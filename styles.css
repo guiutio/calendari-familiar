@@ -245,3 +245,43 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   :root[data-theme="dark"] .mobile-tab { color:#aab9cf; }
   :root[data-theme="dark"] .mobile-tab.active { color:#a9d1ff; }
 }
+
+/* Escoles · v0.1.5 */
+.school-breadcrumb { display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:6px 1px;margin:0 0 16px;font-weight:700;font-size:12px;color:#54779f; }
+.school-row { padding:12px 0;border-bottom:1px solid #eef0f3; }
+.school-row:last-child { border-bottom:0; }
+.school-link { width:100%;min-height:34px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;background:transparent;border:0;color:#294d79;font-size:15px;font-weight:730; }
+.school-link svg { color:#8396ad; }
+.school-meta { display:block;font-size:12px;color:#8290a2;margin:2px 0 0;line-height:1.45; }
+.school-details p {font-size:13px;color:#5e6f87;line-height:1.5;overflow-wrap:anywhere; }
+.school-details a { color:#416eaa; }
+.school-period { padding:13px 0 16px;border-top:1px solid #eef0f3; }
+.school-period .panel-header { align-items:center;margin-bottom:8px; }
+.school-period .panel-header strong {font-size:13px;}
+.school-day-list { display:flex;flex-wrap:wrap;gap:7px; }
+.school-day-pill { display:inline-flex;align-items:center;gap:5px;background:#fff1e9;color:#955a35;border-radius:8px;padding:7px 8px;font-size:12px;font-weight:720; }
+.school-day-pill.reduced {background:#fff6d8;color:#82621b;}
+.school-day-pill button {background:transparent;border:0;display:inline-grid;place-items:center;padding:3px;color:inherit;min-width:20px;min-height:20px;}
+.school-child-choice { width:100%;min-height:51px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:7px 0;padding:10px 13px;border:1px solid #e2e8ef;border-radius:11px;background:#fff;color:#3f5069;font-size:14px;font-weight:720;text-align:left; }
+.school-child-choice.selected {background:#edf4ff;border-color:#93b4dc;color:#2d5685;}
+.school-child-choice small { display:block;font-size:11px;font-weight:450;color:#8493a8;margin-top:3px; }
+.school-schedule-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e9edf3;font-size:13px;line-height:1.5;}
+.school-schedule-row:last-child {border-bottom:0;}
+.school-schedule-row .delete-icon {flex-shrink:0;border:1px solid #f0dcdc;border-radius:10px;color:#b76e72;background:#fffafa;min-width:36px;min-height:36px;display:grid;place-items:center;}
+.school-form-fields { display:grid;gap:14px; }
+.school-form-fields .field {min-width:0;}
+.school-form-fields .form-row {align-items:stretch;}
+.school-form-fields .field input,.school-form-fields .field select {min-height:46px;}
+.school-day-notice { margin:7px 0;padding:11px 12px;background:#f1f5fe;border-radius:10px;color:#3c648a;font-size:12px;line-height:1.5;}
+:root[data-theme="dark"] .school-breadcrumb,:root[data-theme="dark"] .school-link,:root[data-theme="dark"] .school-details a {color:#a5ccfa;}
+:root[data-theme="dark"] .school-row,:root[data-theme="dark"] .school-period,:root[data-theme="dark"] .school-schedule-row {border-color:#33445a;}
+:root[data-theme="dark"] .school-meta,:root[data-theme="dark"] .school-details p {color:#aabbd1;}
+:root[data-theme="dark"] .school-day-pill {background:#563b35;color:#ffd2b7;}
+:root[data-theme="dark"] .school-day-pill.reduced {background:#4e442b;color:#f0d49b;}
+:root[data-theme="dark"] .school-child-choice {background:#202f44;border-color:#3b4b63;color:#d8e8fb;}
+:root[data-theme="dark"] .school-child-choice.selected {background:#274364;border-color:#70a6e3;color:#e6f1ff;}
+:root[data-theme="dark"] .school-child-choice small {color:#aabbd0;}
+:root[data-theme="dark"] .school-schedule-row .delete-icon {background:#38272e;border-color:#59404d;color:#ffb3bd;}
+:root[data-theme="dark"] .school-day-notice {background:#273d56;color:#d0e3fa;}
+@media(max-width:900px) { .mobile-tabs {grid-template-columns:repeat(4,minmax(0,1fr));} }
+@media(max-width:360px) { .mobile-tabs {padding-left:5px;padding-right:5px;} .mobile-tab {font-size:9px;} .school-link {font-size:14px;} }
