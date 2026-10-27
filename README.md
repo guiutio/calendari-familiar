@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1
+# Calendari Familiar · Web MVP v0.1.1
 
 Prototip funcional **mobile-first** en català per planificar les nits dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -31,12 +31,12 @@ Per obrir-lo des de l'iPhone, has de servir els mateixos fitxers en una URL **HT
 - Calendari mensual de dilluns a diumenge, avançar/retrocedir mes i tornar a avui.
 - Agrupament de fills quan dormen amb el mateix tutor, amb color i inicials dels fills, sense icona o inicial del tutor en les caselles.
 - Filtres compactes de fills i tutors.
-- Editor de rotació per 7, 14, 21 o 28 dies, aplicació «Tots igual» i «Copiar de ...».
+- Editor de rotació amb durada configurable en dies o setmanes (per exemple, 10 setmanes = 70 dies), i assignació setmanal ràpida, aplicació «Tots igual» i «Copiar de ...».
 - Modificacions puntuals per fill i data; tornar al patró habitual.
 - Fills i tutors editables; data de naixement opcional i aniversaris.
 - Persistència automàtica en **IndexedDB** (fallback a localStorage quan no és disponible).
 - Còpies de seguretat: exportació/importació JSON, amb comprovacions bàsiques.
-- Dades de mostra per Elna i Blai, i opció de restablir-les.
+- Dades de mostra per Elna i Blai, només amb Pare i Mare i sense dates de naixement; opció de restablir-les. Una mostra original íntegra (sense editar) es neteja automàticament en actualitzar.
 - PWA amb manifest, icones i memòria cau de fitxers per a ús offline.
 
 ## Desenvolupament
