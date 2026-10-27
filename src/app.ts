@@ -213,7 +213,7 @@ function layout(content:string){return `<div class="app-layout"><aside class="si
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.2 · Privat per disseny</div></div></main>
+  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.4 · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function calendarPage(){
   const today=localDate(new Date());
@@ -443,6 +443,6 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sheet){sheet=null;render();}});
 async function init(){await loadState();applyTheme();render();if('serviceWorker'in navigator && location.protocol!=='file:'){
-  navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker no registrat:',err));
+  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update().catch(()=>{})).catch(err=>console.warn('Service worker no registrat:',err));
 }}
 void init();
