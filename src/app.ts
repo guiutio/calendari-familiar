@@ -48,15 +48,26 @@ function monthTitle(year:number,month:number) {return `${months[month]} ${year}`
 function fullDate(date:string) {const d=parseDate(date); const dayIndex=(d.getDay()+6)%7;return `${weekLong[dayIndex]}, ${d.getDate()} d’${months[d.getMonth()]} de ${d.getFullYear()}`;}
 function initial(name:string) {return [...name.trim()][0]?.toUpperCase() || '?';}
 function newId() {return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;}
+const DEMO_START_DATE = '2026-10-12'; // Dilluns de la primera setmana
+const LEGACY_DEMO_SEQUENCE = ['pare','pare','mare','mare','pare','pare','pare','mare','mare','pare','pare','mare','mare','mare'];
+/** Cicle de 10 setmanes, amb excepcions incorporades dins del patró (no com a dates soltes). */
+function demoSequence():string[] {
+  const weeklyGuardians=['pare','mare','pare','mare','pare','pare','mare','pare','mare','pare'];
+  return Array.from({length:70},(_,day)=>{
+    const week=Math.floor(day/7); // 0 = setmana 1
+    const weekday=day%7; // 0 = dilluns, 6 = diumenge
+    if((week===1 || week===6) && weekday===6)return 'pare'; // Diumenge setmanes 2 i 7
+    if(week===9 && weekday>=5)return 'mare'; // Dissabte i diumenge setmana 10
+    return weeklyGuardians[week]!;
+  });
+}
 function seedState():AppState {
-  const today=new Date(), monday=new Date(today.getFullYear(),today.getMonth(),today.getDate(),12);
-  monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
-  const sequence=['pare','pare','mare','mare','pare','pare','pare','mare','mare','pare','pare','mare','mare','mare'];
+  const sequence=demoSequence();
   return {
     version:1,
     children:[{id:'elna',name:'Elna',birthDate:''},{id:'blai',name:'Blai',birthDate:''}],
     guardians:[{id:'pare',name:'Pare',color:'#8bb8e8'},{id:'mare',name:'Mare',color:'#efafc3'}],
-    rotation:{startDate:localDate(monday),length:14,assignments:{elna:[...sequence],blai:[...sequence]}},
+    rotation:{startDate:DEMO_START_DATE,length:sequence.length,assignments:{elna:[...sequence],blai:[...sequence]}},
     overrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],theme:'auto'}
   };
 }
@@ -80,7 +91,6 @@ function cleanState(raw:unknown):AppState {
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
-  const oldSequence=['pare','pare','mare','mare','pare','pare','pare','mare','mare','pare','pare','mare','mare','mare'];
   const untouched=data.children.length===2
     && data.children[0]?.id==='elna' && data.children[0]?.name==='Elna' && data.children[0]?.birthDate==='2015-10-08'
     && data.children[1]?.id==='blai' && data.children[1]?.name==='Blai' && data.children[1]?.birthDate==='2019-04-16'
@@ -89,14 +99,39 @@ function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
     && data.guardians[1]?.id==='mare' && data.guardians[1]?.name==='Mare' && data.guardians[1]?.color==='#efafc3'
     && data.guardians[2]?.id==='avia' && data.guardians[2]?.name==='Àvia' && data.guardians[2]?.color==='#c9b4ef'
     && data.rotation.length===14
-    && ['elna','blai'].every(id=>JSON.stringify(data.rotation.assignments[id])===JSON.stringify(oldSequence))
+    && ['elna','blai'].every(id=>JSON.stringify(data.rotation.assignments[id])===JSON.stringify(LEGACY_DEMO_SEQUENCE))
     && Object.keys(data.overrides).length===0
     && JSON.stringify(data.preferences.visibleChildren)===JSON.stringify(['elna','blai'])
     && JSON.stringify(data.preferences.visibleGuardians)===JSON.stringify(['pare','mare','avia']);
   if(!untouched)return {data,changed:false};
   data.children.forEach(c=>c.birthDate='');
   data.guardians=data.guardians.filter(g=>g.id!=='avia');
+  data.preferences.visibleGuardians=data.preferences.visibleGuardians.filter(id=>id!=='avia');
   return {data,changed:true};
+}
+/** Només substitueix les dades de demostració 14 dies sense modificar. 
+ * Si hi ha canvis d'usuari en noms, tutors, rotació, filtres o excepcions, es conserva tot. */
+function upgradeUntouchedDemo(data:AppState):{data:AppState;changed:boolean}{
+  const demoLike=data.children.length===2
+    && data.children[0]?.id==='elna' && data.children[0]?.name==='Elna' && data.children[0]?.birthDate===''
+    && data.children[1]?.id==='blai' && data.children[1]?.name==='Blai' && data.children[1]?.birthDate===''
+    && data.guardians.length===2
+    && data.guardians[0]?.id==='pare' && data.guardians[0]?.name==='Pare' && data.guardians[0]?.color==='#8bb8e8'
+    && data.guardians[1]?.id==='mare' && data.guardians[1]?.name==='Mare' && data.guardians[1]?.color==='#efafc3'
+    && data.rotation.length===LEGACY_DEMO_SEQUENCE.length
+    && parseDate(data.rotation.startDate).getDay()===1
+    && ['elna','blai'].every(id=>JSON.stringify(data.rotation.assignments[id])===JSON.stringify(LEGACY_DEMO_SEQUENCE))
+    && Object.keys(data.overrides).length===0
+    && JSON.stringify(data.preferences.visibleChildren)===JSON.stringify(['elna','blai'])
+    && JSON.stringify(data.preferences.visibleGuardians)===JSON.stringify(['pare','mare']);
+  if(!demoLike)return {data,changed:false};
+  data.rotation=seedState().rotation; // Preferències de tema desades intactes
+  return {data,changed:true};
+}
+function upgradeDemo(data:AppState):{data:AppState;changed:boolean}{
+  const legacy=upgradeOriginalDemo(data);
+  const current=upgradeUntouchedDemo(legacy.data);
+  return {data:current.data,changed:legacy.changed||current.changed};
 }
 function resizedRotation(rotation:Rotation,length:number):Rotation{
   const fallback=defaultGuardian();
@@ -142,9 +177,9 @@ function idbPut(data:AppState):Promise<void> {return new Promise((resolve,reject
   tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
 });}
 async function loadState(){
-  try {db=await openDB();storageMode='indexeddb';const raw=await idbGet();if(raw){const result=upgradeOriginalDemo(cleanState(raw));state=result.data;if(result.changed)await idbPut(state);}else await idbPut(state);return;}
+  try {db=await openDB();storageMode='indexeddb';const raw=await idbGet();if(raw){const result=upgradeDemo(cleanState(raw));state=result.data;if(result.changed)await idbPut(state);}else await idbPut(state);return;}
   catch(e) {console.warn('IndexedDB no disponible; s’intenta emmagatzematge alternatiu.',e);}
-  try{storageMode='localStorage';const raw=localStorage.getItem('calendari-familiar-v1');if(raw){const result=upgradeOriginalDemo(cleanState(JSON.parse(raw)));state=result.data;if(result.changed)localStorage.setItem('calendari-familiar-v1',JSON.stringify(state));}else localStorage.setItem('calendari-familiar-v1',JSON.stringify(state));}
+  try{storageMode='localStorage';const raw=localStorage.getItem('calendari-familiar-v1');if(raw){const result=upgradeDemo(cleanState(JSON.parse(raw)));state=result.data;if(result.changed)localStorage.setItem('calendari-familiar-v1',JSON.stringify(state));}else localStorage.setItem('calendari-familiar-v1',JSON.stringify(state));}
   catch(e){console.error('No hi ha emmagatzematge persistent disponible',e);storageMode='session';}
 }
 function saveState(){
