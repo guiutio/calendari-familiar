@@ -1,4 +1,4 @@
-const CACHE = 'calendari-familiar-v0.1.2';
+const CACHE = 'calendari-familiar-v0.1.3';
 const ASSETS = ['./','./index.html','./app.js','./styles.css','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
