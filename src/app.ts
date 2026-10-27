@@ -2,11 +2,17 @@
 type Child = { id: string; name: string; birthDate: string };
 type Guardian = { id: string; name: string; color: string };
 type Rotation = { startDate: string; length: number; assignments: Record<string, string[]> };
+// Les inscripcions són per grup i curs: l'historial es conserva en canviar de curs.
+type WeeklySession = { id:string; weekday:number; startTime:string; endTime:string; label:string };
+type ClassGroup = { id:string; name:string; tutorName:string; weeklySchedule:WeeklySession[]; childIds:string[] };
+type SchoolYear = { id:string; startDate:string; endDate:string; holidays:string[]; reducedDays:string[]; groups:ClassGroup[] };
+type School = { id:string; name:string; address:string; phone:string; years:SchoolYear[] };
+
 type ThemeMode = 'auto' | 'light' | 'dark';
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; theme: ThemeMode };
-type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; preferences: Preferences };
-type Tab = 'calendar' | 'rotation' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | null;
+type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; preferences: Preferences; schools:School[] };
+type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
+type Sheet = { type:'filters' } | { type:'day'; date:string } | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string} | null;
 
 const $app = document.getElementById('app')!;
 const DB_NAME = 'calendari-familiar-db';
@@ -17,6 +23,7 @@ const weekdays = ['Dl', 'Dt', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'];
 const weekLong = ['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'];
 const months = ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
 const icons: Record<string,string> = {
+  school:'<path d="M3 22V8l9-5 9 5v14M2 22h20M7 12h2m6 0h2M7 16h2m6 0h2M10 22v-4h4v4"/>',
   calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
   repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
   settings:'<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2 2-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-2.85v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06-2-2 .06-.06A1.65 1.65 0 0 0 7.6 15a1.65 1.65 0 0 0-1.51-1H6v-2.85h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06 2-2 .06.06A1.65 1.65 0 0 0 11.09 6a1.65 1.65 0 0 0 1-1.51V4h2.85v.49a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06 2 2-.06.06A1.65 1.65 0 0 0 19.4 10a1.65 1.65 0 0 0 1.51 1H21v3h-.09a1.65 1.65 0 0 0-1.51 1Z" transform="translate(-.5 -.5) scale(.94)"/>',
@@ -68,11 +75,54 @@ function seedState():AppState {
     children:[{id:'elna',name:'Elna',birthDate:''},{id:'blai',name:'Blai',birthDate:''}],
     guardians:[{id:'pare',name:'Pare',color:'#8bb8e8'},{id:'mare',name:'Mare',color:'#efafc3'}],
     rotation:{startDate:DEMO_START_DATE,length:sequence.length,assignments:{elna:[...sequence],blai:[...sequence]}},
-    overrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],theme:'auto'}
+    overrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],theme:'auto'},schools:[]
   };
 }
 function validTheme(value:unknown):ThemeMode {return value==='light'||value==='dark'?value:'auto';}
 function isValidDate(s:string) {return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s))===s;}
+/** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
+function cleanSchools(raw:unknown,children:Child[]):School[]{
+  if(raw===undefined)return [];
+  if(!Array.isArray(raw)||raw.length>50)throw Error('La còpia conté escoles incorrectes');
+  const childSet=new Set(children.map(c=>c.id)),schoolIds=new Set<string>();
+  const isText=(x:unknown)=>typeof x==='string';
+  const name=(x:unknown,max=120)=>typeof x==='string'?x.trim().slice(0,max):'';
+  const validTime=(t:unknown)=>typeof t==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+  return raw.map((entry:unknown)=>{
+    const school=entry as Partial<School>;
+    if(!school||!isText(school.id)||schoolIds.has(school.id!)||!name(school.name)||!Array.isArray(school.years)||school.years.length>60)throw Error('Hi ha una escola invàlida a la còpia');
+    schoolIds.add(school.id!);
+    const yearIds=new Set<string>();
+    const years=school.years.map(entryYear=>{
+      const year=entryYear as SchoolYear;
+      if(!year||!isText(year.id)||yearIds.has(year.id)||!isValidDate(year.startDate)||!isValidDate(year.endDate)||year.startDate>=year.endDate||!Array.isArray(year.groups)||year.groups.length>80)throw Error('Un curs escolar no és vàlid');
+      yearIds.add(year.id);
+      const validateDays=(days:unknown)=>{
+        if(!Array.isArray(days)||days.length>1000||days.some(d=>typeof d!=='string'||!isValidDate(d)||d<year.startDate||d>year.endDate))throw Error('Hi ha dies fora del curs escolar');
+        return [...new Set(days as string[])].sort();
+      };
+      const holidays=validateDays(year.holidays??[]),reducedDays=validateDays(year.reducedDays??[]);
+      if(reducedDays.some(d=>holidays.includes(d)))throw Error('Un dia no pot ser festiu i d’horari reduït alhora');
+      const groupIds=new Set<string>(),enrolled=new Set<string>();
+      const groups=year.groups.map(g=>{
+        if(!g||!isText(g.id)||groupIds.has(g.id)||!name(g.name)||!Array.isArray(g.childIds)||!Array.isArray(g.weeklySchedule)||g.childIds.length>30||g.weeklySchedule.length>200)throw Error('Un grup classe no és vàlid');
+        groupIds.add(g.id);
+        const childIds=g.childIds.filter(id=>childSet.has(id));
+        if(new Set(childIds).size!==childIds.length||childIds.some(id=>enrolled.has(id)))throw Error('Un fill no pot pertànyer a dos grups del mateix curs');
+        childIds.forEach(id=>enrolled.add(id));
+        const sessionIds=new Set<string>();
+        const weeklySchedule=g.weeklySchedule.map(a=>{
+          if(!a||!isText(a.id)||sessionIds.has(a.id)||!Number.isInteger(a.weekday)||a.weekday<0||a.weekday>6||!validTime(a.startTime)||!validTime(a.endTime)||a.startTime>=a.endTime)throw Error('Hi ha un horari setmanal incorrecte');
+          sessionIds.add(a.id);
+          return {id:a.id,weekday:a.weekday,startTime:a.startTime,endTime:a.endTime,label:name(a.label,80)};
+        });
+        return {id:g.id,name:name(g.name,80),tutorName:name(g.tutorName,100),weeklySchedule,childIds};
+      });
+      return {id:year.id,startDate:year.startDate,endDate:year.endDate,holidays,reducedDays,groups};
+    });
+    return {id:school.id!,name:name(school.name,100),address:name(school.address,200),phone:name(school.phone,50),years};
+  });
+}
 function cleanState(raw:unknown):AppState {
   if(!raw || typeof raw!=='object')throw Error('Fitxer sense dades vàlides');
   const obj=raw as Partial<AppState>;
@@ -87,11 +137,12 @@ function cleanState(raw:unknown):AppState {
   for(const child of children){const seq=obj.rotation.assignments?.[child.id];if(!Array.isArray(seq)||seq.length!==length||seq.some(x=>!validGuardians.has(x)))throw Error('El patró de nits està incomplet');assignments[child.id]=[...seq];}
   const overrides:Record<string,string>={};
   for(const [key,value] of Object.entries(obj.overrides)) {const [date,childId]=key.split('|');if(date && childId && isValidDate(date)&&children.some(c=>c.id===childId)&&validGuardians.has(value))overrides[key]=value;}
-  return {version:1,children,guardians,rotation:{startDate:obj.rotation.startDate,length,assignments},overrides,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),theme:validTheme(obj.preferences.theme)}};
+  return {version:1,children,guardians,rotation:{startDate:obj.rotation.startDate,length,assignments},overrides,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),theme:validTheme(obj.preferences.theme)},schools:cleanSchools(obj.schools,children)};
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
-  const untouched=data.children.length===2
+  const untouched=data.schools.length===0
+    && data.children.length===2
     && data.children[0]?.id==='elna' && data.children[0]?.name==='Elna' && data.children[0]?.birthDate==='2015-10-08'
     && data.children[1]?.id==='blai' && data.children[1]?.name==='Blai' && data.children[1]?.birthDate==='2019-04-16'
     && data.guardians.length===3
@@ -112,7 +163,8 @@ function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
 /** Només substitueix les dades de demostració 14 dies sense modificar. 
  * Si hi ha canvis d'usuari en noms, tutors, rotació, filtres o excepcions, es conserva tot. */
 function upgradeUntouchedDemo(data:AppState):{data:AppState;changed:boolean}{
-  const demoLike=data.children.length===2
+  const demoLike=data.schools.length===0
+    && data.children.length===2
     && data.children[0]?.id==='elna' && data.children[0]?.name==='Elna' && data.children[0]?.birthDate===''
     && data.children[1]?.id==='blai' && data.children[1]?.name==='Blai' && data.children[1]?.birthDate===''
     && data.guardians.length===2
@@ -147,6 +199,7 @@ let storageMode:'indexeddb'|'localStorage'|'session'='session';
 let state=seedState();
 let viewYear=new Date().getFullYear(),viewMonth=new Date().getMonth();
 let tab:Tab='calendar';
+let schoolNav:{schoolId?:string;yearId?:string;groupId?:string}={};
 let sheet:Sheet=null;
 let rotationDraft:Rotation|null=null;
 let rotationUnit:'days'|'weeks'='weeks';
@@ -211,10 +264,10 @@ function navButton(target:Tab,label:string,name:string,kind:'side'|'mobile'){
 }
 function layout(content:string){return `<div class="app-layout"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('settings','Configuració','settings','side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('schools','Escoles','school','side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.4 · Privat per disseny</div></div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
+  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.5 · Privat per disseny</div></div></main>
+  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function calendarPage(){
   const today=localDate(new Date());
   const visibleCh=state.preferences.visibleChildren.length;
@@ -259,6 +312,90 @@ function rotationPage(){
     <div class="action-row"><button class="primary-btn" data-action="rotation-save">Desa el patró</button>${rotationDraft?'<button class="soft-btn" data-action="rotation-cancel">Descarta canvis</button>':''}</div>
     <p class="settings-note">Les excepcions de dies concrets tenen prioritat sobre el patró. Si canvies el patró, les excepcions continuaran guardades.</p></section>`;
 }
+function schoolById(id:string|undefined){return state.schools.find(s=>s.id===id);}
+function yearById(school:School|undefined,id:string|undefined){return school?.years.find(y=>y.id===id);}
+function groupById(year:SchoolYear|undefined,id:string|undefined){return year?.groups.find(g=>g.id===id);}
+function schoolYearName(y:SchoolYear){return `Curs ${y.startDate.slice(0,4)}-${y.endDate.slice(0,4)}`;}
+function shortDate(date:string){const d=parseDate(date);return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;}
+function schoolNavButton(label:string,nav:{schoolId?:string;yearId?:string;groupId?:string},style='school-link'){
+  return `<button type="button" class="${style}" data-action="school-nav" ${nav.schoolId?`data-school="${escapeHtml(nav.schoolId)}"`:''} ${nav.yearId?`data-year="${escapeHtml(nav.yearId)}"`:''} ${nav.groupId?`data-group="${escapeHtml(nav.groupId)}"`:''}>${escapeHtml(label)} ${icon('chevronRight',15)}</button>`;
+}
+function schoolCrumb(text:string,nav:{schoolId?:string;yearId?:string;groupId?:string}={}){
+ return `<button class="school-breadcrumb" type="button" data-action="school-nav" ${nav.schoolId?`data-school="${escapeHtml(nav.schoolId)}"`:''} ${nav.yearId?`data-year="${escapeHtml(nav.yearId)}"`:''}>${icon('chevronLeft',15)} ${escapeHtml(text)}</button>`;
+}
+function schoolsPage():string {
+ const school=schoolById(schoolNav.schoolId),year=yearById(school,schoolNav.yearId),group=groupById(year,schoolNav.groupId);
+ if(!school) return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Les escoles</h2><button class="secondary-btn" data-action="school-add">${icon('plus',15)} Afegir escola</button></div>
+ <p class="section-description">Cada escola pot tenir diferents cursos, grups classe, festius i dies d’horari reduït. Les dades són privades i es desen al teu dispositiu.</p>
+ ${state.schools.length?state.schools.map(s=>`<div class="school-row">${schoolNavButton(s.name,{schoolId:s.id})}<span class="school-meta">${s.years.length} ${s.years.length===1?'curs':'cursos'}</span></div>`).join(''):'<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
+ if(!year) return `<header class="page-heading"><div>${schoolCrumb('Escoles')}<div class="eyebrow">ESCOLA</div><h1 class="page-title">${escapeHtml(school.name)}</h1><p class="page-subtitle">${escapeHtml(school.address||'Adreça no indicada')}${school.phone?` · ${escapeHtml(school.phone)}`:''}</p></div></header>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Dades de l’escola</h2><button class="secondary-btn" data-action="school-edit" data-school="${escapeHtml(school.id)}">${icon('pencil',15)} Edita</button></div>
+ <div class="school-details">${school.address?`<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>`:''}${school.phone?`<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g,''))}">${escapeHtml(school.phone)}</a></p>`:''}${!school.address&&!school.phone?'<p class="settings-note">Sense adreça ni telèfon.</p>':''}</div>
+ <div class="action-row"><button class="danger-btn" data-action="school-delete" data-school="${escapeHtml(school.id)}">Suprimeix l’escola</button></div></section>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Cursos escolars</h2><button class="secondary-btn" data-action="year-add" data-school="${escapeHtml(school.id)}">${icon('plus',15)} Afegir curs</button></div>
+ ${school.years.length?[...school.years].sort((a,b)=>b.startDate.localeCompare(a.startDate)).map(y=>`<div class="school-row">${schoolNavButton(schoolYearName(y),{schoolId:school.id,yearId:y.id})}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join(''):'<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>`;
+ if(!group) return `<header class="page-heading"><div>${schoolCrumb(school.name,{schoolId:school.id})}<div class="eyebrow">${escapeHtml(school.name)}</div><h1 class="page-title">${schoolYearName(year)}</h1><p class="page-subtitle">Del ${shortDate(year.startDate)} al ${shortDate(year.endDate)}</p></div></header>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Calendari escolar</h2><button class="soft-btn" data-action="year-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil',14)} Dates</button></div>
+ <p class="section-description">Els festius i els dies d’horari reduït han d’estar compresos dins del curs. Són dies concrets, no es repeteixen automàticament.</p>
+ <div class="school-period"><div class="panel-header"><strong>Dies festius (${year.holidays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Dia</button></div>
+ ${year.holidays.length?`<div class="school-day-list">${year.holidays.map(d=>`<span class="school-day-pill">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix el festiu ${d}">${icon('close',13)}</button></span>`).join('')}</div>`:'<p class="settings-note">No hi ha dies festius.</p>'}</div>
+ <div class="school-period"><div class="panel-header"><strong>Horari reduït (${year.reducedDays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Dia</button></div>
+ ${year.reducedDays.length?`<div class="school-day-list">${year.reducedDays.map(d=>`<span class="school-day-pill reduced">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix l’horari reduït ${d}">${icon('close',13)}</button></span>`).join('')}</div>`:'<p class="settings-note">No hi ha dies d’horari reduït.</p>'}</div>
+ <div class="action-row"><button class="danger-btn" data-action="year-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Suprimeix el curs</button></div></section>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Grups classe</h2><button class="secondary-btn" data-action="group-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Afegir grup</button></div>
+ ${year.groups.length?year.groups.map(g=>`<div class="school-row">${schoolNavButton(g.name,{schoolId:school.id,yearId:year.id,groupId:g.id})}<span class="school-meta">${g.childIds.length} ${g.childIds.length===1?'fill':'fills'}${g.tutorName?` · ${escapeHtml(g.tutorName)}`:''}</span></div>`).join(''):'<div class="empty-state">Encara no hi ha cap grup. Pots afegir-hi «Segon», «Sisè A» o qualsevol altre.</div>'}</section>`;
+ const sessions=[...group.weeklySchedule].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+ return `<header class="page-heading"><div>${schoolCrumb(schoolYearName(year),{schoolId:school.id,yearId:year.id})}<div class="eyebrow">${escapeHtml(school.name)} · ${schoolYearName(year)}</div><h1 class="page-title">${escapeHtml(group.name)}</h1><p class="page-subtitle">${group.tutorName?`Tutor/a: ${escapeHtml(group.tutorName)}`:'Tutor/a no especificat'}</p></div></header>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Grup classe</h2><button class="secondary-btn" data-action="group-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">${icon('pencil',15)} Edita</button></div>
+ <div class="action-row"><button class="danger-btn" data-action="group-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">Suprimeix el grup</button></div></section>
+ <section class="card"><div class="panel-header"><h2 class="section-title">Fills del grup</h2></div><p class="section-description">Selecciona els fills que pertanyen a aquest grup aquest curs. Un fill només pot estar en un grup del mateix curs i escola.</p>
+ ${state.children.map(c=>{const selected=group.childIds.includes(c.id),other=year.groups.find(g=>g.id!==group.id&&g.childIds.includes(c.id));return `<button class="school-child-choice ${selected?'selected':''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other?`<small>Actualment a ${escapeHtml(other.name)}</small>`:''}</span>${selected?icon('check',18):icon('plus',17)}</button>`;}).join('')}
+ </section><section class="card"><div class="panel-header"><h2 class="section-title">Horari setmanal</h2><button class="secondary-btn" data-action="schedule-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">${icon('plus',14)} Franja</button></div>
+ <p class="section-description">Opcional. Pots afegir més d’una franja per dia (per exemple, matí i tarda).</p>
+ ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}${a.label?`<span class="school-meta">${escapeHtml(a.label)}</span>`:''}</div><button class="delete-icon" aria-label="Suprimeix franja" data-action="schedule-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-session="${escapeHtml(a.id)}">${icon('trash',15)}</button></div>`).join(''):'<div class="empty-state">Encara no s’ha introduït cap franja horària.</div>'}</section>`;
+}
+function schoolFormMarkup():string {
+ if(!sheet)return '';
+ const heading=(title:string,subtitle:string)=>`<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(title)}</h2><p class="sheet-subtitle">${escapeHtml(subtitle)}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>`;
+ const field=(label:string,name:string,type:string,value:string,required=false,maxLength=0)=>`<div class="field"><label for="school-field-${name}">${escapeHtml(label)}</label><input id="school-field-${name}" name="${name}" type="${type}" value="${escapeHtml(value)}" ${required?'required':''} ${maxLength?`maxlength="${maxLength}"`:''} /></div>`;
+ const actions='<div class="action-row"><button class="primary-btn" type="submit">Desa</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div>';
+ if(sheet.type==='schoolForm'){
+  const school=schoolById(sheet.schoolId);
+  return heading(school?'Edita escola':'Afegeix escola','Nom obligatori; adreça i telèfon opcionals')+`<form data-school-form="school" data-school="${escapeHtml(school?.id??'')}"><div class="school-form-fields">${field('Nom de l’escola','name','text',school?.name??'',true,100)}${field('Adreça (opcional)','address','text',school?.address??'',false,200)}${field('Telèfon (opcional)','phone','tel',school?.phone??'',false,50)}</div>${actions}</form>`;
+ }
+ if(sheet.type==='yearForm'){
+  const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId);
+  const now=new Date(),startYear=now.getMonth()>=6?now.getFullYear():now.getFullYear()-1;
+  return heading(year?'Edita curs escolar':'Afegeix curs escolar','El nom es genera automàticament a partir dels anys de les dates')+`<form data-school-form="year" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(year?.id??'')}"><div class="school-form-fields">${field('Data d’inici','startDate','date',year?.startDate??`${startYear}-09-01`,true)}${field('Data de finalització','endDate','date',year?.endDate??`${startYear+1}-06-30`,true)}</div><p class="settings-note">Format del nom: «Curs any inici-any final». Els dies festius i d’horari reduït han de quedar dins d’aquest interval.</p>${actions}</form>`;
+ }
+ if(sheet.type==='groupForm'){
+  const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId),group=groupById(year,sheet.groupId);
+  return heading(group?'Edita grup classe':'Afegeix grup classe','Exemples: Segon, Sisè A')+`<form data-school-form="group" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(group?.id??'')}"><div class="school-form-fields">${field('Nom del grup','name','text',group?.name??'',true,80)}${field('Nom del tutor/a (opcional)','tutorName','text',group?.tutorName??'',false,100)}</div>${actions}</form>`;
+ }
+ if(sheet.type==='schoolDayForm'){
+  const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId);if(!year)return '';
+  return heading(sheet.kind==='holiday'?'Afegeix dia festiu':'Afegeix dia d’horari reduït',`${schoolYearName(year)} · ${shortDate(year.startDate)} – ${shortDate(year.endDate)}`)+`<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}"><div class="school-form-fields"><div class="field"><label for="school-date">Data</label><input id="school-date" name="date" type="date" min="${year.startDate}" max="${year.endDate}" value="${year.startDate}" required /></div></div>${actions}</form>`;
+ }
+ if(sheet.type==='scheduleForm'){
+  const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId),group=groupById(year,sheet.groupId);
+  return heading('Afegeix franja horària',group?.name??'Grup classe')+`<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}"><div class="school-form-fields"><div class="field"><label for="session-weekday">Dia de la setmana</label><select name="weekday" id="session-weekday">${weekLong.map((label,i)=>`<option value="${i}">${label}</option>`).join('')}</select></div><div class="form-row">${field('Inici','startTime','time','09:00',true)}${field('Final','endTime','time','13:00',true)}</div>${field('Descripció (opcional)','label','text','',false,80)}</div>${actions}</form>`;
+ }
+ return '';
+}
+/** Festius/reducció de tots els centres en què un fill està matriculat aquell dia. */
+function schoolInfoForDay(date:string):string {
+ const lines:string[]=[];
+ for(const school of state.schools)for(const year of school.years){
+  if(date<year.startDate||date>year.endDate)continue;
+  const dayKind=year.holidays.includes(date)?'Festiu escolar':year.reducedDays.includes(date)?'Horari reduït':'';
+  if(!dayKind)continue;
+  const enrolled=year.groups.flatMap(g=>g.childIds).filter((id,i,ids)=>ids.indexOf(id)===i).map(id=>childById(id)?.name).filter((name):name is string=>Boolean(name));
+  if(enrolled.length)lines.push(`<div class="school-day-notice"><strong>${escapeHtml(dayKind)}</strong> · ${escapeHtml(school.name)} (${escapeHtml(enrolled.join(', '))})</div>`);
+ }
+ return lines.length?`<div class="sheet-section-label">Informació escolar</div>${lines.join('')}`:'';
+}
+
 function settingsPage(){
   const storageDescription=storageMode==='indexeddb'?'IndexedDB · desat automàtic':storageMode==='localStorage'?'LocalStorage · mode alternatiu':'Sense persistència garantida';
   return `<header class="page-heading"><div><div class="eyebrow">PREFERÈNCIES</div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
@@ -288,7 +425,9 @@ function sheetMarkup(){
     <div class="sheet-section-label">Amb qui dorm cada fill?</div>${state.children.map(c=>{
       const current=assigned(date,c.id),isOverride=overridden(date,c.id);
       return `<div class="day-member"><div class="member-head"><span class="member-name">${escapeHtml(c.name)}</span><span class="member-source">${isOverride?'● Canvi puntual':'Segons la rotació'}</span></div><div class="guardian-choices">${state.guardians.map(g=>`<button class="guardian-choice ${g.id===current?'is-selected':''}" data-action="assign-night" data-date="${date}" data-child="${escapeHtml(c.id)}" data-guardian="${escapeHtml(g.id)}" aria-pressed="${g.id===current}"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</button>`).join('')}</div>${isOverride?`<div class="action-row" style="margin-top:10px"><button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(c.id)}">Torna al patró habitual</button></div>`:''}</div>`;
-    }).join('')}<p class="settings-note">Una modificació aquí només canvia la nit seleccionada. Pots tocar un altre tutor per canviar-la.</p>`;
+    }).join('')}${schoolInfoForDay(date)}<p class="settings-note">Una modificació aquí només canvia la nit seleccionada. Pots tocar un altre tutor per canviar-la.</p>`;
+  } else if(sheet && ['schoolForm','yearForm','groupForm','schoolDayForm','scheduleForm'].includes(sheet.type)){
+    contents=schoolFormMarkup();
   } else if(sheet?.type==='rotationWeek'){
     const {childId,week}=sheet,c=childById(childId),r=rotationDraft??state.rotation;
     const begin=week*7,end=Math.min(r.length,begin+7);
@@ -305,7 +444,7 @@ function sheetMarkup(){
 }
 function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guardian',color?:string){return `<button class="option ${selected?'selected':''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left">${color?`<span class="color-dot" style="background:${color}"></span>`:icon('home',16)}${escapeHtml(name)}</span>${selected?icon('check',17):'<span class="badge-soft">Ocult</span>'}</button>`;}
 function render(){
-  $app.innerHTML=layout(tab==='calendar'?calendarPage():tab==='rotation'?rotationPage():settingsPage());
+  $app.innerHTML=layout(tab==='calendar'?calendarPage():tab==='rotation'?rotationPage():tab==='schools'?schoolsPage():settingsPage());
   document.body.style.overflow=sheet?'hidden':'';
 }
 function notify(message:string){
@@ -332,6 +471,7 @@ function removeChild(id:string){
   if(state.children.length<2)return;
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
   state.children=state.children.filter(x=>x.id!==id);delete state.rotation.assignments[id];
+  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>g.childIds=g.childIds.filter(x=>x!==id))));
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;update();
 }
@@ -346,13 +486,55 @@ async function importData(file:File){
   if(file.size>5_000_000) {notify('El fitxer és massa gran');return;}
   try {const text=await file.text();const imported=cleanState(JSON.parse(text));
     if(!confirm('Vols substituir totes les dades actuals per les del fitxer?'))return;
-    state=imported;rotationDraft=null;sheet=null;update();notify('Dades importades correctament');
+    state=imported;rotationDraft=null;sheet=null;schoolNav={};update();notify('Dades importades correctament');
   }catch(err){notify(err instanceof Error?err.message:'No es pot importar aquest fitxer');}
 }
-async function resetData(){if(!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))return;const theme=state.preferences.theme;state=seedState();state.preferences.theme=theme;rotationDraft=null;sheet=null;update();notify('Dades de mostra restablertes');}
+async function resetData(){if(!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))return;const theme=state.preferences.theme;state=seedState();state.preferences.theme=theme;rotationDraft=null;sheet=null;schoolNav={};update();notify('Dades de mostra restablertes');}
 function clickAction(button:HTMLElement){
   const action=button.dataset.action;
   switch(action){
+    case 'school-nav': schoolNav={schoolId:button.dataset.school||undefined,yearId:button.dataset.year||undefined,groupId:button.dataset.group||undefined};render();window.scrollTo({top:0,behavior:'instant'});break;
+    case 'school-add':sheet={type:'schoolForm'};render();break;
+    case 'school-edit':sheet={type:'schoolForm',schoolId:button.dataset.school!};render();break;
+    case 'year-add':sheet={type:'yearForm',schoolId:button.dataset.school!};render();break;
+    case 'year-edit':sheet={type:'yearForm',schoolId:button.dataset.school!,yearId:button.dataset.year!};render();break;
+    case 'group-add':sheet={type:'groupForm',schoolId:button.dataset.school!,yearId:button.dataset.year!};render();break;
+    case 'group-edit':sheet={type:'groupForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!};render();break;
+    case 'school-day-add':sheet={type:'schoolDayForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,kind:button.dataset.kind==='holiday'?'holiday':'reduced'};render();break;
+    case 'schedule-add':sheet={type:'scheduleForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!};render();break;
+    case 'school-child-toggle':{
+      const year=yearById(schoolById(button.dataset.school),button.dataset.year),group=groupById(year,button.dataset.group),id=button.dataset.child!;
+      if(!year||!group||!childById(id))break;
+      if(group.childIds.includes(id))group.childIds=group.childIds.filter(x=>x!==id);
+      else {year.groups.forEach(g=>g.childIds=g.childIds.filter(x=>x!==id));group.childIds.push(id);}
+      update();notify('Assignació al grup actualitzada');break;
+    }
+    case 'school-delete':{
+      const school=schoolById(button.dataset.school);if(!school||!confirm(`Vols suprimir «${school.name}» amb tots els cursos i grups?`))break;
+      state.schools=state.schools.filter(s=>s.id!==school.id);schoolNav={};update();notify('Escola suprimida');break;
+    }
+    case 'year-delete':{
+      const school=schoolById(button.dataset.school),year=yearById(school,button.dataset.year);
+      if(!school||!year||!confirm(`Vols suprimir «${schoolYearName(year)}» amb tots els seus grups i dies especials?`))break;
+      school.years=school.years.filter(y=>y.id!==year.id);schoolNav={schoolId:school.id};update();notify('Curs suprimit');break;
+    }
+    case 'group-delete':{
+      const school=schoolById(button.dataset.school),year=yearById(school,button.dataset.year),group=groupById(year,button.dataset.group);
+      if(!school||!year||!group||!confirm(`Vols suprimir el grup «${group.name}»?`))break;
+      year.groups=year.groups.filter(g=>g.id!==group.id);schoolNav={schoolId:school.id,yearId:year.id};update();notify('Grup suprimit');break;
+    }
+    case 'school-day-delete':{
+      const year=yearById(schoolById(button.dataset.school),button.dataset.year),date=button.dataset.date!;
+      if(!year)break;
+      if(button.dataset.kind==='holiday')year.holidays=year.holidays.filter(d=>d!==date);
+      else year.reducedDays=year.reducedDays.filter(d=>d!==date);
+      update();notify('Dia eliminat');break;
+    }
+    case 'schedule-delete':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group);
+      if(!group)break;group.weeklySchedule=group.weeklySchedule.filter(a=>a.id!==button.dataset.session);
+      update();notify('Franja suprimida');break;
+    }
     case 'tab':changeTab(button.dataset.tab as Tab);break;
     case 'set-theme':state.preferences.theme=validTheme(button.dataset.themeMode);update();break;
     case 'open-filters':sheet={type:'filters'};render();break;
@@ -420,6 +602,55 @@ document.addEventListener('click',event=>{
   if(actionButton.dataset.action==='close-backdrop') {if(target===actionButton){sheet=null;render();}return;}
   if(actionButton.matches('button') && !(actionButton as HTMLButtonElement).disabled)clickAction(actionButton);
 });
+document.addEventListener('submit',event=>{
+ const form=event.target;
+ if(!(form instanceof HTMLFormElement)||!form.dataset.schoolForm)return;
+ event.preventDefault();
+ const values=new FormData(form),get=(key:string)=>String(values.get(key)??'').trim();
+ const formKind=form.dataset.schoolForm;
+ const school=schoolById(form.dataset.school),year=yearById(school,form.dataset.year),group=groupById(year,form.dataset.group);
+ const finish=(message:string)=>{sheet=null;update();notify(message);};
+ if(formKind==='school'){
+  const name=get('name').slice(0,100);if(!name){notify('Indica el nom de l’escola');return;}
+  if(school){school.name=name;school.address=get('address').slice(0,200);school.phone=get('phone').slice(0,50);finish('Escola actualitzada');}
+  else{const id=newId();state.schools.push({id,name,address:get('address').slice(0,200),phone:get('phone').slice(0,50),years:[]});schoolNav={schoolId:id};finish('Escola afegida');}
+  return;
+ }
+ if(formKind==='year'){
+  if(!school)return;
+  const startDate=get('startDate'),endDate=get('endDate');
+  if(!isValidDate(startDate)||!isValidDate(endDate)||startDate>=endDate){notify('La data final ha de ser posterior a la inicial');return;}
+  if(school.years.some(y=>y.id!==year?.id&&y.startDate===startDate&&y.endDate===endDate)){notify('Aquest curs ja existeix');return;}
+  if(year){
+    if([...year.holidays,...year.reducedDays].some(d=>d<startDate||d>endDate)){notify('Hi ha dies especials fora de les noves dates. Revisa’ls abans.');return;}
+    year.startDate=startDate;year.endDate=endDate;finish('Dates del curs actualitzades');
+  }else{const id=newId();school.years.push({id,startDate,endDate,holidays:[],reducedDays:[],groups:[]});schoolNav={schoolId:school.id,yearId:id};finish('Curs escolar afegit');}
+  return;
+ }
+ if(formKind==='group'){
+  if(!school||!year)return;
+  const name=get('name').slice(0,80),tutorName=get('tutorName').slice(0,100);
+  if(!name){notify('Indica el nom del grup classe');return;}
+  if(group){group.name=name;group.tutorName=tutorName;finish('Grup classe actualitzat');}
+  else{const id=newId();year.groups.push({id,name,tutorName,weeklySchedule:[],childIds:[]});schoolNav={schoolId:school.id,yearId:year.id,groupId:id};finish('Grup classe afegit');}
+  return;
+ }
+ if(formKind==='day'){
+  if(!year)return;const date=get('date'),kind=form.dataset.kind;
+  if(!isValidDate(date)||date<year.startDate||date>year.endDate){notify('La data ha d’estar compresa dins del curs');return;}
+  if(year.holidays.includes(date)||year.reducedDays.includes(date)){notify('Aquest dia ja està marcat al curs');return;}
+  const days=kind==='holiday'?year.holidays:year.reducedDays;
+  days.push(date);days.sort();finish(kind==='holiday'?'Festiu afegit':'Dia d’horari reduït afegit');return;
+ }
+ if(formKind==='schedule'){
+  if(!group)return;
+  const weekday=Number(get('weekday')),startTime=get('startTime'),endTime=get('endTime');
+  if(!Number.isInteger(weekday)||weekday<0||weekday>6||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){notify('L’horari ha de tenir una hora final posterior a la inicial');return;}
+  if(group.weeklySchedule.some(a=>a.weekday===weekday&&a.startTime<endTime&&a.endTime>startTime)){notify('Aquesta franja se solapa amb una altra del mateix dia');return;}
+  group.weeklySchedule.push({id:newId(),weekday,startTime,endTime,label:get('label').slice(0,80)});finish('Franja horària afegida');
+ }
+});
+
 document.addEventListener('change',event=>{
   const target=event.target;if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement))return;
   const action=target.dataset.action;
