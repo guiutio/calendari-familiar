@@ -91,3 +91,8 @@ El patró comença el **dilluns 12 d’octubre de 2026** i es repeteix cada **70
 | 10 | Pare | Dissabte i diumenge: Mare (19–20/12/2026) |
 
 Les excepcions formen part del patró que es repeteix, no són canvis d'una sola data. Per veure aquest patró amb dades guardades d'una altra versió, ves a **Configuració → Restableix les dades d'exemple**; l'acció demana confirmació i esborra els teus canvis (recomanem exportar un JSON abans). Si les dades eren les mostres anteriors intactes, s'actualitzen soles.
+
+
+## Escoles (v0.1.5)
+
+La pestanya **Escoles** permet crear escoles (nom, adreça i telèfon opcionals excepte el nom), cursos amb dates i nom automàtic «Curs any inici-any final», festius i dies d’horari reduït dins del curs, grups classe, tutor/a opcional, horari setmanal per franges i inscripcions de fills per curs. Les dades s’inclouen a IndexedDB i a les còpies JSON. Les còpies de versions anteriors sense escoles continuen sent compatibles.
