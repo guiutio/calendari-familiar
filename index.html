@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f6f7f8" />
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('calendari-familiar-theme');
+        const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#101722' : '#f6f7f8';
+      } catch { /* La preferència es carregarà amb l'aplicació */ }
+    })();
+  </script>
   <meta name="description" content="Calendari Familiar: organitza les nits i les rotacions familiars de manera privada, també sense connexió." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />

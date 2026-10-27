@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1.1
+# Calendari Familiar · Web MVP v0.1.2
 
 Prototip funcional **mobile-first** en català per planificar les nits dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -68,3 +68,7 @@ sw.js                    Service Worker / caché offline
 manifest.webmanifest     Metadades PWA
 assets/                  Icones
 ```
+
+## Aparença (v0.1.2)
+
+A **Configuració → Aparença** es pot seleccionar **Automàtic** (segueix el tema del sistema), **Clar** o **Fosc**. La preferència es desa amb les dades locals, s’inclou al fitxer exportat i els fitxers de còpies anteriors continuen sent compatibles.

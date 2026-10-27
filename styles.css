@@ -189,3 +189,59 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .settings-item:not(.guardian)>.field:nth-child(2) { grid-column:1 / 3;grid-row:2; }
   .settings-item:not(.guardian)>.delete-icon { grid-column:2;grid-row:1; }
 }
+
+/* Aparença configurable: la classe s'aplica a <html> abans de mostrar el calendari. */
+.theme-options { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px; }
+.theme-choice { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:75px;padding:10px 5px;border-radius:12px;border:1px solid #e5eaf1;background:#f8fafc;color:#63728a;font-size:12px;font-weight:700; }
+.theme-choice.is-selected { border-color:#6089bd;background:#edf4ff;color:#294d79;box-shadow:0 0 0 1px #6089bd; }
+.theme-choice:focus-visible { outline:3px solid #8bb3ee;outline-offset:2px; }
+:root[data-theme="dark"] { color-scheme:dark;color:#e5ecf6;background:#101722; }
+:root[data-theme="dark"] body { background:#101722;color:#e5ecf6; }
+:root[data-theme="dark"] .sidebar { background:#141e2c;border-color:#2c394b; }
+:root[data-theme="dark"] .brand-mark { background:#37577c; }
+:root[data-theme="dark"] .brand-caption,:root[data-theme="dark"] .side-foot,:root[data-theme="dark"] .footer { color:#99a8bc; }
+:root[data-theme="dark"] .side-foot strong { color:#c2cfdf; }
+:root[data-theme="dark"] .nav-button { color:#a6b5cb; }
+:root[data-theme="dark"] .nav-button.active { background:#253a55;color:#bfdafe; }
+:root[data-theme="dark"] .calendar-card,:root[data-theme="dark"] .card { background:#192436;border-color:#304058;box-shadow:0 8px 28px #050c1733; }
+:root[data-theme="dark"] .page-subtitle,:root[data-theme="dark"] .eyebrow,:root[data-theme="dark"] .section-description,:root[data-theme="dark"] .duration-help,:root[data-theme="dark"] .settings-note,:root[data-theme="dark"] .sheet-subtitle { color:#a6b5cb; }
+:root[data-theme="dark"] .field label,:root[data-theme="dark"] .field-label,:root[data-theme="dark"] .legend-entry { color:#b1c2d7; }
+:root[data-theme="dark"] .btn-icon,:root[data-theme="dark"] .filter-button,:root[data-theme="dark"] .soft-btn,:root[data-theme="dark"] .rotation-cell { background:#233148;border-color:#3b4b63;color:#d5e1f1; }
+:root[data-theme="dark"] .calendar-nav .btn-icon { background:#26364f; }
+:root[data-theme="dark"] .day-cell { background:#1b2a3d;color:#e4ecf8; }
+:root[data-theme="dark"] .day-cell:hover { background:#253950; }
+:root[data-theme="dark"] .day-cell.other-month { background:#172336;opacity:.68; }
+:root[data-theme="dark"] .day-cell.today { background:#274363; }
+:root[data-theme="dark"] .day-cell.today .day-number { background:#86b9f3;color:#111c2c; }
+:root[data-theme="dark"] .month-grid { background:#33445c;border-color:#33445c; }
+:root[data-theme="dark"] .weekdays span,:root[data-theme="dark"] .rotation-week-title,:root[data-theme="dark"] .rotation-cell .small-day { color:#b3c0d2; }
+:root[data-theme="dark"] .change-dot { background:#bbcadb; }
+:root[data-theme="dark"] .birth-label { color:#f0bb7f; }
+:root[data-theme="dark"] .tip-card { background:#253750;color:#c1d5f0; }
+:root[data-theme="dark"] .tip-card strong,:root[data-theme="dark"] .tip-card svg { color:#c7e0fc; }
+:root[data-theme="dark"] .field input,:root[data-theme="dark"] .field select,:root[data-theme="dark"] .editable-text { background:#111c2d;border-color:#40516a;color:#edf3fb; }
+:root[data-theme="dark"] input::placeholder { color:#9daec4; }
+:root[data-theme="dark"] .secondary-btn,:root[data-theme="dark"] .week-fill-btn { background:#2b4160;color:#c6dffd; }
+:root[data-theme="dark"] .primary-btn { background:#497cb5;color:#fff; }
+:root[data-theme="dark"] .danger-btn { background:#47272e;color:#ffb6bc; }
+:root[data-theme="dark"] .sample-tag { background:#423727;color:#f2d09e;border-color:#695337; }
+:root[data-theme="dark"] .rotation-cell { background:#202e43; }
+:root[data-theme="dark"] .settings-item .delete-icon { background:#38272e;border-color:#59404d;color:#ffb3bd; }
+:root[data-theme="dark"] .status-good { color:#9bd6bd; }
+:root[data-theme="dark"] hr,:root[data-theme="dark"] .settings-item:not(.guardian)+.settings-item:not(.guardian) { border-color:#34445a; }
+:root[data-theme="dark"] .sheet { background:#192436;box-shadow:0 -18px 54px #02081066; }
+:root[data-theme="dark"] .sheet-handle { background:#5f7087; }
+:root[data-theme="dark"] .sheet-close { background:#2c3d53;color:#d4dfef; }
+:root[data-theme="dark"] .sheet-section-label,:root[data-theme="dark"] .member-source { color:#aebed2; }
+:root[data-theme="dark"] .option,:root[data-theme="dark"] .day-member,:root[data-theme="dark"] .guardian-choice { background:#202f44;border-color:#3b4b63;color:#e3ebf7; }
+:root[data-theme="dark"] .option.selected,:root[data-theme="dark"] .guardian-choice.is-selected { border-color:#70a6e3;background:#274364;color:#e6f1ff; }
+:root[data-theme="dark"] .badge-soft { background:#30445f;color:#c7d6e9; }
+:root[data-theme="dark"] .empty-state,:root[data-theme="dark"] .loading-state { color:#adbed3; }
+:root[data-theme="dark"] .toast { background:#e6eef9;color:#142235;box-shadow:0 8px 25px #050e20a3; }
+:root[data-theme="dark"] .theme-choice { background:#202e43;color:#aebfd5;border-color:#3a4b63; }
+:root[data-theme="dark"] .theme-choice.is-selected { background:#294b73;color:#e4f2ff;border-color:#76a7de;box-shadow:0 0 0 1px #76a7de; }
+@media(max-width:900px) {
+  :root[data-theme="dark"] .mobile-tabs { background:#172334f2;border-color:#34445b; }
+  :root[data-theme="dark"] .mobile-tab { color:#aab9cf; }
+  :root[data-theme="dark"] .mobile-tab.active { color:#a9d1ff; }
+}

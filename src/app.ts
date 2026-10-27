@@ -2,7 +2,8 @@
 type Child = { id: string; name: string; birthDate: string };
 type Guardian = { id: string; name: string; color: string };
 type Rotation = { startDate: string; length: number; assignments: Record<string, string[]> };
-type Preferences = { visibleChildren: string[]; visibleGuardians: string[] };
+type ThemeMode = 'auto' | 'light' | 'dark';
+type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; theme: ThemeMode };
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; preferences: Preferences };
 type Tab = 'calendar' | 'rotation' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | null;
@@ -31,7 +32,10 @@ const icons: Record<string,string> = {
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
   pencil:'<path d="m15 5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"/>',
   home:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-8h6v8"/>',
-  copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>'
+  copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>',
+  moon:'<path d="M20.9 13a9 9 0 0 1-9.9-9.9A9 9 0 1 0 20.9 13Z"/>',
+  monitor:'<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22h8M12 18v4"/>'
 };
 function icon(name:string,size=19) {return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||''}</svg>`;}
 function escapeHtml(value:unknown):string {return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]??c));}
@@ -53,9 +57,10 @@ function seedState():AppState {
     children:[{id:'elna',name:'Elna',birthDate:''},{id:'blai',name:'Blai',birthDate:''}],
     guardians:[{id:'pare',name:'Pare',color:'#8bb8e8'},{id:'mare',name:'Mare',color:'#efafc3'}],
     rotation:{startDate:localDate(monday),length:14,assignments:{elna:[...sequence],blai:[...sequence]}},
-    overrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare']}
+    overrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],theme:'auto'}
   };
 }
+function validTheme(value:unknown):ThemeMode {return value==='light'||value==='dark'?value:'auto';}
 function isValidDate(s:string) {return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s))===s;}
 function cleanState(raw:unknown):AppState {
   if(!raw || typeof raw!=='object')throw Error('Fitxer sense dades vàlides');
@@ -71,7 +76,7 @@ function cleanState(raw:unknown):AppState {
   for(const child of children){const seq=obj.rotation.assignments?.[child.id];if(!Array.isArray(seq)||seq.length!==length||seq.some(x=>!validGuardians.has(x)))throw Error('El patró de nits està incomplet');assignments[child.id]=[...seq];}
   const overrides:Record<string,string>={};
   for(const [key,value] of Object.entries(obj.overrides)) {const [date,childId]=key.split('|');if(date && childId && isValidDate(date)&&children.some(c=>c.id===childId)&&validGuardians.has(value))overrides[key]=value;}
-  return {version:1,children,guardians,rotation:{startDate:obj.rotation.startDate,length,assignments},overrides,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id)}};
+  return {version:1,children,guardians,rotation:{startDate:obj.rotation.startDate,length,assignments},overrides,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),theme:validTheme(obj.preferences.theme)}};
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
@@ -112,6 +117,16 @@ let rotationDraft:Rotation|null=null;
 let rotationUnit:'days'|'weeks'='weeks';
 let toastTimer:number|null=null;
 let writeQueue:Promise<void>=Promise.resolve();
+const themeMedia=window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  const mode=validTheme(state.preferences.theme);
+  const effective=mode==='auto'?(themeMedia.matches?'dark':'light'):mode;
+  document.documentElement.dataset.theme=effective;
+  document.documentElement.style.colorScheme=effective;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',effective==='dark'?'#101722':'#f6f7f8');
+  try{localStorage.setItem('calendari-familiar-theme',mode);}catch{/* Emmagatzematge opcional */}
+}
+themeMedia.addEventListener?.('change',()=>{if(state.preferences.theme==='auto')applyTheme();});
 async function openDB():Promise<IDBDatabase> {return new Promise((resolve,reject)=>{
   const request=indexedDB.open(DB_NAME,1);
   request.onupgradeneeded=()=>{const database=request.result;if(!database.objectStoreNames.contains(DB_STORE)) database.createObjectStore(DB_STORE);};
@@ -139,7 +154,7 @@ function saveState(){
     else if(storageMode==='localStorage')localStorage.setItem('calendari-familiar-v1',JSON.stringify(snapshot));
   }).catch(e=>{console.error('No s’han desat els canvis',e);notify('No s’ha pogut desar. Exporta una còpia.');});
 }
-function update(){saveState();render();}
+function update(){applyTheme();saveState();render();}
 function guardian(id:string):Guardian|undefined {return state.guardians.find(g=>g.id===id);}
 function childById(id:string):Child|undefined{return state.children.find(c=>c.id===id);}
 function defaultGuardian(){return state.guardians[0]?.id??'';}
@@ -163,7 +178,7 @@ function layout(content:string){return `<div class="app-layout"><aside class="si
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.1 · Privat per disseny</div></div></main>
+  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.2 · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function calendarPage(){
   const today=localDate(new Date());
@@ -212,6 +227,8 @@ function rotationPage(){
 function settingsPage(){
   const storageDescription=storageMode==='indexeddb'?'IndexedDB · desat automàtic':storageMode==='localStorage'?'LocalStorage · mode alternatiu':'Sense persistència garantida';
   return `<header class="page-heading"><div><div class="eyebrow">PREFERÈNCIES</div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
+  <section class="card appearance-card"><h2 class="section-title">Aparença</h2><p class="section-description">Tria el tema de l'aplicació. Automàtic segueix l'aparença de l'iPhone.</p>
+  <div class="theme-options" role="group" aria-label="Mode d’aparença">${([['auto','Automàtic','monitor'],['light','Clar','sun'],['dark','Fosc','moon']] as const).map(([mode,label,glyph])=>`<button type="button" class="theme-choice ${validTheme(state.preferences.theme)===mode?'is-selected':''}" data-action="set-theme" data-theme-mode="${mode}" aria-pressed="${validTheme(state.preferences.theme)===mode}">${icon(glyph,19)}<span>${label}</span></button>`).join('')}</div></section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus',14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari.</p>
   ${state.children.map(c=>`<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" ${state.children.length===1?'disabled':''}>${icon('trash',16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
@@ -297,11 +314,12 @@ async function importData(file:File){
     state=imported;rotationDraft=null;sheet=null;update();notify('Dades importades correctament');
   }catch(err){notify(err instanceof Error?err.message:'No es pot importar aquest fitxer');}
 }
-async function resetData(){if(!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))return;state=seedState();rotationDraft=null;sheet=null;update();notify('Dades de mostra restablertes');}
+async function resetData(){if(!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))return;const theme=state.preferences.theme;state=seedState();state.preferences.theme=theme;rotationDraft=null;sheet=null;update();notify('Dades de mostra restablertes');}
 function clickAction(button:HTMLElement){
   const action=button.dataset.action;
   switch(action){
     case 'tab':changeTab(button.dataset.tab as Tab);break;
+    case 'set-theme':state.preferences.theme=validTheme(button.dataset.themeMode);update();break;
     case 'open-filters':sheet={type:'filters'};render();break;
     case 'close-sheet':sheet=null;render();break;
     case 'today':{const now=new Date();viewMonth=now.getMonth();viewYear=now.getFullYear();render();break;}
@@ -389,7 +407,7 @@ document.addEventListener('change',event=>{
   else if(target instanceof HTMLInputElement&&target.id==='import-file'&&target.files?.[0]){void importData(target.files[0]);target.value='';}
 });
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sheet){sheet=null;render();}});
-async function init(){await loadState();render();if('serviceWorker'in navigator && location.protocol!=='file:'){
+async function init(){await loadState();applyTheme();render();if('serviceWorker'in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service worker no registrat:',err));
 }}
 void init();
