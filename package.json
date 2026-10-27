@@ -1,0 +1,11 @@
+{
+  "name": "calendari-familiar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp build/app.js app.js",
+    "serve": "python3 -m http.server 8080"
+  },
+  "description": "Web app local-first per a calendari familiar. Sense dependències en producció."
+}
