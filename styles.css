@@ -555,3 +555,29 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .timeline-zoom-toolbar label,:root[data-theme="dark"] .timeline-zoom-toolbar output {color:#d3e3f8;}
 :root[data-theme="dark"] .timeline-zoom-button {border-color:#516c8b;background:#2c405d;color:#e7f2ff;}
 @media(max-width:560px){.timeline-zoom-toolbar{margin:7px 8px 12px;gap:6px 8px;padding:8px;}.timeline-zoom-toolbar input[type="range"]{min-width:80px;}.timeline-zoom-toolbar output{min-width:42px;}}
+
+/* v0.5.2 · A la setmana, el moviment vertical pertany a la pàgina, no a la graella. */
+.week-timeline {padding:5px 8px 18px;margin-inline:8px;}
+.week-timeline-viewport {
+  box-sizing:border-box;
+  width:calc(100% - 32px);
+  max-width:calc(100% - 32px);
+  margin-inline:auto;
+  height:auto;
+  max-height:none;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  overscroll-behavior-y:auto;
+  touch-action:pan-x pan-y;
+}
+.day-timeline-viewport[data-zoom="25"] .day-night-subtitle,
+.day-timeline-viewport[data-zoom="25"] .day-school-label,
+.day-timeline-viewport[data-zoom="25"] .day-school-kind,
+.day-timeline-viewport[data-zoom="25"] .day-night-title {display:none;}
+.day-timeline-viewport[data-zoom="25"] .day-night-block,
+.day-timeline-viewport[data-zoom="25"] .day-school-block {padding-top:1px;padding-bottom:1px;}
+@media (max-width:560px) {
+  .week-timeline {margin-inline:4px;padding-inline:6px;}
+  .week-timeline-viewport {width:calc(100% - 32px);max-width:calc(100% - 32px);}
+}

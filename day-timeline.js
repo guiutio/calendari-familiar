@@ -46,13 +46,14 @@
     }).join('');
     return columns;
   }
-  function renderWeek(startDate,days,children,zoom=100) {
-    const safeZoom=[50,75,100,125,150].includes(zoom)?zoom:100;
+  function renderWeek(startDate,days,children,zoom=50) {
+    const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
     const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
     const height=DAY_MINUTES*pxPerMinute;
-    const ticks=Array.from({length:25},(_,i)=>
-      `<span class="day-time-tick" style="top:${i*60*pxPerMinute}px">${fmt(i*60)}</span>`).join('');
+    const tickStep=safeZoom===25?120:60;
+    const ticks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>
+      `<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
     const childHeaders=children.map(c=>`<span class="week-child-label">${escape(c.name)}</span>`).join('');
     const head=days.map(day=>`<div class="week-day-header">
       <button type="button" class="week-date-button" data-action="show-calendar-day" data-date="${escape(day.date)}" title="Obre el dia ${escape(day.label)}">${escape(day.label)}</button>
@@ -80,19 +81,20 @@
       <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=100) {
-    const safeZoom=[50,75,100,125,150].includes(zoom)?zoom:100;
+  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50) {
+    const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
     const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
     const height=DAY_MINUTES*pxPerMinute;
-    const tickMarks=Array.from({length:25},(_,i)=>`<span class="day-time-tick" style="top:${i*60*pxPerMinute}px">${fmt(i*60)}</span>`).join('');
+    const tickStep=safeZoom===25?120:60;
+    const tickMarks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>`<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
     const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute);
     const list=children.map(child=>{
       const nights=nightSegments[child.id]??[];
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
     }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
-      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
+      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px;height:${Math.min(768,Math.ceil(height+42))}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
         <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*145}px">
           <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
           <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${tickMarks}</div>${columns}</div>

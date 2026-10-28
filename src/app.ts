@@ -87,8 +87,8 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.5.1';
-const TIMELINE_ZOOM_LEVELS:readonly number[]=[50,75,100,125,150];
+const APP_VERSION = '0.5.2';
+const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
 const DB_NAME = 'calendari-familiar-db';
@@ -152,7 +152,7 @@ function seedState():AppState {
     children:[{id:'elna',name:'Elna',birthDate:''},{id:'blai',name:'Blai',birthDate:''}],
     guardians:[{id:'pare',name:'Pare',color:'#8bb8e8'},{id:'mare',name:'Mare',color:'#efafc3'}],
     rotation:{startDate:DEMO_START_DATE,length:sequence.length,assignments:{elna:[...sequence],blai:[...sequence]},changeTime:DEFAULT_CHANGE_TIME},
-    overrides:{},bandOverrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:100},schools:[]
+    overrides:{},bandOverrides:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50},schools:[]
   };
 }
 const SCHOOL_PALETTE = ['#74c6a3','#f0be75','#afa4e6','#7bbcc9','#d3a1cd','#bbc773','#d4a68f','#87b8e1'];
@@ -171,7 +171,7 @@ function suggestedSchoolColor(schools:School[]):string{
 }
 function validTheme(value:unknown):ThemeMode {return value==='light'||value==='dark'?value:'auto';}
 function validFontSize(value:unknown):FontSize{return value==='large'||value==='xlarge'?value:'normal';}
-function validTimelineZoom(value:unknown):number{return typeof value==='number'&&TIMELINE_ZOOM_LEVELS.includes(value)?value:100;}
+function validTimelineZoom(value:unknown):number{return typeof value==='number'&&TIMELINE_ZOOM_LEVELS.includes(value)?value:50;}
 function isValidDate(s:string) {return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s))===s;}
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
 /** Horari ordinari general de l'escola, independent dels grups. */
@@ -576,7 +576,7 @@ function calendarPage(){
     ${calendarView==='day'||calendarView==='week'?`<div class="timeline-zoom-toolbar" role="group" aria-label="Zoom vertical de les hores">
       <label for="timeline-zoom">Zoom</label>
       <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="-1" aria-label="Allunya el zoom per veure més hores" ${zoomIndex===0?'disabled':''}>−</button>
-      <input id="timeline-zoom" data-action="timeline-zoom" type="range" min="0" max="4" step="1" value="${zoomIndex}" aria-label="Zoom de la línia temporal" aria-valuetext="${zoom} per cent" />
+      <input id="timeline-zoom" data-action="timeline-zoom" type="range" min="0" max="5" step="1" value="${zoomIndex}" aria-label="Zoom de la línia temporal" aria-valuetext="${zoom} per cent" />
       <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="1" aria-label="Apropa el zoom per veure més detall" ${zoomIndex===TIMELINE_ZOOM_LEVELS.length-1?'disabled':''}>+</button>
       <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
     </div>`:''}
