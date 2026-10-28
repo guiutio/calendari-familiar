@@ -564,7 +564,7 @@ function calendarPage() {
             const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
             const schoolCount = schoolActivities(date, children).length;
             return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Toca per veure les franges i els fills.">
-        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}${schoolCount ? `<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount} act.</span>` : ''}</span>
+        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}${schoolCount ? `<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount}</span>` : ''}</span>
         ${miniBands(date, children, bands)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
       </button>`;

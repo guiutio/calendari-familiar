@@ -51,7 +51,7 @@ Aquest prototip de validació és **TypeScript + DOM natiu** per poder-lo execut
 
 ## Limitacions actuals
 
-- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.3.0.
+- Les vistes **diària i setmanal** mostren activitats escolars a escala horària proporcional; la vista **mensual** utilitza indicadors compactes i permet obrir-ne el detall per dia.
 - No inclou rotacions amb dates d'inici específiques per fill ni múltiples patrons alhora: una rotació global, independentment de les assignacions per fill.
 - No hi ha comptes ni sincronització entre dispositius. Cada origin web/navegador disposa de dades independents.
 - Les dades locals poden desaparèixer en eliminar dades del lloc, de l'app o per polítiques del navegador. **Exporta còpies periòdicament.**
@@ -133,7 +133,7 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - **Horari reduït específic:** si el resultat automàtic no coincideix amb la realitat, pots crear una còpia independent i modificar-la, afegir-hi franges o eliminar-ne. Permet horaris específics per grup o per fill. Les activitats específiques han de ser dins de la finestra i no poden solapar-se.
 - **Herència i recuperació:** els fills hereten l'horari reduït específic del grup, si existeix; en cas contrari s'utilitza el seu horari ordinari retallat. Recuperar l'horari de referència descarta les modificacions reduïdes, no les ordinàries.
 - **Validació i migració:** les dades de 0.1.9 i les còpies JSON anteriors continuen funcionant. Les noves dades es conserven en exportar/importar; es rebutgen intervals invàlids i franges fora dels límits, i es netegen les dades d'un fill en canviar de grup o eliminar-lo.
-- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.3.0**.
+- **Calendari:** en aquella versió es conservà la representació bàsica; des de la **v0.3.0** també es poden veure les activitats amb hores reals.
 
 ### Prova manual de la 0.1.10
 

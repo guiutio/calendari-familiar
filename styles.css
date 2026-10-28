@@ -468,3 +468,8 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .school-timeline-reduced {background:#51462f;color:#f2d69c;}
 :root[data-theme="dark"] .school-timeline-empty {color:#bccce0;}
 @media(max-width:560px) {.school-timeline {padding:8px;margin:12px 0;}.school-month-count {font-size:calc(7px * var(--font-scale,1));}}
+
+/* Resum mensual llegible fins i tot en amplades petites. */
+.school-month-count {font-size:calc(10px * var(--font-scale,1));line-height:1.2;letter-spacing:-.3px;}
+.school-month-count::before {content:'🏫';font-size:calc(9px * var(--font-scale,1));padding-right:1px;}
+@media(max-width:560px) {.school-month-count {font-size:calc(9px * var(--font-scale,1));}}
