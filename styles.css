@@ -581,3 +581,29 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .week-timeline {margin-inline:4px;padding-inline:6px;}
   .week-timeline-viewport {width:calc(100% - 32px);max-width:calc(100% - 32px);}
 }
+
+/* v0.5.3 · Dia i Setmana: desplaçament vertical de la pàgina completa,
+   marges tàctils i columnes de fills més estretes per veure més informació. */
+.day-timeline {margin:5px 8px 18px;padding:5px 8px 12px;min-width:0;}
+.day-timeline-viewport {
+  box-sizing:border-box;
+  width:calc(100% - 32px);
+  max-width:calc(100% - 32px);
+  margin-inline:auto;
+  height:auto;
+  max-height:none;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  overscroll-behavior-y:auto;
+  touch-action:pan-x pan-y;
+}
+.day-timeline-inner {width:max-content;min-width:0;}
+.day-timeline-headers,.day-timeline-grid {grid-template-columns:52px repeat(var(--day-child-count),98px);}
+.week-timeline-inner {width:max-content;min-width:0;}
+.week-timeline-head,.week-timeline-grid {grid-template-columns:52px repeat(var(--week-day-count),minmax(0,calc(var(--week-child-count) * 98px)));}
+.week-child-headers,.week-date-columns {grid-template-columns:repeat(var(--week-child-count),98px);}
+@media(max-width:560px) {
+  .day-timeline {margin-inline:4px;padding-inline:6px;}
+  .day-timeline-viewport {width:calc(100% - 32px);max-width:calc(100% - 32px);}
+}
