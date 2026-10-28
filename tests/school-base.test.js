@@ -48,11 +48,11 @@ test('respecta festius i jornades reduïdes sense inventar hores',()=>{
 
 test('interfície ordinària d’escola i absència de personalització individual',()=>{
  const ts=read('src/app.ts'),html=read('index.html'),sw=read('sw.js'),source=read('app.js');
- assert.match(ts,/function schoolBasePanel\(/);
+ assert.match(ts,/function schoolMembershipPanel\(/);
  assert.match(ts,/data-action="school-membership-toggle"/);
- assert.match(ts,/data-action="school-schedule-add"/);
+ assert.match(ts,/data-action="ordinary-window-edit"/);
  assert.doesNotMatch(ts,/Personalitza l'horari/);
- assert.match(source,/case 'school-schedule-add'/);
- assert.match(html,/school-schedule-core\.js\?v=0\.3\.1/);
- assert.match(sw,/school-schedule-core\.js\?v=0\.3\.1/);
+ assert.match(source,/case 'ordinary-window-edit'/);
+ assert.match(html,/school-schedule-core\.js\?v=0\.3\.2/);
+ assert.match(sw,/school-schedule-core\.js\?v=0\.3\.2/);
 });

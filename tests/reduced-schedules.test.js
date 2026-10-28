@@ -98,7 +98,7 @@ test('rebutja hores reduïdes invàlides i sessions especials fora de l’interv
 });
 
 test('el formulari d’hores reduïdes és accessible i es mostra amb les dades actuals',()=>{
-  assert.match(js,/\['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'schoolScheduleForm', 'scheduleForm'\]/);
+  assert.match(js,/\['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'\]/);
   const formFactory=new Function('sheet','schoolById','yearById','schoolYearName','escapeHtml','icon',
     part('function schoolFormMarkup()', '/** Festius/reducció de tots els centres')+
     '\nreturn schoolFormMarkup();');

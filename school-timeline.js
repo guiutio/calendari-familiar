@@ -21,7 +21,7 @@
             if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)continue;
             result.push({id:session.id,childId:child.id,schoolId:school.id,schoolName:school.name,color:school.color,
               startTime:session.startTime,endTime:session.endTime,start,end,
-              kind:types[session.kind]??types.classe,description:session.label??''});
+              kind:session.id.startsWith('__school_window__')?'Jornada escolar':(types[session.kind]??types.classe),description:session.label??''});
           }
         }
       }

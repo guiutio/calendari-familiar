@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.3.1
+# Calendari Familiar · Web MVP v0.3.2
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -199,3 +199,12 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Les jornades reduïdes continuen depenent de l'interval definit al curs i els dies festius no presenten activitats. Els horaris especials de grup continuen disponibles.
 - La còpia de dades antiga s'importa sense errors; les noves propietats d'horari ordinari i fills de l'escola es creen buides en importar fitxers antics.
 - No es canvien nits, rotacions ni preferències de mida de lletra. Propera funcionalitat v0.4.0.
+
+## v0.3.2: correcció de les hores generals del curs escolar
+
+- **Escoles → Curs → Calendari escolar** incorpora «Hores de jornada ordinària», amb un únic inici i final per a tots els dies lectius normals del curs, al mateix nivell que les hores de jornada reduïda.
+- **L’escola no defineix activitats per franges.** Es retira l’editor de franges generals d’escola introduït a la 0.3.1. L’interval ordinari no indica si els fills fan classe, pati o mengen.
+- **Cada grup** defineix les seves pròpies activitats i hores dins d’aquest interval ordinari. Les activitats d’un grup poden ser diferents i en hores diferents de les d’un altre. No es poden crear activitats noves fora de la jornada ordinària.
+- **Calendari:** el temps ordinari d’un fill matriculat es mostra com a «Jornada escolar», mentre les activitats del grup es mostren amb la seva categoria. La jornada normal només s’aplica de dilluns a divendres i s’exclou en festius i dies reduïts; els dies reduïts segueixen el seu interval específic.
+- **Compatibilitat:** les franges generals antigues de la v0.3.1 continuen guardades dins dels JSON i només s’utilitzen com a lectura de compatibilitat en cursos que encara no tenen una jornada ordinària definida. No es perden els horaris de grup ja introduïts.
+- Aquest canvi és una **correcció v0.3.2**, no una nova funcionalitat.
