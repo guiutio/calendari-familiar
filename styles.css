@@ -404,3 +404,10 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .mobile-tabs {position:relative;inset:auto;flex:0 0 auto;width:100%;}
   .sheet {max-height:min(87vh,830px);max-height:min(87dvh,830px);-webkit-overflow-scrolling:touch;}
 }
+
+/* v0.1.13 · Evita el rebot elàstic de Safari iOS amb pantalles curtes. */
+@media (max-width:900px) {
+  html,body,#app,.app-layout {overscroll-behavior-y:none;}
+  .main-area,.sheet {overscroll-behavior-y:none;}
+  .mobile-tabs {overscroll-behavior:none;touch-action:pan-x;}
+}

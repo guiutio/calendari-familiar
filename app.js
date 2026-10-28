@@ -35,7 +35,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.1.12';
+const APP_VERSION = '0.1.13';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';

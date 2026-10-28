@@ -56,7 +56,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.1.12';
+const APP_VERSION = '0.1.13';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
