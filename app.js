@@ -784,21 +784,14 @@ function schoolFormMarkup() {
    <div class="form-row">${field('Inici', 'startTime', 'time', year.reducedWindow?.startTime ?? '', true)}${field('Final', 'endTime', 'time', year.reducedWindow?.endTime ?? '', true)}</div>
    </div>${actions}</form>`;
     }
-    if (sheet.type === 'schoolScheduleForm') {
-        const school = schoolById(sheet.schoolId);
-        if (!school)
+    if (sheet.type === 'ordinaryWindowForm') {
+        const year = yearById(schoolById(sheet.schoolId), sheet.yearId);
+        if (!year)
             return '';
-        const sessionId = sheet.sessionId;
-        const session = school.weeklySchedule.find(a => a.id === sessionId);
-        const weekdaysInput = session
-            ? `<div class="field"><label for="school-weekday">Dia de la setmana</label><select name="weekday" id="school-weekday">${weekLong.map((day, i) => `<option value="${i}" ${session.weekday === i ? 'selected' : ''}>${day}</option>`).join('')}</select></div>`
-            : `<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((day, i) => `<label><input type="checkbox" name="weekdays" value="${i}" ${i < 5 ? 'checked' : ''}/> ${day}</label>`).join('')}</div></fieldset>`;
-        return heading(session ? 'Edita franja de l’escola' : 'Afegeix franja a l’escola', school.name) + `<form data-school-form="schoolSchedule" data-school="${escapeHtml(school.id)}" data-session="${escapeHtml(session?.id ?? '')}"><div class="school-form-fields">
-     ${weekdaysInput}
-     <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? '12:30', true)}</div>
-     <div class="field"><label for="school-session-kind">Tipus de franja</label><select name="kind" id="school-session-kind">${SESSION_KINDS.map(k => `<option value="${k}" ${sessionKind(session?.kind) === k ? 'selected' : ''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
-     ${field('Descripció (opcional)', 'label', 'text', session?.label ?? '', false, 80)}</div>
-     <p class="settings-note">Aquest horari és el mateix per a tota l’escola els dies ordinaris. Les franges del mateix dia no es poden solapar.</p>${actions}</form>`;
+        return heading('Hores de jornada ordinària', schoolYearName(year)) + `<form data-school-form="ordinaryWindow" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}"><div class="school-form-fields">
+      <p class="settings-note">Indica l’hora d’entrada i la de sortida de l’escola els dies lectius normals. Les activitats concretes es defineixen a cada grup.</p>
+      <div class="form-row">${field('Inici', 'startTime', 'time', year.ordinaryWindow?.startTime ?? '', true)}${field('Final', 'endTime', 'time', year.ordinaryWindow?.endTime ?? '', true)}</div>
+    </div>${actions}</form>`;
     }
     if (sheet.type === 'scheduleForm') {
         const school = schoolById(sheet.schoolId), year = yearById(school, sheet.yearId), group = groupById(year, sheet.groupId);
@@ -811,6 +804,7 @@ function schoolFormMarkup() {
             return '';
         const sessionId = sheet.sessionId;
         const reducedWindow = mode === 'reduced' ? year?.reducedWindow : undefined;
+        const ordinaryWindow = mode === 'ordinary' ? year?.ordinaryWindow : undefined;
         if (mode === 'reduced' && !reducedWindow)
             return '';
         const session = entries.find(a => a.id === sessionId);
@@ -819,10 +813,10 @@ function schoolFormMarkup() {
             : `<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((label, i) => `<label><input type="checkbox" name="weekdays" value="${i}" ${i < 5 ? 'checked' : ''}/> ${label}</label>`).join('')}</div></fieldset>`;
         return heading(session ? 'Edita franja horària' : 'Afegeix franja horària', childId ? childById(childId)?.name ?? group.name : group.name) + `<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}" data-child="${escapeHtml(childId)}" data-session="${escapeHtml(session?.id ?? '')}" data-mode="${mode}"><div class="school-form-fields">
   ${weekdaysInput}
-  <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? reducedWindow?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? reducedWindow?.endTime ?? '13:00', true)}</div>
+  <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? reducedWindow?.startTime ?? ordinaryWindow?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? reducedWindow?.endTime ?? ordinaryWindow?.endTime ?? '13:00', true)}</div>
   <div class="field"><label for="session-kind">Tipus d'activitat</label><select name="kind" id="session-kind">${SESSION_KINDS.map(k => `<option value="${k}" ${sessionKind(session?.kind) === k ? 'selected' : ''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
   ${field('Descripció (opcional)', 'label', 'text', session?.label ?? '', false, 80)}</div>
-  <p class="settings-note">Les franges del mateix grup no es poden solapar. Les activitats ordinàries han de quedar dins l’horari general de l’escola. ${reducedWindow ? `La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.` : ''}</p>${actions}</form>`;
+  <p class="settings-note">Les franges del mateix grup no es poden solapar. Les activitats ordinàries han de quedar entre l’inici i el final de la jornada ordinària del curs. ${reducedWindow ? `La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.` : ''}</p>${actions}</form>`;
     }
     return '';
 }
@@ -897,7 +891,7 @@ function sheetMarkup() {
     ${!isNight && manual ? `<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>` : ''}
     <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
     }
-    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'schoolScheduleForm', 'scheduleForm'].includes(sheet.type)) {
+    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
     else if (sheet?.type === 'rotationWeek') {
@@ -1066,6 +1060,14 @@ function clickAction(button) {
             sheet = { type: 'schoolDayForm', schoolId: button.dataset.school, yearId: button.dataset.year, kind: button.dataset.kind === 'holiday' ? 'holiday' : 'reduced' };
             render();
             break;
+        case 'ordinary-window-edit': {
+            const year = yearById(schoolById(button.dataset.school), button.dataset.year);
+            if (!year)
+                break;
+            sheet = { type: 'ordinaryWindowForm', schoolId: button.dataset.school, yearId: button.dataset.year };
+            render();
+            break;
+        }
         case 'reduced-window-edit': {
             const year = yearById(schoolById(button.dataset.school), button.dataset.year);
             if (!year)
@@ -1081,34 +1083,6 @@ function clickAction(button) {
             school.childIds = school.childIds.includes(id) ? school.childIds.filter(x => x !== id) : [...school.childIds, id];
             update();
             notify('Fills associats a l’escola actualitzats');
-            break;
-        }
-        case 'school-schedule-add': {
-            const school = schoolById(button.dataset.school);
-            if (!school)
-                break;
-            sheet = { type: 'schoolScheduleForm', schoolId: school.id };
-            render();
-            break;
-        }
-        case 'school-schedule-edit': {
-            const school = schoolById(button.dataset.school), sessionId = button.dataset.session ?? '';
-            if (!school || !school.weeklySchedule.some(a => a.id === sessionId))
-                break;
-            sheet = { type: 'schoolScheduleForm', schoolId: school.id, sessionId };
-            render();
-            break;
-        }
-        case 'school-schedule-delete': {
-            const school = schoolById(button.dataset.school), id = button.dataset.session ?? '';
-            if (!school)
-                break;
-            const items = school.weeklySchedule.filter(a => a.id !== id);
-            if (items.length === school.weeklySchedule.length)
-                break;
-            school.weeklySchedule = items;
-            update();
-            notify('Franja de l’escola suprimida');
             break;
         }
         case 'schedule-customize': {
@@ -1137,8 +1111,8 @@ function clickAction(button) {
             const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
             if (!school || !group || !scheduleEntriesForEdit(group, '', mode))
                 break;
-            if (mode === 'ordinary' && !school.weeklySchedule.length) {
-                notify('Defineix primer l’horari ordinari de l’escola');
+            if (mode === 'ordinary' && !yearById(school, button.dataset.year)?.ordinaryWindow) {
+                notify('Configura primer les hores de jornada ordinària del curs');
                 break;
             }
             sheet = { type: 'scheduleForm', schoolId: school.id, yearId: button.dataset.year, groupId: group.id, mode };
@@ -1671,8 +1645,8 @@ document.addEventListener('submit', event => {
             notify('Tria un tipus d’activitat vàlid');
             return;
         }
-        if (mode === 'ordinary' && (!school?.weeklySchedule.length || days.some(day => !school.weeklySchedule.some(a => a.weekday === day && a.startTime <= startTime && a.endTime >= endTime)))) {
-            notify('L’activitat ha d’estar completament dins de l’horari de l’escola');
+        if (mode === 'ordinary' && (!year?.ordinaryWindow || startTime < year.ordinaryWindow.startTime || endTime > year.ordinaryWindow.endTime)) {
+            notify('L’activitat ha d’estar dins de les hores de jornada ordinària del curs');
             return;
         }
         if (days.some(day => entries.some(a => a.id !== existing?.id && a.weekday === day && a.startTime < endTime && a.endTime > startTime))) {
