@@ -673,7 +673,20 @@ function schoolFormMarkup():string {
    <div class="form-row">${field('Inici','startTime','time',year.reducedWindow?.startTime??'',true)}${field('Final','endTime','time',year.reducedWindow?.endTime??'',true)}</div>
    </div>${actions}</form>`;
  }
- if(sheet.type==='scheduleForm'){
+ if(sheet.type==='schoolScheduleForm'){
+   const school=schoolById(sheet.schoolId);if(!school)return '';
+   const session=school.weeklySchedule.find(a=>a.id===sheet.sessionId);
+   const weekdaysInput=session
+     ?`<div class="field"><label for="school-weekday">Dia de la setmana</label><select name="weekday" id="school-weekday">${weekLong.map((day,i)=>`<option value="${i}" ${session.weekday===i?'selected':''}>${day}</option>`).join('')}</select></div>`
+     :`<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((day,i)=>`<label><input type="checkbox" name="weekdays" value="${i}" ${i<5?'checked':''}/> ${day}</label>`).join('')}</div></fieldset>`;
+   return heading(session?'Edita franja de l’escola':'Afegeix franja a l’escola',school.name)+`<form data-school-form="schoolSchedule" data-school="${escapeHtml(school.id)}" data-session="${escapeHtml(session?.id??'')}"><div class="school-form-fields">
+     ${weekdaysInput}
+     <div class="form-row">${field('Inici','startTime','time',session?.startTime??'09:00',true)}${field('Final','endTime','time',session?.endTime??'12:30',true)}</div>
+     <div class="field"><label for="school-session-kind">Tipus de franja</label><select name="kind" id="school-session-kind">${SESSION_KINDS.map(k=>`<option value="${k}" ${sessionKind(session?.kind)===k?'selected':''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
+     ${field('Descripció (opcional)','label','text',session?.label??'',false,80)}</div>
+     <p class="settings-note">Aquest horari és el mateix per a tota l’escola els dies ordinaris. Les franges del mateix dia no es poden solapar.</p>${actions}</form>`;
+  }
+  if(sheet.type==='scheduleForm'){
   const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId),group=groupById(year,sheet.groupId);
   if(!group)return '';
   const childId=group.childIds.includes(sheet.childId??'')?sheet.childId??'':'';
@@ -692,7 +705,7 @@ function schoolFormMarkup():string {
   <div class="form-row">${field('Inici','startTime','time',session?.startTime??reducedWindow?.startTime??'09:00',true)}${field('Final','endTime','time',session?.endTime??reducedWindow?.endTime??'13:00',true)}</div>
   <div class="field"><label for="session-kind">Tipus d'activitat</label><select name="kind" id="session-kind">${SESSION_KINDS.map(k=>`<option value="${k}" ${sessionKind(session?.kind)===k?'selected':''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
   ${field('Descripció (opcional)','label','text',session?.label??'',false,80)}</div>
-  <p class="settings-note">Les franges d'un mateix dia no es poden solapar. Els horaris individuals són independents dels del grup. ${reducedWindow?`La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.`:''}</p>${actions}</form>`;
+  <p class="settings-note">Les franges del mateix grup no es poden solapar. Les activitats ordinàries han de quedar dins l’horari general de l’escola. ${reducedWindow?`La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.`:''}</p>${actions}</form>`;
  }
  return '';
 }
@@ -759,7 +772,7 @@ function sheetMarkup(){
     ${isNight&&overridden(date,childId)?`<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>`:''}
     ${!isNight&&manual?`<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>`:''}
     <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
-  } else if(sheet && ['schoolForm','yearForm','groupForm','schoolDayForm','reducedWindowForm','scheduleForm'].includes(sheet.type)){
+  } else if(sheet && ['schoolForm','yearForm','groupForm','schoolDayForm','reducedWindowForm','schoolScheduleForm','scheduleForm'].includes(sheet.type)){
     contents=schoolFormMarkup();
   } else if(sheet?.type==='rotationWeek'){
     const {childId,week}=sheet,c=childById(childId),r=rotationDraft??state.rotation;
@@ -817,7 +830,7 @@ function removeChild(id:string){
   if(state.children.length<2)return;
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
   state.children=state.children.filter(x=>x.id!==id);delete state.rotation.assignments[id];
-  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];})));
+  state.schools.forEach(s=>{s.childIds=s.childIds.filter(x=>x!==id);s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];}));});
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   Object.keys(state.bandOverrides).forEach(key=>{if(key.split('|')[1]===id)delete state.bandOverrides[key];});
   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;update();
@@ -1042,7 +1055,7 @@ document.addEventListener('submit',event=>{
   if(!/^#[0-9a-f]{6}$/.test(color)){notify('Tria un color vàlid');return;}
   if(state.schools.some(s=>s.id!==school?.id&&s.color.toLowerCase()===color)){notify('Aquest color ja correspon a una altra escola');return;}
   if(school){school.name=name;school.address=get('address').slice(0,200);school.phone=get('phone').slice(0,50);school.color=color;finish('Escola actualitzada');}
-  else{const id=newId();state.schools.push({id,name,address:get('address').slice(0,200),phone:get('phone').slice(0,50),color,years:[]});schoolNav={schoolId:id};finish('Escola afegida');}
+  else{const id=newId();state.schools.push({id,name,address:get('address').slice(0,200),phone:get('phone').slice(0,50),color,years:[],weeklySchedule:[],childIds:[]});schoolNav={schoolId:id};finish('Escola afegida');}
   return;
  }
  if(formKind==='year'){
