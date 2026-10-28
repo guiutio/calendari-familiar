@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.3.2
+# Calendari Familiar · Web MVP v0.3.3
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -208,3 +208,13 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - **Calendari:** el temps ordinari d’un fill matriculat es mostra com a «Jornada escolar», mentre les activitats del grup es mostren amb la seva categoria. La jornada normal només s’aplica de dilluns a divendres i s’exclou en festius i dies reduïts; els dies reduïts segueixen el seu interval específic.
 - **Compatibilitat:** les franges generals antigues de la v0.3.1 continuen guardades dins dels JSON i només s’utilitzen com a lectura de compatibilitat en cursos que encara no tenen una jornada ordinària definida. No es perden els horaris de grup ja introduïts.
 - Aquest canvi és una **correcció v0.3.2**, no una nova funcionalitat.
+
+## v0.3.3: activitats de grup en jornada reduïda
+
+- A **Escoles → Curs → Grup**, l'apartat anterior «Jornada reduïda del grup» passa a ser **«Activitats en jornada reduïda»**.
+- Si el curs té definides les hores de jornada reduïda, es pot prémer **«+ Activitat»** directament, escollir els dies de la setmana, l'hora inicial/final de cada activitat, el tipus (classe, pati, menjador, extraescolar, altres) i la descripció. Les hores han de quedar dins de l'interval reduït configurat al curs.
+- Les activitats es poden **afegir, editar i suprimir individualment** i també es poden esborrar totes les activitats reduïdes d'un grup. Desapareix l'etapa «Defineix horari específic» que copiava automàticament franges genèriques.
+- En l'editor del grup **només figuren les activitats definides**; no es llisten com a activitats les cinc franges generals «Altres» de 09:00 a 13:00.
+- **Calendari:** en un dia reduït es mostra la jornada escolar com a context entre les hores del curs i les activitats específiques del grup, si n'hi ha. Les activitats ordinàries del grup no s'atribueixen automàticament a dies reduïts. Els dies no marcats com a jornada reduïda continuen mostrant l'horari ordinari.
+- **Compatibilitat:** es preserven les activitats reduïdes que l'usuari havia introduït prèviament, així com els horaris individuals històrics (només lectura). El format de dades es manté.
+- Correcció **v0.3.3** sense canviar la planificació de la v0.4.0.

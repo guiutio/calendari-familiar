@@ -40,7 +40,7 @@ test('festius i reduïdes es respecten, conservant les activitats del grup',()=>
  const children=[{id:'elna',name:'Elna'}];
  const reduced=collect('2026-11-02',children,[school],['centre'],resolver);
  assert.deepEqual(Array.from(reduced,a=>[a.startTime,a.endTime,a.kind]),
- [['10:00','10:30','Classe'],['10:30','11:00','Pati'],['11:00','12:00','Classe']]);
+ [['10:00','12:00','Jornada escolar']]);
  assert.equal(collect('2026-11-03',children,[school],['centre'],resolver).length,0);
  assert.equal(collect('2027-07-01',children,[school],['centre'],resolver).length,0);
 });
