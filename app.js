@@ -31,11 +31,29 @@ function scheduleForSchoolDay(group, year, childId, date) {
     const weekly = year.reducedDays.includes(date) ? reducedScheduleForChild(group, year, childId) : ordinaryScheduleForChild(group, childId);
     return weekly.filter(a => a.weekday === weekday);
 }
+/** Mescla l'horari de centre amb activitats de grup; preserva els registres antics per fill en mode lectura. */
+function schoolScheduleForCalendarDay(school, year, group, childId, date) {
+    if (year && (date < year.startDate || date > year.endDate || year.holidays.includes(date)))
+        return [];
+    const weekday = (parseDate(date).getDay() + 6) % 7;
+    const base = (school.weeklySchedule ?? []).filter(s => s.weekday === weekday);
+    const oldChild = group?.childSchedules && Object.hasOwn(group.childSchedules, childId) ? group.childSchedules[childId] : undefined;
+    const extra = (oldChild ?? group?.weeklySchedule ?? []).filter(s => s.weekday === weekday);
+    const core = window.schoolScheduleCore;
+    const ordinary = core ? core.combine(base, extra) : [...base, ...extra];
+    if (!year?.reducedDays.includes(date))
+        return ordinary;
+    if (!year.reducedWindow)
+        return [];
+    const oldReduced = group?.reducedChildSchedules && Object.hasOwn(group.reducedChildSchedules, childId) ? group.reducedChildSchedules[childId] : undefined;
+    const special = oldReduced ?? group?.reducedWeeklySchedule;
+    return special === undefined ? clippedWeeklySchedule(ordinary, year.reducedWindow) : special.filter(s => s.weekday === weekday);
+}
 function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.3.1';
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -125,6 +143,24 @@ function validTheme(value) { return value === 'light' || value === 'dark' ? valu
 function validFontSize(value) { return value === 'large' || value === 'xlarge' ? value : 'normal'; }
 function isValidDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s)) === s; }
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
+/** Horari ordinari general de l'escola, independent dels grups. */
+function cleanSchoolWeeklySchedule(raw) {
+    if (!Array.isArray(raw) || raw.length > 200)
+        throw Error('L’horari ordinari de l’escola no és vàlid');
+    const ids = new Set();
+    const result = raw.map((x) => {
+        if (!x || typeof x.id !== 'string' || ids.has(x.id) || !Number.isInteger(x.weekday) || x.weekday < 0 || x.weekday > 6 ||
+            !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.endTime) ||
+            x.startTime >= x.endTime || (x.kind !== undefined && !SESSION_KINDS.includes(x.kind)))
+            throw Error('Hi ha una franja ordinària d’escola incorrecta');
+        ids.add(x.id);
+        return { id: x.id, weekday: x.weekday, startTime: x.startTime, endTime: x.endTime, label: typeof x.label === 'string' ? x.label.trim().slice(0, 80) : '', kind: sessionKind(x.kind) };
+    });
+    const ordered = [...result].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+    if (ordered.some((a, i) => i > 0 && ordered[i - 1].weekday === a.weekday && ordered[i - 1].endTime > a.startTime))
+        throw Error('Hi ha franges escolars solapades');
+    return result;
+}
 function cleanSchools(raw, children) {
     if (raw === undefined)
         return [];
@@ -141,7 +177,7 @@ function cleanSchools(raw, children) {
             throw Error('Hi ha una escola invàlida a la còpia');
         schoolIds.add(school.id);
         const preferredColor = typeof school.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(school.color) ? school.color.toLowerCase() : '';
-        const previouslyColored = [...acceptedColors].map((color, i) => ({ id: String(i), name: '', address: '', phone: '', color, years: [] }));
+        const previouslyColored = [...acceptedColors].map((color, i) => ({ id: String(i), name: '', address: '', phone: '', color, years: [], weeklySchedule: [], childIds: [] }));
         const color = preferredColor && !acceptedColors.has(preferredColor) ? preferredColor : suggestedSchoolColor(previouslyColored);
         acceptedColors.add(color);
         const yearIds = new Set();
@@ -220,7 +256,10 @@ function cleanSchools(raw, children) {
             });
             return { id: year.id, startDate: year.startDate, endDate: year.endDate, holidays, reducedDays, groups, reducedWindow };
         });
-        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), color, years };
+        const schoolChildIds = school.childIds === undefined ? [] : school.childIds;
+        if (!Array.isArray(schoolChildIds) || schoolChildIds.length > 30 || schoolChildIds.some(id => typeof id !== 'string' || !childSet.has(id)) || new Set(schoolChildIds).size !== schoolChildIds.length)
+            throw Error('Els fills associats a l’escola no són vàlids');
+        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), color, years, weeklySchedule: cleanSchoolWeeklySchedule(school.weeklySchedule ?? []), childIds: [...schoolChildIds] };
     });
 }
 function cleanState(raw) {
@@ -444,26 +483,26 @@ function schoolForBand(date, childId, band) {
     if (band === 'nit' || band === 'sopar')
         return undefined;
     const weekday = (parseDate(date).getDay() + 6) % 7;
-    return state.schools.find(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => {
-        if (date < y.startDate || date > y.endDate || y.holidays.includes(date))
+    const range = BAND_RANGES[band];
+    if (!range)
+        return undefined;
+    return state.schools.find(s => {
+        if (!state.preferences.visibleSchools.includes(s.id))
             return false;
-        return y.groups.some(group => {
-            if (!group.childIds.includes(childId))
-                return false;
-            const reduced = y.reducedDays.includes(date);
-            if (reduced && !y.reducedWindow)
-                return false; // Cap hora suposada sense configuració explícita.
-            const sessions = scheduleForSchoolDay(group, y, childId, date);
-            // Només es manté el comportament antic per als grups ordinaris sense cap horari introduït.
-            if (!reduced && !sessions.length && !group.weeklySchedule.length && !Object.hasOwn(group.childSchedules ?? {}, childId))
-                return weekday < 5 && (band === 'mati' || band === 'tarda');
-            const range = BAND_RANGES[band];
-            if (!range)
-                return false;
-            const covered = sessions.reduce((sum, a) => sum + Math.max(0, Math.min(timeMinutes(a.endTime), range[1]) - Math.max(timeMinutes(a.startTime), range[0])), 0);
-            return covered >= (range[1] - range[0]) / 2;
-        });
-    }));
+        const year = s.years.find(y => date >= y.startDate && date <= y.endDate);
+        if (s.years.length && !year)
+            return false;
+        if (year?.holidays.includes(date))
+            return false;
+        const group = year?.groups.find(g => g.childIds.includes(childId));
+        if (!s.childIds.includes(childId) && !group)
+            return false;
+        const sessions = schoolScheduleForCalendarDay(s, year, group, childId, date);
+        if (!sessions.length && !s.weeklySchedule.length && !group?.weeklySchedule.length && !year?.reducedDays.includes(date))
+            return !!group && weekday < 5 && (band === 'mati' || band === 'tarda');
+        const covered = sessions.reduce((sum, a) => sum + Math.max(0, Math.min(timeMinutes(a.endTime), range[1]) - Math.max(timeMinutes(a.startTime), range[0])), 0);
+        return covered >= (range[1] - range[0]) / 2;
+    });
 }
 function responsibility(date, childId, band) {
     const none = { type: 'none', name: 'Sense assignar', color: '', source: 'Sense assignació', changed: false };
@@ -485,7 +524,7 @@ function bandKey(date, childId, band) { return `${date}|${childId}|${band}`; }
 function shortChildLabel(c) { return initial(c.name); }
 const schoolCalendarUI = window.schoolCalendarUI;
 function schoolActivities(date, children) {
-    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, scheduleForSchoolDay) ?? [];
+    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, schoolScheduleForCalendarDay) ?? [];
 }
 function schoolReducedDay(date, children) {
     return state.schools.some(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => date >= y.startDate && date <= y.endDate && y.reducedDays.includes(date) && y.groups.some(g => g.childIds.some(id => children.some(c => c.id === id)))));
@@ -621,42 +660,50 @@ function schoolNavButton(label, nav, style = 'school-link') {
 function schoolCrumb(text, nav = {}) {
     return `<button class="school-breadcrumb" type="button" data-action="school-nav" ${nav.schoolId ? `data-school="${escapeHtml(nav.schoolId)}"` : ''} ${nav.yearId ? `data-year="${escapeHtml(nav.yearId)}"` : ''}>${icon('chevronLeft', 15)} ${escapeHtml(text)}</button>`;
 }
-function schoolSchedulePanel(school, year, group) {
-    const childId = group.childIds.includes(schoolNav.scheduleChildId ?? '') ? schoolNav.scheduleChildId ?? '' : '';
-    const child = childById(childId);
-    const own = !!childId && Object.hasOwn(group.childSchedules ?? {}, childId);
-    const editable = !childId || own;
-    const sessions = [...(own ? (group.childSchedules?.[childId] ?? []) : group.weeklySchedule)].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
-    const data = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}"`;
-    const target = (id, name) => `<button type="button" class="school-schedule-target ${id === childId ? 'active' : ''}" aria-pressed="${id === childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
+function schoolBasePanel(school) {
+    const rows = [...school.weeklySchedule].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+    const base = `data-school="${escapeHtml(school.id)}"`;
     return `<section class="card">
-  <div class="panel-header"><h2 class="section-title">Horari escolar ordinari</h2>${editable ? `<button class="secondary-btn" data-action="schedule-add" ${data}>${icon('plus', 14)} Franja</button>` : ''}</div>
-  <p class="section-description">Defineix les activitats que es repeteixen cada setmana. L'horari del grup s'aplica als seus fills mentre no tinguin un horari propi.</p>
-  <div class="school-schedule-targets" role="group" aria-label="Selecciona l'horari">${target('', 'Grup')}${group.childIds.map(id => target(id, childById(id)?.name ?? 'Fill')).join('')}</div>
-  ${child ? (own ? `<div class="school-schedule-notice">Horari personalitzat de <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="soft-btn" data-action="schedule-inherit" ${data}>Recupera l'horari del grup</button></div>` : `<div class="school-schedule-notice">S'aplica l'horari del grup a <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="secondary-btn" data-action="schedule-customize" ${data}>Personalitza l'horari</button></div>`) : '<p class="settings-note">Horari de referència del grup, compartit pels fills sense personalització.</p>'}
-  ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div>${editable ? `<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${data} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${data} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash', 15)}</button></div>` : ''}</div>`).join('') : '<div class="empty-state">Encara no hi ha franges horàries definides.</div>'}
- </section>`;
+    <div class="panel-header"><h2 class="section-title">Horari ordinari de l’escola</h2><button class="secondary-btn" data-action="school-schedule-add" ${base}>${icon('plus', 14)} Franja</button></div>
+    <p class="section-description">Defineix aquí les hores habituals de l’escola, sense crear cap grup. S’apliquen als dies normals; els festius i les jornades reduïdes del curs es tracten a part.</p>
+    ${rows.length ? rows.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="school-schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja de l’escola">${icon('pencil', 15)}</button><button class="delete-icon" data-action="school-schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja de l’escola">${icon('trash', 15)}</button></div></div>`).join('') : '<div class="empty-state">Encara no hi ha horari ordinari. Afegeix les franges de classe, pati o menjador que corresponguin.</div>'}
+  </section>
+  <section class="card">
+    <h2 class="section-title">Fills associats a l’escola</h2>
+    <p class="section-description">Assigna directament els fills a l’escola, sense necessitat de grup. Si també estan inscrits en un grup, es tindran en compte les activitats d’aquell grup.</p>
+    ${state.children.map(c => { const chosen = school.childIds.includes(c.id); return `<button type="button" class="school-child-choice ${chosen ? 'selected' : ''}" data-action="school-membership-toggle" ${base} data-child="${escapeHtml(c.id)}" aria-pressed="${chosen}"><span>${escapeHtml(c.name)}</span>${chosen ? icon('check', 18) : icon('plus', 17)}</button>`; }).join('')}
+  </section>`;
+}
+function schoolSchedulePanel(school, year, group) {
+    const entries = [...group.weeklySchedule].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+    const base = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}"`;
+    return `<section class="card">
+    <div class="panel-header"><h2 class="section-title">Activitats del grup</h2><button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus', 14)} Activitat</button></div>
+    <p class="section-description">L’horari ordinari és el de l’escola. Aquí pots afegir activitats específiques del grup dins d’aquelles hores (per exemple, pati, menjador o una classe). Substitueixen el tram equivalent de l’horari general, no el modifiquen. No hi ha horaris ordinaris diferents per fill.</p>
+    ${!school.weeklySchedule.length ? '<p class="school-schedule-notice">Configura primer l’horari ordinari a la fitxa de l’escola.</p>' : ''}
+    ${entries.length ? entries.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita l’activitat">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix l’activitat">${icon('trash', 15)}</button></div></div>`).join('') : '<p class="settings-note">Aquest grup encara no té activitats afegides. S’aplica l’horari general de l’escola.</p>'}
+  </section>`;
 }
 function scheduleEntriesForEdit(group, childId, mode) {
-    return mode === 'reduced'
-        ? (childId ? group.reducedChildSchedules?.[childId] : group.reducedWeeklySchedule)
-        : (childId ? group.childSchedules?.[childId] : group.weeklySchedule);
+    if (childId)
+        return undefined; // Els horaris individuals antics són de lectura, però no es poden continuar editant.
+    return mode === 'reduced' ? group.reducedWeeklySchedule : group.weeklySchedule;
 }
 function schoolReducedPanel(school, year, group) {
-    const childId = group.childIds.includes(schoolNav.scheduleChildId ?? '') ? schoolNav.scheduleChildId ?? '' : '';
-    const own = childId ? Object.hasOwn(group.reducedChildSchedules ?? {}, childId) : group.reducedWeeklySchedule !== undefined;
-    const sessions = reducedScheduleForChild(group, year, childId).sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
-    const base = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}" data-mode="reduced"`;
-    const target = (id, name) => `<button type="button" class="school-schedule-target ${id === childId ? 'active' : ''}" aria-pressed="${id === childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
+    const own = group.reducedWeeklySchedule !== undefined;
+    const base = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-mode="reduced"`;
+    const core = window.schoolScheduleCore;
+    const ordinary = core ? core.combine(school.weeklySchedule, group.weeklySchedule) : [...school.weeklySchedule, ...group.weeklySchedule];
+    const automatic = year.reducedWindow ? clippedWeeklySchedule(ordinary, year.reducedWindow) : [];
+    const sessions = [...(group.reducedWeeklySchedule ?? automatic)].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
     return `<section class="card">
- <div class="panel-header"><h2 class="section-title">Jornada reduïda</h2>${own && year.reducedWindow ? `<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus', 14)} Franja</button>` : ''}</div>
- <p class="section-description">De manera automàtica, les activitats ordinàries es retallen a les hores de jornada reduïda. Pots definir un horari especial en lloc d'aquest càlcul. S'aplica a tots els dies reduïts del curs, segons el dia de la setmana.</p>
- <div class="school-schedule-targets" role="group" aria-label="Jornada reduïda del grup o del fill">${target('', 'Grup')}${group.childIds.map(id => target(id, childById(id)?.name ?? 'Fill')).join('')}</div>
- ${year.reducedWindow ? `<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
- <div class="school-schedule-notice">${own ? `Horari reduït específic${childId ? ` de <strong>${escapeHtml(childById(childId)?.name ?? '')}</strong>` : ' del grup'}. <button class="soft-btn" data-action="schedule-inherit" ${base}>${childId ? 'Recupera l’horari del grup' : 'Recupera el càlcul automàtic'}</button>` : `<span>${childId ? 'Horari reduït heretat o calculat automàticament.' : 'Horari calculat retallant les franges ordinàries.'}</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
- ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div>${own ? `<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash', 15)}</button></div>` : ''}</div>`).join('') : '<p class="settings-note">La jornada reduïda no conté franges en aquest horari.</p>'}` :
-        `<div class="school-schedule-notice">No es pot calcular la jornada reduïda fins que indiquis les hores reals del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
- </section>`;
+    <div class="panel-header"><h2 class="section-title">Jornada reduïda del grup</h2>${own && year.reducedWindow ? `<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus', 14)} Franja</button>` : ''}</div>
+    <p class="section-description">La jornada reduïda es calcula retallant l’horari de l’escola i les activitats del grup a l’interval establert. Si cal, pots definir un horari reduït específic del grup.</p>
+    ${year.reducedWindow ? `<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
+    <div class="school-schedule-notice">${own ? `<span>Horari reduït específic del grup.</span><button class="soft-btn" data-action="schedule-inherit" ${base}>Recupera el càlcul automàtic</button>` : `<span>Horari reduït calculat automàticament.</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
+    ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div>${own ? `<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash', 15)}</button></div>` : ''}</div>`).join('') : '<p class="settings-note">No hi ha activitats en aquesta jornada reduïda.</p>'}` :
+        `<div class="school-schedule-notice">Cal configurar les hores de jornada reduïda del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
+  </section>`;
 }
 function schoolsPage() {
     const school = schoolById(schoolNav.schoolId), year = yearById(school, schoolNav.yearId), group = groupById(year, schoolNav.groupId);
@@ -671,7 +718,7 @@ function schoolsPage() {
  <div class="school-details"><p><span class="school-color-dot" style="background:${school.color}"></span><strong>Color de l’escola</strong></p>${school.address ? `<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>` : ''}${school.phone ? `<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g, ''))}">${escapeHtml(school.phone)}</a></p>` : ''}${!school.address && !school.phone ? '<p class="settings-note">Sense adreça ni telèfon.</p>' : ''}</div>
  <div class="action-row"><button class="danger-btn" data-action="school-delete" data-school="${escapeHtml(school.id)}">Suprimeix l’escola</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Cursos escolars</h2><button class="secondary-btn" data-action="year-add" data-school="${escapeHtml(school.id)}">${icon('plus', 15)} Afegir curs</button></div>
- ${school.years.length ? [...school.years].sort((a, b) => b.startDate.localeCompare(a.startDate)).map(y => `<div class="school-row">${schoolNavButton(schoolYearName(y), { schoolId: school.id, yearId: y.id })}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join('') : '<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>`;
+ ${school.years.length ? [...school.years].sort((a, b) => b.startDate.localeCompare(a.startDate)).map(y => `<div class="school-row">${schoolNavButton(schoolYearName(y), { schoolId: school.id, yearId: y.id })}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join('') : '<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>${schoolBasePanel(school)}`;
     if (!group)
         return `<header class="page-heading"><div>${schoolCrumb(school.name, { schoolId: school.id })}<div class="eyebrow">${escapeHtml(school.name)}</div><h1 class="page-title">${schoolYearName(year)}</h1><p class="page-subtitle">Del ${shortDate(year.startDate)} al ${shortDate(year.endDate)}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Calendari escolar</h2><button class="soft-btn" data-action="year-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil', 14)} Dates</button></div>
@@ -727,6 +774,22 @@ function schoolFormMarkup() {
    <div class="form-row">${field('Inici', 'startTime', 'time', year.reducedWindow?.startTime ?? '', true)}${field('Final', 'endTime', 'time', year.reducedWindow?.endTime ?? '', true)}</div>
    </div>${actions}</form>`;
     }
+    if (sheet.type === 'schoolScheduleForm') {
+        const school = schoolById(sheet.schoolId);
+        if (!school)
+            return '';
+        const sessionId = sheet.sessionId;
+        const session = school.weeklySchedule.find(a => a.id === sessionId);
+        const weekdaysInput = session
+            ? `<div class="field"><label for="school-weekday">Dia de la setmana</label><select name="weekday" id="school-weekday">${weekLong.map((day, i) => `<option value="${i}" ${session.weekday === i ? 'selected' : ''}>${day}</option>`).join('')}</select></div>`
+            : `<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((day, i) => `<label><input type="checkbox" name="weekdays" value="${i}" ${i < 5 ? 'checked' : ''}/> ${day}</label>`).join('')}</div></fieldset>`;
+        return heading(session ? 'Edita franja de l’escola' : 'Afegeix franja a l’escola', school.name) + `<form data-school-form="schoolSchedule" data-school="${escapeHtml(school.id)}" data-session="${escapeHtml(session?.id ?? '')}"><div class="school-form-fields">
+     ${weekdaysInput}
+     <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? '12:30', true)}</div>
+     <div class="field"><label for="school-session-kind">Tipus de franja</label><select name="kind" id="school-session-kind">${SESSION_KINDS.map(k => `<option value="${k}" ${sessionKind(session?.kind) === k ? 'selected' : ''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
+     ${field('Descripció (opcional)', 'label', 'text', session?.label ?? '', false, 80)}</div>
+     <p class="settings-note">Aquest horari és el mateix per a tota l’escola els dies ordinaris. Les franges del mateix dia no es poden solapar.</p>${actions}</form>`;
+    }
     if (sheet.type === 'scheduleForm') {
         const school = schoolById(sheet.schoolId), year = yearById(school, sheet.yearId), group = groupById(year, sheet.groupId);
         if (!group)
@@ -749,7 +812,7 @@ function schoolFormMarkup() {
   <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? reducedWindow?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? reducedWindow?.endTime ?? '13:00', true)}</div>
   <div class="field"><label for="session-kind">Tipus d'activitat</label><select name="kind" id="session-kind">${SESSION_KINDS.map(k => `<option value="${k}" ${sessionKind(session?.kind) === k ? 'selected' : ''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
   ${field('Descripció (opcional)', 'label', 'text', session?.label ?? '', false, 80)}</div>
-  <p class="settings-note">Les franges d'un mateix dia no es poden solapar. Els horaris individuals són independents dels del grup. ${reducedWindow ? `La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.` : ''}</p>${actions}</form>`;
+  <p class="settings-note">Les franges del mateix grup no es poden solapar. Les activitats ordinàries han de quedar dins l’horari general de l’escola. ${reducedWindow ? `La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.` : ''}</p>${actions}</form>`;
     }
     return '';
 }
@@ -763,7 +826,8 @@ function schoolInfoForDay(date) {
             const dayKind = year.holidays.includes(date) ? 'Festiu escolar' : year.reducedDays.includes(date) ? 'Horari reduït' : '';
             if (!dayKind)
                 continue;
-            const enrolled = year.groups.flatMap(g => g.childIds).filter((id, i, ids) => ids.indexOf(id) === i).map(id => childById(id)?.name).filter((name) => Boolean(name));
+            const ids = [...new Set([...school.childIds, ...year.groups.flatMap(g => g.childIds)])];
+            const enrolled = ids.map(id => childById(id)?.name).filter((name) => Boolean(name));
             if (enrolled.length)
                 lines.push(`<div class="school-day-notice"><strong>${escapeHtml(dayKind)}</strong> · ${escapeHtml(school.name)} (${escapeHtml(enrolled.join(', '))})</div>`);
         }
@@ -823,7 +887,7 @@ function sheetMarkup() {
     ${!isNight && manual ? `<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>` : ''}
     <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
     }
-    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'scheduleForm'].includes(sheet.type)) {
+    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'schoolScheduleForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
     else if (sheet?.type === 'rotationWeek') {
@@ -909,9 +973,9 @@ function removeChild(id) {
         return;
     state.children = state.children.filter(x => x.id !== id);
     delete state.rotation.assignments[id];
-    state.schools.forEach(s => s.years.forEach(y => y.groups.forEach(g => { g.childIds = g.childIds.filter(x => x !== id); if (g.childSchedules)
+    state.schools.forEach(s => { s.childIds = s.childIds.filter(x => x !== id); s.years.forEach(y => y.groups.forEach(g => { g.childIds = g.childIds.filter(x => x !== id); if (g.childSchedules)
         delete g.childSchedules[id]; if (g.reducedChildSchedules)
-        delete g.reducedChildSchedules[id]; })));
+        delete g.reducedChildSchedules[id]; })); });
     Object.keys(state.overrides).forEach(key => { if (key.endsWith(`|${id}`))
         delete state.overrides[key]; });
     Object.keys(state.bandOverrides).forEach(key => { if (key.split('|')[1] === id)
@@ -1000,89 +1064,82 @@ function clickAction(button) {
             render();
             break;
         }
-        case 'schedule-target': {
-            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group);
-            const childId = button.dataset.child ?? '';
-            if (!group || (childId && !group.childIds.includes(childId)))
+        case 'school-membership-toggle': {
+            const school = schoolById(button.dataset.school), id = button.dataset.child ?? '';
+            if (!school || !childById(id))
                 break;
-            schoolNav.scheduleChildId = childId;
+            school.childIds = school.childIds.includes(id) ? school.childIds.filter(x => x !== id) : [...school.childIds, id];
+            update();
+            notify('Fills associats a l’escola actualitzats');
+            break;
+        }
+        case 'school-schedule-add': {
+            const school = schoolById(button.dataset.school);
+            if (!school)
+                break;
+            sheet = { type: 'schoolScheduleForm', schoolId: school.id };
             render();
             break;
         }
-        case 'schedule-customize': {
-            const year = yearById(schoolById(button.dataset.school), button.dataset.year), group = groupById(year, button.dataset.group), childId = button.dataset.child ?? '';
-            const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
-            if (!group || (childId && !group.childIds.includes(childId)))
+        case 'school-schedule-edit': {
+            const school = schoolById(button.dataset.school), sessionId = button.dataset.session ?? '';
+            if (!school || !school.weeklySchedule.some(a => a.id === sessionId))
                 break;
-            if (mode === 'reduced') {
-                if (!year?.reducedWindow)
-                    break;
-                if (childId) {
-                    group.reducedChildSchedules ??= {};
-                    if (Object.hasOwn(group.reducedChildSchedules, childId))
-                        break;
-                    group.reducedChildSchedules[childId] = reducedScheduleForChild(group, year, childId).map(a => ({ ...a, id: newId() }));
-                }
-                else {
-                    if (group.reducedWeeklySchedule !== undefined)
-                        break;
-                    group.reducedWeeklySchedule = reducedScheduleForChild(group, year, '').map(a => ({ ...a, id: newId() }));
-                }
-            }
-            else {
-                if (!childId)
-                    break;
-                group.childSchedules ??= {};
-                if (Object.hasOwn(group.childSchedules, childId))
-                    break;
-                group.childSchedules[childId] = group.weeklySchedule.map(a => ({ ...a, id: newId() }));
-            }
-            schoolNav.scheduleChildId = childId;
+            sheet = { type: 'schoolScheduleForm', schoolId: school.id, sessionId };
+            render();
+            break;
+        }
+        case 'school-schedule-delete': {
+            const school = schoolById(button.dataset.school), id = button.dataset.session ?? '';
+            if (!school)
+                break;
+            const items = school.weeklySchedule.filter(a => a.id !== id);
+            if (items.length === school.weeklySchedule.length)
+                break;
+            school.weeklySchedule = items;
             update();
-            notify('Horari específic creat');
+            notify('Franja de l’escola suprimida');
+            break;
+        }
+        case 'schedule-customize': {
+            const school = schoolById(button.dataset.school), year = yearById(school, button.dataset.year), group = groupById(year, button.dataset.group);
+            if (!school || !group || !year?.reducedWindow || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule !== undefined)
+                break;
+            const core = window.schoolScheduleCore;
+            const ordinary = core ? core.combine(school.weeklySchedule, group.weeklySchedule) : [...school.weeklySchedule, ...group.weeklySchedule];
+            group.reducedWeeklySchedule = clippedWeeklySchedule(ordinary, year.reducedWindow).map(a => ({ ...a, id: newId() }));
+            update();
+            notify('Horari reduït específic del grup creat');
             break;
         }
         case 'schedule-inherit': {
-            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group), childId = button.dataset.child ?? '';
-            const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
-            if (!group || !confirm('Vols descartar aquest horari específic i recuperar l’horari de referència?'))
+            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group);
+            if (!group || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule === undefined || !confirm('Vols recuperar el càlcul automàtic de jornada reduïda?'))
                 break;
-            if (mode === 'reduced') {
-                if (childId) {
-                    if (!Object.hasOwn(group.reducedChildSchedules ?? {}, childId))
-                        break;
-                    delete group.reducedChildSchedules[childId];
-                }
-                else {
-                    if (group.reducedWeeklySchedule === undefined)
-                        break;
-                    delete group.reducedWeeklySchedule;
-                }
-            }
-            else {
-                if (!childId || !Object.hasOwn(group.childSchedules ?? {}, childId))
-                    break;
-                delete group.childSchedules[childId];
-            }
+            delete group.reducedWeeklySchedule;
             update();
-            notify('Horari de referència recuperat');
+            notify('Càlcul automàtic recuperat');
             break;
         }
         case 'schedule-add': {
-            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group), childId = button.dataset.child ?? '';
+            const school = schoolById(button.dataset.school), group = groupById(yearById(school, button.dataset.year), button.dataset.group);
             const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
-            if (!group || !scheduleEntriesForEdit(group, childId, mode))
+            if (!school || !group || !scheduleEntriesForEdit(group, '', mode))
                 break;
-            sheet = { type: 'scheduleForm', schoolId: button.dataset.school, yearId: button.dataset.year, groupId: button.dataset.group, childId, mode };
+            if (mode === 'ordinary' && !school.weeklySchedule.length) {
+                notify('Defineix primer l’horari ordinari de l’escola');
+                break;
+            }
+            sheet = { type: 'scheduleForm', schoolId: school.id, yearId: button.dataset.year, groupId: group.id, mode };
             render();
             break;
         }
         case 'schedule-edit': {
-            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group), childId = button.dataset.child ?? '', sessionId = button.dataset.session ?? '';
+            const school = schoolById(button.dataset.school), group = groupById(yearById(school, button.dataset.year), button.dataset.group), sessionId = button.dataset.session ?? '';
             const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
-            if (!group || !scheduleEntriesForEdit(group, childId, mode)?.some(a => a.id === sessionId))
+            if (!school || !group || !scheduleEntriesForEdit(group, '', mode)?.some(a => a.id === sessionId))
                 break;
-            sheet = { type: 'scheduleForm', schoolId: button.dataset.school, yearId: button.dataset.year, groupId: button.dataset.group, childId, sessionId, mode };
+            sheet = { type: 'scheduleForm', schoolId: school.id, yearId: button.dataset.year, groupId: group.id, sessionId, mode };
             render();
             break;
         }
@@ -1149,30 +1206,22 @@ function clickAction(button) {
             break;
         }
         case 'schedule-delete': {
-            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group), childId = button.dataset.child ?? '';
+            const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group);
             const mode = button.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
             if (!group)
                 break;
-            const entries = scheduleEntriesForEdit(group, childId, mode);
+            const entries = scheduleEntriesForEdit(group, '', mode);
             if (!entries)
                 break;
             const filtered = entries.filter(a => a.id !== button.dataset.session);
             if (filtered.length === entries.length)
                 break;
-            if (mode === 'reduced') {
-                if (childId)
-                    group.reducedChildSchedules[childId] = filtered;
-                else
-                    group.reducedWeeklySchedule = filtered;
-            }
-            else {
-                if (childId)
-                    group.childSchedules[childId] = filtered;
-                else
-                    group.weeklySchedule = filtered;
-            }
+            if (mode === 'reduced')
+                group.reducedWeeklySchedule = filtered;
+            else
+                group.weeklySchedule = filtered;
             update();
-            notify('Franja suprimida');
+            notify('Activitat suprimida');
             break;
         }
         case 'tab':
@@ -1447,7 +1496,7 @@ document.addEventListener('submit', event => {
         }
         else {
             const id = newId();
-            state.schools.push({ id, name, address: get('address').slice(0, 200), phone: get('phone').slice(0, 50), color, years: [] });
+            state.schools.push({ id, name, address: get('address').slice(0, 200), phone: get('phone').slice(0, 50), color, years: [], weeklySchedule: [], childIds: [] });
             schoolNav = { schoolId: id };
             finish('Escola afegida');
         }
@@ -1538,17 +1587,56 @@ document.addEventListener('submit', event => {
         finish('Hores de jornada reduïda desades');
         return;
     }
+    if (formKind === 'schoolSchedule') {
+        if (!school)
+            return;
+        const sessionId = form.dataset.session ?? '', existing = school.weeklySchedule.find(a => a.id === sessionId);
+        if (sessionId && !existing) {
+            notify('Aquesta franja ja no existeix');
+            return;
+        }
+        const days = existing ? [Number(get('weekday'))] : values.getAll('weekdays').map(Number);
+        const startTime = get('startTime'), endTime = get('endTime'), kind = get('kind'), label = get('label').slice(0, 80);
+        if (!days.length || days.some(d => !Number.isInteger(d) || d < 0 || d > 6) || new Set(days).size !== days.length) {
+            notify('Selecciona com a mínim un dia vàlid');
+            return;
+        }
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || startTime >= endTime) {
+            notify('Indica unes hores vàlides');
+            return;
+        }
+        if (!SESSION_KINDS.includes(kind)) {
+            notify('Tria un tipus d’activitat vàlid');
+            return;
+        }
+        if (days.some(day => school.weeklySchedule.some(a => a.id !== sessionId && a.weekday === day && a.startTime < endTime && a.endTime > startTime))) {
+            notify('Hi ha franges solapades a l’horari de l’escola');
+            return;
+        }
+        if (existing) {
+            existing.weekday = days[0];
+            existing.startTime = startTime;
+            existing.endTime = endTime;
+            existing.kind = kind;
+            existing.label = label;
+        }
+        else
+            for (const weekday of days)
+                school.weeklySchedule.push({ id: newId(), weekday, startTime, endTime, kind: kind, label });
+        finish('Horari ordinari de l’escola desat');
+        return;
+    }
     if (formKind === 'schedule') {
         if (!group)
             return;
-        const childId = form.dataset.child ?? '', mode = form.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
+        const childId = '', mode = form.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
         const entries = scheduleEntriesForEdit(group, childId, mode);
         if (mode === 'reduced' && !year?.reducedWindow) {
             notify('Primer cal configurar les hores de jornada reduïda');
             return;
         }
         if (!entries)
-            return; // Primer cal personalitzar l'horari d'aquest fill.
+            return;
         const existing = entries.find(a => a.id === form.dataset.session);
         if (form.dataset.session && !existing) {
             notify('Aquesta franja ja no existeix');
@@ -1570,6 +1658,10 @@ document.addEventListener('submit', event => {
         }
         if (!SESSION_KINDS.includes(kind)) {
             notify('Tria un tipus d’activitat vàlid');
+            return;
+        }
+        if (mode === 'ordinary' && (!school?.weeklySchedule.length || days.some(day => !school.weeklySchedule.some(a => a.weekday === day && a.startTime <= startTime && a.endTime >= endTime)))) {
+            notify('L’activitat ha d’estar completament dins de l’horari de l’escola');
             return;
         }
         if (days.some(day => entries.some(a => a.id !== existing?.id && a.weekday === day && a.startTime < endTime && a.endTime > startTime))) {
