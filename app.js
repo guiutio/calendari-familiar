@@ -7,6 +7,8 @@ const BAND_NAMES = { mati: 'Matí', dinar: 'Dinar', tarda: 'Tarda', sopar: 'Sopa
 // Hores orientatives. No equivalen a un horari escolar real i no es mostren com a hores exactes.
 const BAND_RANGES = { mati: [8 * 60, 12 * 60], dinar: [12 * 60, 15 * 60], tarda: [15 * 60, 18 * 60] };
 function isTimeBand(value) { return BANDS.some(b => b === value); }
+const DEFAULT_CHANGE_TIME = '19:00';
+function validChangeTime(value) { return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : DEFAULT_CHANGE_TIME; }
 function timeMinutes(value) { const [h, m] = value.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0); }
 /** Retalla les franges a l'interval reduït conegut, sense modificar el patró original. */
 function clippedWeeklySchedule(sessions, window) {
@@ -67,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.3.3';
+const APP_VERSION = '0.4.0';
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -132,7 +134,7 @@ function seedState() {
         version: 1,
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
-        rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] } },
+        rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] }, changeTime: DEFAULT_CHANGE_TIME },
         overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal' }, schools: []
     };
 }
@@ -322,7 +324,7 @@ function cleanState(raw) {
             bandOverrides[key] = who;
         }
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize) }, schools };
+    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -552,6 +554,16 @@ function schoolTimeline(date, children, range, empty = false) {
         return '';
     return schoolCalendarUI?.render(date, fullDate(date), children, schoolActivities(date, children), range, empty, schoolReducedDay(date, children)) ?? '';
 }
+const dayTimelineUI = window.dayTimelineUI;
+function dayTimeline(date, children) {
+    if (!dayTimelineUI)
+        return '<p class="settings-note">No es pot carregar la línia temporal diària.</p>';
+    const changeTime = validChangeTime(state.rotation.changeTime);
+    const nights = {};
+    for (const c of children)
+        nights[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
+    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime);
+}
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
         return '<span class="mini-empty">—</span>';
@@ -638,25 +650,26 @@ function calendarPage() {
         }).join('')}</div>`;
     }
     else {
-        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${fullAgenda(selectedDate)}${schoolInfoForDay(selectedDate)}${schoolTimeline(selectedDate, children, undefined, true)}</section>`;
+        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
     }
     const visibleNames = bands.map(b => BAND_NAMES[b]).join(' · ');
-    return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Responsables per fill i moment del dia.</p></div>
+    return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView === 'day' ? 'Pernoctes i activitats per fill durant les 24 hores.' : 'Responsables per fill i moment del dia.'}</p></div>
     <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button></div></header>
     <section class="calendar-card" aria-label="Calendari familiar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="Anterior">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="Següent">${icon('chevronRight', 18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    <div class="time-row-help">Files de dalt a baix: ${visibleNames || 'cap franja visible'}. Columnes: ${children.map(c => escapeHtml(c.name)).join(' · ') || 'cap fill visible'}.</div>
-    <div class="tip-card">${icon('info', 18)}<span>Les nits segueixen la rotació. La resta de franges són independents i, si no tenen un responsable o escola assignats, queden sense color. Toca una casella per veure'n el detall i editar-la.</span></div>`;
+    ${calendarView === 'day' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar abans de les 06:00 o després de les 22:00.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Files de dalt a baix: ${visibleNames || 'cap franja visible'}. Columnes: ${children.map(c => escapeHtml(c.name)).join(' · ') || 'cap fill visible'}.</div>
+    <div class="tip-card">${icon('info', 18)}<span>Les nits segueixen la rotació. La resta de franges són independents i, si no tenen un responsable o escola assignats, queden sense color. Toca una casella per veure'n el detall i editar-la.</span></div>`}`;
 }
 function rotationPage() {
     const r = rotationDraft ?? state.rotation;
     return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix el patró habitual de les nits.</p></div></header>
-    <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia del patró i la seva durada. El patró es repeteix indefinidament cap endavant i cap enrere.</p>
+    <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia, la durada i l’hora de canvi de pernocta. El patró es repeteix indefinidament.</p>
     <div class="form-row"><div class="field"><label for="rotation-start">Data d’inici</label><input id="rotation-start" type="date" value="${r.startDate}" data-action="rotation-start" /></div>
     <div class="field"><label for="rotation-length">Durada de la rotació</label><div class="duration-row"><input id="rotation-length" type="number" min="1" max="${rotationUnit === 'weeks' ? MAX_ROTATION_DAYS / 7 : MAX_ROTATION_DAYS}" step="1" inputmode="numeric" value="${rotationUnit === 'weeks' ? Math.ceil(r.length / 7) : r.length}" data-action="rotation-length" aria-label="Nombre de dies o setmanes" /><select id="rotation-unit" data-action="rotation-unit" aria-label="Unitat de la rotació"><option value="days" ${rotationUnit === 'days' ? 'selected' : ''}>dies</option><option value="weeks" ${rotationUnit === 'weeks' ? 'selected' : ''}>setmanes</option></select></div></div></div>
+    <div class="field rotation-change-field"><label for="rotation-change-time">Hora de canvi de pernocta</label><input id="rotation-change-time" type="time" data-action="rotation-change-time" value="${validChangeTime(r.changeTime)}" /><p class="settings-note">Per defecte, 19:00. La nit assignada a una data va des d’aquesta hora fins a la mateixa hora de l’endemà.</p></div>
     <p class="duration-help">${r.length} ${r.length === 1 ? 'dia' : 'dies'} de rotació · ${Math.ceil(r.length / 7)} ${Math.ceil(r.length / 7) === 1 ? 'setmana' : 'setmanes'} ${r.length % 7 === 0 ? '' : '(l’última incompleta)'}. Les nits afegides hereten el patró actual fins que les canviïs.</p>
     <hr><div class="panel-header"><h2 class="section-title">Assignació per fill</h2><button class="secondary-btn" data-action="rotation-same">${icon('copy', 14)} Tots igual</button></div><p class="section-description">Toca cada casella per triar el tutor d’aquella nit. La lletra i el color corresponen al tutor.</p>
     ${state.children.map((c, cIndex) => `<div class="rotation-child"><div class="rotation-child-header"><strong>${escapeHtml(c.name)}</strong>${cIndex > 0 ? `<button class="soft-btn" data-action="rotation-copy" data-child="${escapeHtml(c.id)}" data-from="${escapeHtml(state.children[0].id)}">Copiar de ${escapeHtml(state.children[0].name)}</button>` : ''}</div>
@@ -912,6 +925,10 @@ function filterOption(id, name, selected, kind, color) {
     return `<button class="option ${selected ? 'selected' : ''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol, 18)}</span>${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(name)}</span>${selected ? icon('check', 17) : '<span class="badge-soft">Ocult</span>'}</button>`;
 }
 function render() {
+    const previousTimeline = $app.querySelector('.day-timeline-viewport');
+    const keepTimeline = tab === 'calendar' && calendarView === 'day' && previousTimeline?.dataset.dayTimeline === selectedDate;
+    const timelineTop = keepTimeline ? previousTimeline.scrollTop : NaN;
+    const timelineLeft = keepTimeline ? previousTimeline.scrollLeft : 0;
     const previousMain = $app.querySelector('.main-area');
     const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
     const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
@@ -926,6 +943,11 @@ function render() {
     const currentSheet = $app.querySelector('.sheet');
     if (currentSheet)
         currentSheet.scrollTop = sheetScroll;
+    const timeline = $app.querySelector('.day-timeline-viewport');
+    if (timeline) {
+        timeline.scrollTop = Number.isFinite(timelineTop) ? timelineTop : Number(timeline.dataset.initialScroll ?? 0);
+        timeline.scrollLeft = timelineLeft;
+    }
     document.body.style.overflow = sheet ? 'hidden' : '';
 }
 function notify(message) {
@@ -1372,6 +1394,7 @@ function clickAction(button) {
         case 'rotation-save': {
             if (!rotationDraft)
                 return;
+            rotationDraft.changeTime = validChangeTime(rotationDraft.changeTime);
             state.rotation = JSON.parse(JSON.stringify(rotationDraft));
             rotationDraft = JSON.parse(JSON.stringify(state.rotation));
             update();
@@ -1663,7 +1686,11 @@ document.addEventListener('change', event => {
         }
         return;
     }
-    if (action === 'rotation-start' && rotationDraft && isValidDate(target.value)) {
+    if (action === 'rotation-change-time' && rotationDraft) {
+        rotationDraft.changeTime = validChangeTime(target.value);
+        render();
+    }
+    else if (action === 'rotation-start' && rotationDraft && isValidDate(target.value)) {
         rotationDraft.startDate = target.value;
         render();
     }
