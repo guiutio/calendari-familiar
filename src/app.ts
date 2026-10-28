@@ -149,7 +149,7 @@ function cleanSchools(raw:unknown,children:Child[]):School[]{
           if(!Array.isArray(entries)||entries.length>200)throw Error('Un horari escolar no és vàlid');
           const ids=new Set<string>();
           const sessions:WeeklySession[]=entries.map((a:WeeklySession)=>{
-            if(!a||!isText(a.id)||ids.has(a.id)||!Number.isInteger(a.weekday)||a.weekday<0||a.weekday>6||!validTime(a.startTime)||!validTime(a.endTime)||a.startTime>=a.endTime||(a.kind!==undefined&&!SESSION_KIN.includes(a.kind)))throw Error('Hi ha un horari setmanal incorrecte');
+            if(!a||!isText(a.id)||ids.has(a.id)||!Number.isInteger(a.weekday)||a.weekday<0||a.weekday>6||!validTime(a.startTime)||!validTime(a.endTime)||a.startTime>=a.endTime||(a.kind!==undefined&&!SESSION_KINDS.includes(a.kind)))throw Error('Hi ha un horari setmanal incorrecte');
             ids.add(a.id);
             return {id:a.id,weekday:a.weekday,startTime:a.startTime,endTime:a.endTime,label:name(a.label,80),kind:sessionKind(a.kind)};
           });
