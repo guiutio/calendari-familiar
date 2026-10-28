@@ -825,7 +825,8 @@ function schoolInfoForDay(date) {
             const dayKind = year.holidays.includes(date) ? 'Festiu escolar' : year.reducedDays.includes(date) ? 'Horari reduït' : '';
             if (!dayKind)
                 continue;
-            const enrolled = year.groups.flatMap(g => g.childIds).filter((id, i, ids) => ids.indexOf(id) === i).map(id => childById(id)?.name).filter((name) => Boolean(name));
+            const ids = [...new Set([...school.childIds, ...year.groups.flatMap(g => g.childIds)])];
+            const enrolled = ids.map(id => childById(id)?.name).filter((name) => Boolean(name));
             if (enrolled.length)
                 lines.push(`<div class="school-day-notice"><strong>${escapeHtml(dayKind)}</strong> · ${escapeHtml(school.name)} (${escapeHtml(enrolled.join(', '))})</div>`);
         }
@@ -1585,17 +1586,56 @@ document.addEventListener('submit', event => {
         finish('Hores de jornada reduïda desades');
         return;
     }
+    if (formKind === 'schoolSchedule') {
+        if (!school)
+            return;
+        const sessionId = form.dataset.session ?? '', existing = school.weeklySchedule.find(a => a.id === sessionId);
+        if (sessionId && !existing) {
+            notify('Aquesta franja ja no existeix');
+            return;
+        }
+        const days = existing ? [Number(get('weekday'))] : values.getAll('weekdays').map(Number);
+        const startTime = get('startTime'), endTime = get('endTime'), kind = get('kind'), label = get('label').slice(0, 80);
+        if (!days.length || days.some(d => !Number.isInteger(d) || d < 0 || d > 6) || new Set(days).size !== days.length) {
+            notify('Selecciona com a mínim un dia vàlid');
+            return;
+        }
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || startTime >= endTime) {
+            notify('Indica unes hores vàlides');
+            return;
+        }
+        if (!SESSION_KINDS.includes(kind)) {
+            notify('Tria un tipus d’activitat vàlid');
+            return;
+        }
+        if (days.some(day => school.weeklySchedule.some(a => a.id !== sessionId && a.weekday === day && a.startTime < endTime && a.endTime > startTime))) {
+            notify('Hi ha franges solapades a l’horari de l’escola');
+            return;
+        }
+        if (existing) {
+            existing.weekday = days[0];
+            existing.startTime = startTime;
+            existing.endTime = endTime;
+            existing.kind = kind;
+            existing.label = label;
+        }
+        else
+            for (const weekday of days)
+                school.weeklySchedule.push({ id: newId(), weekday, startTime, endTime, kind, label });
+        finish('Horari ordinari de l’escola desat');
+        return;
+    }
     if (formKind === 'schedule') {
         if (!group)
             return;
-        const childId = form.dataset.child ?? '', mode = form.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
+        const childId = '', mode = form.dataset.mode === 'reduced' ? 'reduced' : 'ordinary';
         const entries = scheduleEntriesForEdit(group, childId, mode);
         if (mode === 'reduced' && !year?.reducedWindow) {
             notify('Primer cal configurar les hores de jornada reduïda');
             return;
         }
         if (!entries)
-            return; // Primer cal personalitzar l'horari d'aquest fill.
+            return;
         const existing = entries.find(a => a.id === form.dataset.session);
         if (form.dataset.session && !existing) {
             notify('Aquesta franja ja no existeix');
@@ -1617,6 +1657,10 @@ document.addEventListener('submit', event => {
         }
         if (!SESSION_KINDS.includes(kind)) {
             notify('Tria un tipus d’activitat vàlid');
+            return;
+        }
+        if (mode === 'ordinary' && (!school?.weeklySchedule.length || days.some(day => !school.weeklySchedule.some(a => a.weekday === day && a.startTime <= startTime && a.endTime >= endTime)))) {
+            notify('L’activitat ha d’estar completament dins de l’horari de l’escola');
             return;
         }
         if (days.some(day => entries.some(a => a.id !== existing?.id && a.weekday === day && a.startTime < endTime && a.endTime > startTime))) {
