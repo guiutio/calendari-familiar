@@ -512,3 +512,28 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
  .day-timeline-headers span {font-size:calc(11px * var(--font-scale,1));}
  .day-night-title,.day-school-kind {font-size:calc(11px * var(--font-scale,1));}
 }
+
+/* v0.5.0 · Set dies, una sola escala de 24 hores; desplaçament horitzontal */
+.week-timeline {padding:5px 14px 18px;min-width:0;}
+.week-timeline-viewport {max-width:100%;scrollbar-width:thin;}
+.week-timeline-inner {min-width:100%;width:max-content;}
+.week-timeline-head,.week-timeline-grid {display:grid;grid-template-columns:52px repeat(var(--week-day-count),minmax(0,1fr));}
+.week-timeline-head {position:sticky;top:0;z-index:8;background:#eff5fb;border-bottom:1px solid #d4e0ee;}
+.week-time-corner {position:sticky;left:0;z-index:10;display:flex;align-items:center;justify-content:center;border-right:1px solid #d4e0ee;background:#eff5fb;font-size:calc(12px * var(--font-scale,1));font-weight:750;color:#3c587a;}
+.week-time-axis {position:sticky;left:0;z-index:5;box-sizing:border-box;background:#f8fbff;border-right:1px solid #d4e0ee;}
+.week-day-header {min-width:0;text-align:center;border-left:1px solid #d4e0ee;}
+.week-date-button {display:block;width:100%;border:0;border-radius:0;border-bottom:1px solid #d4e0ee;background:#e7f0fc;color:#345374;font:inherit;font-size:calc(12px * var(--font-scale,1));font-weight:800;padding:9px 4px;cursor:pointer;}
+.week-date-button:focus-visible {outline:3px solid #276dca;outline-offset:-3px;}
+.week-date-button:active {background:#d0e5ff;}
+.week-child-headers {display:grid;grid-template-columns:repeat(var(--week-child-count),minmax(0,1fr));}
+.week-child-label {min-width:0;padding:8px 3px;display:block;overflow-wrap:anywhere;font-size:calc(11px * var(--font-scale,1));font-weight:750;color:#3c587a;}
+.week-date-columns {min-width:0;display:grid;grid-template-columns:repeat(var(--week-child-count),minmax(0,1fr));border-left:1px solid #d4e0ee;}
+.week-date-columns .day-time-column:first-child {border-left:0;}
+:root[data-theme="dark"] .week-timeline-head {background:#26354c;border-color:#40556e;}
+:root[data-theme="dark"] .week-time-corner {background:#26354c;color:#e1ebf9;border-color:#40556e;}
+:root[data-theme="dark"] .week-time-axis {background:#1b283a;border-color:#40556e;}
+:root[data-theme="dark"] .week-day-header,:root[data-theme="dark"] .week-date-button,:root[data-theme="dark"] .week-date-columns {border-color:#40556e;}
+:root[data-theme="dark"] .week-date-button {background:#2c415d;color:#e1ebf9;}
+:root[data-theme="dark"] .week-date-button:active {background:#3b5a80;}
+:root[data-theme="dark"] .week-child-label {color:#d6e2f1;}
+@media(max-width:560px) {.week-timeline {padding:5px 8px 14px;}.week-date-button {font-size:calc(11px * var(--font-scale,1));}}

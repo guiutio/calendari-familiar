@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.4.1
+# Calendari Familiar · Web MVP v0.5.0
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -237,3 +237,13 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - La taula **Hora / Fills** queda immediatament sota la data, sense aquest text intermedi.
 - No canvien el scroll de 24 hores, el posicionament inicial a les 06:00, les activitats escolars ni les pernoctes. L'hora de canvi continua essent editable a Rotacions i predeterminada a les 19:00.
 - No hi ha canvis en l'estructura de les dades ni en les còpies JSON.
+
+## v0.5.0: setmana horària en set columnes
+
+- **Calendari → Setmana** reutilitza la mateixa línia temporal que la vista **Dia**: una escala vertical de 24 hores, de les **00:00 a les 24:00**, amb desplaçament inicial a les **06:00**, pernoctes i activitats escolars superposades a la franja temporal que els correspon.
+- Els **set dies de dilluns a diumenge** es mostren en columnes d'esquerra a dreta. Cada dia conté una subcolumna per cadascun dels fills visibles, amb pernocta i activitats pròpies. Les activitats no es barregen entre dies ni entre fills.
+- L'espai de capçaleres mostra **dia i fills** i es manté visible en desplaçar-se verticalment. L'eix «Hora» es manté visible en desplaçar-se horitzontalment.
+- En pantalles estretes, es permet **scroll horitzontal** dins de la mateixa taula i **scroll vertical** per recórrer les hores d'un dia complet. Els set dies comparteixen exactament la mateixa escala temporal.
+- Tocant la capçalera d'una jornada, es passa a la vista **Dia** de la data corresponent. Les pernoctes i les activitats escolars mantenen els editors i els filtres existents.
+- La vista Dia i el Mes no canvien d'estructura; el desplaçament vertical i horitzontal de la vista Setmana es preserva en actualitzar dades sense navegar a una altra setmana.
+- No canvia el model de dades, la persistència local o l'exportació/importació JSON. La funcionalitat planificada de patrons familiars recurrents es posposa a una futura versió (a partir de la v0.6.0).
