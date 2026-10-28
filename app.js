@@ -31,6 +31,24 @@ function scheduleForSchoolDay(group, year, childId, date) {
     const weekly = year.reducedDays.includes(date) ? reducedScheduleForChild(group, year, childId) : ordinaryScheduleForChild(group, childId);
     return weekly.filter(a => a.weekday === weekday);
 }
+/** Mescla l'horari de centre amb activitats de grup; preserva els registres antics per fill en mode lectura. */
+function schoolScheduleForCalendarDay(school, year, group, childId, date) {
+    if (year && (date < year.startDate || date > year.endDate || year.holidays.includes(date)))
+        return [];
+    const weekday = (parseDate(date).getDay() + 6) % 7;
+    const base = (school.weeklySchedule ?? []).filter(s => s.weekday === weekday);
+    const oldChild = group?.childSchedules && Object.hasOwn(group.childSchedules, childId) ? group.childSchedules[childId] : undefined;
+    const extra = (oldChild ?? group?.weeklySchedule ?? []).filter(s => s.weekday === weekday);
+    const core = window.schoolScheduleCore;
+    const ordinary = core ? core.combine(base, extra) : [...base, ...extra];
+    if (!year?.reducedDays.includes(date))
+        return ordinary;
+    if (!year.reducedWindow)
+        return [];
+    const oldReduced = group?.reducedChildSchedules && Object.hasOwn(group.reducedChildSchedules, childId) ? group.reducedChildSchedules[childId] : undefined;
+    const special = oldReduced ?? group?.reducedWeeklySchedule;
+    return special === undefined ? clippedWeeklySchedule(ordinary, year.reducedWindow) : special.filter(s => s.weekday === weekday);
+}
 function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
@@ -125,6 +143,24 @@ function validTheme(value) { return value === 'light' || value === 'dark' ? valu
 function validFontSize(value) { return value === 'large' || value === 'xlarge' ? value : 'normal'; }
 function isValidDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s)) === s; }
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
+/** Horari ordinari general de l'escola, independent dels grups. */
+function cleanSchoolWeeklySchedule(raw) {
+    if (!Array.isArray(raw) || raw.length > 200)
+        throw Error('L’horari ordinari de l’escola no és vàlid');
+    const ids = new Set();
+    const result = raw.map(x => {
+        if (!x || typeof x.id !== 'string' || ids.has(x.id) || !Number.isInteger(x.weekday) || x.weekday < 0 || x.weekday > 6 ||
+            !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.endTime) ||
+            x.startTime >= x.endTime || (x.kind !== undefined && !SESSION_KINDS.includes(x.kind)))
+            throw Error('Hi ha una franja ordinària d’escola incorrecta');
+        ids.add(x.id);
+        return { id: x.id, weekday: x.weekday, startTime: x.startTime, endTime: x.endTime, label: typeof x.label === 'string' ? x.label.trim().slice(0, 80) : '', kind: sessionKind(x.kind) };
+    });
+    const ordered = [...result].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
+    if (ordered.some((a, i) => i > 0 && ordered[i - 1].weekday === a.weekday && ordered[i - 1].endTime > a.startTime))
+        throw Error('Hi ha franges escolars solapades');
+    return result;
+}
 function cleanSchools(raw, children) {
     if (raw === undefined)
         return [];
@@ -220,7 +256,10 @@ function cleanSchools(raw, children) {
             });
             return { id: year.id, startDate: year.startDate, endDate: year.endDate, holidays, reducedDays, groups, reducedWindow };
         });
-        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), color, years };
+        const schoolChildIds = school.childIds === undefined ? [] : school.childIds;
+        if (!Array.isArray(schoolChildIds) || schoolChildIds.length > 30 || schoolChildIds.some(id => typeof id !== 'string' || !childSet.has(id)) || new Set(schoolChildIds).size !== schoolChildIds.length)
+            throw Error('Els fills associats a l’escola no són vàlids');
+        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), color, years, weeklySchedule: cleanSchoolWeeklySchedule(school.weeklySchedule ?? []), childIds: [...schoolChildIds] };
     });
 }
 function cleanState(raw) {
@@ -444,26 +483,26 @@ function schoolForBand(date, childId, band) {
     if (band === 'nit' || band === 'sopar')
         return undefined;
     const weekday = (parseDate(date).getDay() + 6) % 7;
-    return state.schools.find(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => {
-        if (date < y.startDate || date > y.endDate || y.holidays.includes(date))
+    const range = BAND_RANGES[band];
+    if (!range)
+        return undefined;
+    return state.schools.find(s => {
+        if (!state.preferences.visibleSchools.includes(s.id))
             return false;
-        return y.groups.some(group => {
-            if (!group.childIds.includes(childId))
-                return false;
-            const reduced = y.reducedDays.includes(date);
-            if (reduced && !y.reducedWindow)
-                return false; // Cap hora suposada sense configuració explícita.
-            const sessions = scheduleForSchoolDay(group, y, childId, date);
-            // Només es manté el comportament antic per als grups ordinaris sense cap horari introduït.
-            if (!reduced && !sessions.length && !group.weeklySchedule.length && !Object.hasOwn(group.childSchedules ?? {}, childId))
-                return weekday < 5 && (band === 'mati' || band === 'tarda');
-            const range = BAND_RANGES[band];
-            if (!range)
-                return false;
-            const covered = sessions.reduce((sum, a) => sum + Math.max(0, Math.min(timeMinutes(a.endTime), range[1]) - Math.max(timeMinutes(a.startTime), range[0])), 0);
-            return covered >= (range[1] - range[0]) / 2;
-        });
-    }));
+        const year = s.years.find(y => date >= y.startDate && date <= y.endDate);
+        if (s.years.length && !year)
+            return false;
+        if (year?.holidays.includes(date))
+            return false;
+        const group = year?.groups.find(g => g.childIds.includes(childId));
+        if (!s.childIds.includes(childId) && !group)
+            return false;
+        const sessions = schoolScheduleForCalendarDay(s, year, group, childId, date);
+        if (!sessions.length && !s.weeklySchedule.length && !group?.weeklySchedule.length && !year?.reducedDays.includes(date))
+            return !!group && weekday < 5 && (band === 'mati' || band === 'tarda');
+        const covered = sessions.reduce((sum, a) => sum + Math.max(0, Math.min(timeMinutes(a.endTime), range[1]) - Math.max(timeMinutes(a.startTime), range[0])), 0);
+        return covered >= (range[1] - range[0]) / 2;
+    });
 }
 function responsibility(date, childId, band) {
     const none = { type: 'none', name: 'Sense assignar', color: '', source: 'Sense assignació', changed: false };
@@ -485,7 +524,7 @@ function bandKey(date, childId, band) { return `${date}|${childId}|${band}`; }
 function shortChildLabel(c) { return initial(c.name); }
 const schoolCalendarUI = window.schoolCalendarUI;
 function schoolActivities(date, children) {
-    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, scheduleForSchoolDay) ?? [];
+    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, schoolScheduleForCalendarDay) ?? [];
 }
 function schoolReducedDay(date, children) {
     return state.schools.some(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => date >= y.startDate && date <= y.endDate && y.reducedDays.includes(date) && y.groups.some(g => g.childIds.some(id => children.some(c => c.id === id)))));
