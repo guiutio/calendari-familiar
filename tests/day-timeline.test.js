@@ -52,10 +52,10 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(ts,/\$\{fullAgenda\(date\)\}/); // setmana conservada
  assert.match(ts,/\$\{miniBands\(date,children,bands\)\}/); // mes conservat
  assert.match(app,/dayTimelineUI\.overnightSegments/);
- assert.match(app,/previousTimeline\.scrollTop/);
- assert.match(css,/\.day-timeline-viewport \{height:768px;/);
- assert.match(html,/day-timeline\.js\?v=0\.5\.2/);
- assert.match(sw,/day-timeline\.js\?v=0\.5\.2/);
+ assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
+ assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
+ assert.match(html,/day-timeline\.js\?v=0\.5\.3/);
+ assert.match(sw,/day-timeline\.js\?v=0\.5\.3/);
 });
 test('la rotació incorpora la nova hora per defecte, el desament i la importació',()=>{
  assert.match(ts,/const DEFAULT_CHANGE_TIME='19:00'/);
