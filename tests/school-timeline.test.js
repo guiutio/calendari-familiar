@@ -11,7 +11,7 @@ const {collect,range,render}=context.window.schoolCalendarUI;
 const children=[{id:'elna',name:'Elna'},{id:'blai',name:'Blai'}];
 const group={childIds:['elna','blai']};
 const school={id:'escola',name:'Escola',color:'#74c6a3',years:[{startDate:'2026-09-01',endDate:'2027-06-30',holidays:['2026-11-03'],groups:[group]}]};
-const getSessions=(_g,_y,id,_d)=>id==='elna'
+const getSessions=(_s,_y,_g,id,_d)=>id==='elna'
  ? [{id:'s1',startTime:'08:30',endTime:'09:30',kind:'classe',label:'Matemàtiques'},
     {id:'s2',startTime:'10:30',endTime:'12:00',kind:'pati',label:''}]
  : [{id:'s3',startTime:'09:00',endTime:'10:00',kind:'menjador',label:''}];
@@ -42,8 +42,8 @@ test('evita HTML maliciós procedent de descripcions',()=>{
  assert.match(out,/&lt;script&gt;/);
 });
 test('els recursos s’inclouen a la PWA i el JS d’inici',()=>{
- assert.match(html,/school-timeline\.js\?v=0\.3\.0/);
- assert.match(sw,/school-timeline\.js\?v=0\.3\.0/);
+ assert.match(html,/school-timeline\.js\?v=0\.3\.1/);
+ assert.match(sw,/school-timeline\.js\?v=0\.3\.1/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/schoolCalendarUI\?\.render/);
  assert.match(app,/const schoolRange = schoolCalendarUI\?\.range/);
