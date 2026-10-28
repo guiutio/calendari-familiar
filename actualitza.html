@@ -17,7 +17,7 @@
 </head>
 <body><main>
   <h1>Actualitza Calendari Familiar</h1>
-  <p>Actualitzarem els fitxers temporals de l'aplicació a la versió <strong>0.1.11</strong>, que corregeix el desplaçament vertical i estabilitza la barra inferior.</p>
+  <p>Actualitzarem els fitxers temporals de l'aplicació a la versió <strong>0.1.12</strong>, que estabilitza la barra inferior també a les pantalles amb poc contingut, com Escoles.</p>
   <p><strong>Les teves dades familiars no s'esborraran:</strong> no es modifica IndexedDB ni LocalStorage, ni els calendaris, rotacions o escoles que hagis desat.</p>
   <button type="button" id="update">Actualitza ara</button>
   <p id="result" role="status" aria-live="polite"></p>
@@ -33,9 +33,9 @@
     result.textContent = 'Comprovant la versió publicada…';
     try {
       if (!navigator.onLine) throw new Error('No hi ha connexió a Internet. Torna-ho a provar quan tinguis connexió.');
-      const response = await fetch('./index.html?comprovacio=0.1.11-' + Date.now(), {cache:'no-store'});
-      if (!response.ok || !(await response.text()).includes('app.js?v=0.1.11')) {
-        throw new Error('GitHub Pages encara no serveix la versió 0.1.11. Torna-ho a provar més tard.');
+      const response = await fetch('./index.html?comprovacio=0.1.12-' + Date.now(), {cache:'no-store'});
+      if (!response.ok || !(await response.text()).includes('app.js?v=0.1.12')) {
+        throw new Error('GitHub Pages encara no serveix la versió 0.1.12. Torna-ho a provar més tard.');
       }
       result.textContent = 'Versió verificada. Renovant els fitxers temporals…';
       if ('serviceWorker' in navigator) {
@@ -51,7 +51,7 @@
         }
       }
       result.textContent = 'Actualització preparada. Obrint el calendari…';
-      location.replace('./index.html?actualitzat=0.1.11-' + Date.now());
+      location.replace('./index.html?actualitzat=0.1.12-' + Date.now());
     } catch (err) {
       result.textContent = err instanceof Error ? err.message : 'No s’ha pogut actualitzar. Torna-ho a provar.';
       button.disabled = false;

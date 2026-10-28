@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1.11
+# Calendari Familiar · Web MVP v0.1.12
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -152,3 +152,10 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - No canvia cap dada, ni la importació/exportació JSON de versions anteriors.
 
 La visualització detallada dels horaris escolars al calendari queda reservada per a la **v0.2.0**.
+
+## v0.1.12: barra inferior estable amb contingut curt
+
+- Corregeix la barra de navegació inferior, que es podia aixecar en algunes pantalles d'**Escoles** amb poc contingut.
+- En mòbils, el contenidor global ocupa sempre l'espai de pantalla real disponible i distribueix l'espai vertical amb Flexbox, sense dependre de `100dvh` ni de l'alçada del contingut.
+- La barra inferior queda fora de la zona desplaçable i conserva l'àrea segura de l'iPhone. Les vistes llargues continuen permetent arribar fins al final.
+- Sense canvis a dades, horaris, rotacions ni còpies JSON. La següent versió funcional continua sent **v0.2.0**.

@@ -9,12 +9,12 @@ const end=js.indexOf('function notify(',start);
 assert.ok(start>=0&&end>start);
 const renderSource=js.slice(start,end);
 
-test('barra inferior dins la graella, amb zona principal desplaçable',()=>{
-  const rules=css.slice(css.indexOf('/* v0.1.11 · Scroll estable'));
-  assert.match(rules,/grid-template-rows:minmax\(0,1fr\) auto/);
-  assert.match(rules,/\.main-area \{[^}]*overflow-y:auto/);
-  assert.match(rules,/\.mobile-tabs \{position:static/);
-  assert.match(rules,/#app \{height:100vh;height:100dvh/);
+test('la barra queda ancorada a la part inferior fins i tot amb pàgines curtes',()=>{
+  const rules=css.slice(css.indexOf('/* v0.1.12 · El contingut curt'));
+  assert.match(rules,/\.app-layout \{position:fixed;inset:0;display:flex;flex-direction:column;/);
+  assert.match(rules,/\.main-area \{flex:1 1 0%;[^}]*min-height:0;[^}]*overflow-y:auto/);
+  assert.match(rules,/\.mobile-tabs \{position:relative;inset:auto;flex:0 0 auto;/);
+  assert.match(rules,/#app \{height:100%;min-height:0;overflow:hidden/);
   assert.match(rules,/\.sheet \{[^}]*87dvh/);
 });
 
