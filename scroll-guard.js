@@ -23,7 +23,9 @@ export function installScrollGuard(doc, win) {
     if (Math.abs(dy) < 1 || Math.abs(dy) <= Math.abs(dx)) return;
     const target = event.target;
     if (!target || typeof target.closest !== 'function') return;
-    const scroller = target.closest('.day-timeline-viewport, .sheet, .main-area');
+    // La setmana fa scroll només horitzontalment: el gest vertical s'ha de delegar a .main-area.
+    const weekly = target.closest('.week-timeline-viewport');
+    const scroller = weekly ? target.closest('.main-area') : target.closest('.day-timeline-viewport, .sheet, .main-area');
     const block = scroller
       ? shouldPreventBoundaryScroll(scroller.scrollTop, scroller.scrollHeight, scroller.clientHeight, dy)
       : Boolean(target.closest('.mobile-tabs, .overlay'));
