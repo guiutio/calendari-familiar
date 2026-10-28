@@ -93,6 +93,10 @@ El patró comença el **dilluns 12 d’octubre de 2026** i es repeteix cada **70
 Les excepcions formen part del patró que es repeteix, no són canvis d'una sola data. Per veure aquest patró amb dades guardades d'una altra versió, ves a **Configuració → Restableix les dades d'exemple**; l'acció demana confirmació i esborra els teus canvis (recomanem exportar un JSON abans). Si les dades eren les mostres anteriors intactes, s'actualitzen soles.
 
 
-## Escoles (v0.1.5)
+## v0.1.7: escoles visibles opcionalment al calendari
 
-La pestanya **Escoles** permet crear escoles (nom, adreça i telèfon opcionals excepte el nom), cursos amb dates i nom automàtic «Curs any inici-any final», festius i dies d’horari reduït dins del curs, grups classe, tutor/a opcional, horari setmanal per franges i inscripcions de fills per curs. Les dades s’inclouen a IndexedDB i a les còpies JSON. Les còpies de versions anteriors sense escoles continuen sent compatibles.
+- Les escoles es mostren com a contenidors de fills, per sobre de la pernocta (tutor). Per defecte estan ocultes.
+- Les icones de persones (fills), cases (tutors) i escoles només acompanyen aquestes entitats al panell de filtres.
+- Cada escola pot triar un color propi, distint dels altres centres; migració automàtica dels antics registres sense color.
+- Es mostra una escola en dies de curs no festius; es respecta l’horari setmanal del grup i, si és buit, s’assumeix de dilluns a divendres.
+- Les dades existents, la configuració de pernoctes i les còpies JSON antigues són compatibles.
