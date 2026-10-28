@@ -601,7 +601,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .day-timeline-inner {width:max-content;min-width:0;}
 .day-timeline-headers,.day-timeline-grid {grid-template-columns:52px repeat(var(--day-child-count),98px);}
 .week-timeline-inner {width:max-content;min-width:0;}
-.week-timeline-head,.week-timeline-grid {grid-template-columns:52px repeat(var(--week-day-count),minmax(0,calc(var(--week-child-count) * 98px)));}
+.week-timeline-head,.week-timeline-grid {grid-template-columns:52px repeat(var(--week-day-count),var(--week-day-width,196px));}
 .week-child-headers,.week-date-columns {grid-template-columns:repeat(var(--week-child-count),98px);}
 @media(max-width:560px) {
   .day-timeline {margin-inline:4px;padding-inline:6px;}
