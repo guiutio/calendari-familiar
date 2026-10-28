@@ -96,3 +96,17 @@ test('rebutja hores reduïdes invàlides i sessions especials fora de l’interv
   x.years[0].groups[0].reducedChildSchedules={inexistent:[session('x',0,'10:00','11:00')]};
   assert.throws(()=>lib.cleanSchools([x],children),/no matriculat/);
 });
+
+test('el formulari d’hores reduïdes és accessible i es mostra amb les dades actuals',()=>{
+  assert.match(js,/\['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'scheduleForm'\]/);
+  const formFactory=new Function('sheet','schoolById','yearById','schoolYearName','escapeHtml','icon',
+    part('function schoolFormMarkup()', '/** Festius/reducció de tots els centres')+
+    '\nreturn schoolFormMarkup();');
+  const {school,year}=fixtures();
+  const html=formFactory({type:'reducedWindowForm',schoolId:'escola',yearId:'curs'},
+    ()=>school,()=>year,()=> 'Curs 2026-2027',
+    v=>String(v).replaceAll('&','&amp;').replaceAll('<','&lt;'),()=>'<svg></svg>');
+  assert.match(html,/data-school-form="reducedWindow"/);
+  assert.match(html,/value="09:00"/);
+  assert.match(html,/value="13:00"/);
+});
