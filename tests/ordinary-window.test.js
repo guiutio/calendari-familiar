@@ -21,7 +21,7 @@ const group1={childIds:['elna'],weeklySchedule:[session('pati',0,'10:00','10:30'
 const group2={childIds:['blai'],weeklySchedule:[session('dinar',0,'12:00','13:30','menjador')]};
 test('jornada ordinària de curs sense grups, amb entrada i sortida',()=>{
  const monday=lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-02');
- assert.deepEqual(monday.map(s=>[s.startTime,s.endTime]),[['08:30','16:30']]);
+ assert.deepEqual(JSON.parse(JSON.stringify(monday.map(s=>[s.startTime,s.endTime]))),[['08:30','16:30']]);
  assert.equal(monday[0].id,'__school_window__0');
  assert.equal(lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-07').length,0);
  assert.equal(lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-05').length,0);
@@ -29,12 +29,12 @@ test('jornada ordinària de curs sense grups, amb entrada i sortida',()=>{
 test('els grups poden tenir activitats diferents que no canvien la jornada de l’escola',()=>{
  const a=lib.schoolScheduleForCalendarDay(school,year,group1,'elna','2026-11-02');
  const b=lib.schoolScheduleForCalendarDay(school,year,group2,'blai','2026-11-02');
- assert.deepEqual(a.map(s=>[s.startTime,s.endTime]),[['08:30','10:00'],['10:00','10:30'],['10:30','16:30']]);
- assert.deepEqual(b.map(s=>[s.startTime,s.endTime]),[['08:30','12:00'],['12:00','13:30'],['13:30','16:30']]);
+ assert.deepEqual(JSON.parse(JSON.stringify(a.map(s=>[s.startTime,s.endTime]))),[['08:30','10:00'],['10:00','10:30'],['10:30','16:30']]);
+ assert.deepEqual(JSON.parse(JSON.stringify(b.map(s=>[s.startTime,s.endTime]))),[['08:30','12:00'],['12:00','13:30'],['13:30','16:30']]);
 });
 test('jornada reduïda només retalla, festius no afegeixen activitats',()=>{
  const items=lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-04');
- assert.deepEqual(items.map(s=>[s.startTime,s.endTime]),[['09:00','13:00']]);
+ assert.deepEqual(JSON.parse(JSON.stringify(items.map(s=>[s.startTime,s.endTime]))),[['09:00','13:00']]);
  const results=context.window.schoolCalendarUI.collect('2026-11-02',[{id:'elna',name:'Elna'}],[school],['centre'],lib.schoolScheduleForCalendarDay);
  assert.equal(results.length,1);
  assert.equal(results[0].kind,'Jornada escolar');

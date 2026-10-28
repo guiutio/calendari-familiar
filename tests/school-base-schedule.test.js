@@ -12,7 +12,7 @@ const {combine}=context.window.schoolScheduleCore;
 const {collect}=context.window.schoolCalendarUI;
 const lesson=(id,weekday,startTime,endTime,kind='classe')=>({id,weekday,startTime,endTime,kind,label:''});
 const base=[lesson('base',0,'09:00','13:00')],groupActivity=[lesson('pati',0,'10:30','11:00','pati')];
-const resolverText=app.slice(app.indexOf('function schoolScheduleForCalendarDay('),app.indexOf('function inReducedWindow('));
+const resolverText=app.slice(app.indexOf('function ordinaryBaseForSchool('),app.indexOf('function inReducedWindow('));
 assert.ok(resolverText.includes('schoolScheduleForCalendarDay'));
 const resolver=new Function('window','parseDate','clippedWeeklySchedule',resolverText+';return schoolScheduleForCalendarDay;')(
  context.window,s=>new Date(s+'T12:00:00'),(a,w)=>a.map(s=>({...s,startTime:s.startTime<w.startTime?w.startTime:s.startTime,endTime:s.endTime>w.endTime?w.endTime:s.endTime})).filter(s=>s.startTime<s.endTime)
