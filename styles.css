@@ -368,3 +368,23 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
  .calendar-title {font-size:15px;}
  .agenda-cell {font-size:9px;}
 }
+
+/* v0.1.9 · Horari escolar ordinari, de grup i particular */
+.school-schedule-targets {display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:15px 0 12px;}
+.school-schedule-target {border:1px solid #dce5f0;background:#f7f9fc;color:#547088;border-radius:999px;padding:8px 13px;min-height:36px;font-size:12px;font-weight:720;}
+.school-schedule-target.active {background:#e8f1ff;border-color:#7a9ac8;color:#294f80;}
+.school-schedule-notice {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:11px 12px;margin:8px 0 14px;border-radius:10px;background:#f0f5fc;color:#526a84;font-size:12px;line-height:1.5;}
+.school-schedule-notice button {font-size:12px;white-space:normal;text-align:center;}
+.school-schedule-actions {display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.school-schedule-edit {border:1px solid #dce6f2;border-radius:10px;color:#54779f;background:#f8fbff;min-width:36px;min-height:36px;display:grid;place-items:center;}
+.school-schedule-weekdays {border:1px solid #e2e8ef;border-radius:12px;margin:0;padding:12px;}
+.school-schedule-weekdays legend {font-size:12px;font-weight:750;color:#66778d;padding:0 6px;}
+.school-schedule-weekdays > div {display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;}
+.school-schedule-weekdays label {display:flex;align-items:center;gap:7px;font-size:13px;min-height:34px;cursor:pointer;}
+.school-schedule-weekdays input {accent-color:#446eaa;width:18px;height:18px;min-height:18px;flex-shrink:0;}
+:root[data-theme="dark"] .school-schedule-target {background:#26364b;border-color:#40516c;color:#bbcee2;}
+:root[data-theme="dark"] .school-schedule-target.active {background:#28466a;border-color:#86b1e5;color:#f1f7ff;}
+:root[data-theme="dark"] .school-schedule-notice {background:#26384f;color:#c4d3e5;}
+:root[data-theme="dark"] .school-schedule-edit {background:#20334a;border-color:#405778;color:#bedcff;}
+:root[data-theme="dark"] .school-schedule-weekdays {border-color:#42516a;}
+:root[data-theme="dark"] .school-schedule-weekdays legend {color:#b1c2d7;}

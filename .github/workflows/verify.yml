@@ -1,0 +1,27 @@
+name: Verifica el Calendari Familiar
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instal·la TypeScript per al desenvolupament
+        run: npm install --no-save --no-package-lock typescript@5.8.3
+      - name: Compila el TypeScript
+        run: npm run build
+      - name: Comprova la sintaxi del JavaScript
+        run: node --check app.js
+      - name: Executa les proves
+        run: node --test tests/*.test.js
