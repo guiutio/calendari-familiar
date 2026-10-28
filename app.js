@@ -793,7 +793,7 @@ function sheetMarkup() {
     ${!isNight && manual ? `<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>` : ''}
     <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
     }
-    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'scheduleForm'].includes(sheet.type)) {
+    else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
     else if (sheet?.type === 'rotationWeek') {
