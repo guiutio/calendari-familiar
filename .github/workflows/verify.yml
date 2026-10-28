@@ -21,6 +21,17 @@ jobs:
         run: npm install --no-save --no-package-lock typescript@5.8.3
       - name: Compila el TypeScript
         run: npm run build
+      - name: Extreu el JavaScript compilat per sincronitzar el web
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          text = base64.b64encode(Path("app.js").read_bytes()).decode("ascii")
+          print("COMPILED_JS_BEGIN")
+          for i in range(0, len(text), 3000):
+              print("COMPILED_CHUNK:" + text[i:i+3000])
+          print("COMPILED_JS_END")
+          PY
       - name: Comprova la sintaxi del JavaScript
         run: node --check app.js
       - name: Executa les proves
