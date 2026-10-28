@@ -567,42 +567,49 @@ function schoolNavButton(label:string,nav:{schoolId?:string;yearId?:string;group
 function schoolCrumb(text:string,nav:{schoolId?:string;yearId?:string;groupId?:string}={}){
  return `<button class="school-breadcrumb" type="button" data-action="school-nav" ${nav.schoolId?`data-school="${escapeHtml(nav.schoolId)}"`:''} ${nav.yearId?`data-year="${escapeHtml(nav.yearId)}"`:''}>${icon('chevronLeft',15)} ${escapeHtml(text)}</button>`;
 }
+function schoolBasePanel(school:School):string {
+  const rows=[...school.weeklySchedule].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+  const base=`data-school="${escapeHtml(school.id)}"`;
+  return `<section class="card">
+    <div class="panel-header"><h2 class="section-title">Horari ordinari de l’escola</h2><button class="secondary-btn" data-action="school-schedule-add" ${base}>${icon('plus',14)} Franja</button></div>
+    <p class="section-description">Defineix aquí les hores habituals de l’escola, sense crear cap grup. S’apliquen als dies normals; els festius i les jornades reduïdes del curs es tracten a part.</p>
+    ${rows.length?rows.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="school-schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja de l’escola">${icon('pencil',15)}</button><button class="delete-icon" data-action="school-schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja de l’escola">${icon('trash',15)}</button></div></div>`).join(''):'<div class="empty-state">Encara no hi ha horari ordinari. Afegeix les franges de classe, pati o menjador que corresponguin.</div>'}
+  </section>
+  <section class="card">
+    <h2 class="section-title">Fills associats a l’escola</h2>
+    <p class="section-description">Assigna directament els fills a l’escola, sense necessitat de grup. Si també estan inscrits en un grup, es tindran en compte les activitats d’aquell grup.</p>
+    ${state.children.map(c=>{const chosen=school.childIds.includes(c.id);return `<button type="button" class="school-child-choice ${chosen?'selected':''}" data-action="school-membership-toggle" ${base} data-child="${escapeHtml(c.id)}" aria-pressed="${chosen}"><span>${escapeHtml(c.name)}</span>${chosen?icon('check',18):icon('plus',17)}</button>`;}).join('')}
+  </section>`;
+}
 function schoolSchedulePanel(school:School,year:SchoolYear,group:ClassGroup):string {
- const childId=group.childIds.includes(schoolNav.scheduleChildId??'')?schoolNav.scheduleChildId??'':'';
- const child=childById(childId);
- const own=!!childId&&Object.hasOwn(group.childSchedules??{},childId);
- const editable=!childId||own;
- const sessions=[...(own?(group.childSchedules?.[childId]??[]):group.weeklySchedule)].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
- const data=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}"`;
- const target=(id:string,name:string)=>`<button type="button" class="school-schedule-target ${id===childId?'active':''}" aria-pressed="${id===childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
- return `<section class="card">
-  <div class="panel-header"><h2 class="section-title">Horari escolar ordinari</h2>${editable?`<button class="secondary-btn" data-action="schedule-add" ${data}>${icon('plus',14)} Franja</button>`:''}</div>
-  <p class="section-description">Defineix les activitats que es repeteixen cada setmana. L'horari del grup s'aplica als seus fills mentre no tinguin un horari propi.</p>
-  <div class="school-schedule-targets" role="group" aria-label="Selecciona l'horari">${target('','Grup')}${group.childIds.map(id=>target(id,childById(id)?.name??'Fill')).join('')}</div>
-  ${child?(own?`<div class="school-schedule-notice">Horari personalitzat de <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="soft-btn" data-action="schedule-inherit" ${data}>Recupera l'horari del grup</button></div>`:`<div class="school-schedule-notice">S'aplica l'horari del grup a <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="secondary-btn" data-action="schedule-customize" ${data}>Personalitza l'horari</button></div>`):'<p class="settings-note">Horari de referència del grup, compartit pels fills sense personalització.</p>'}
-  ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${editable?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${data} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${data} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<div class="empty-state">Encara no hi ha franges horàries definides.</div>'}
- </section>`;
+  const entries=[...group.weeklySchedule].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+  const base=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}"`;
+  return `<section class="card">
+    <div class="panel-header"><h2 class="section-title">Activitats del grup</h2><button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus',14)} Activitat</button></div>
+    <p class="section-description">L’horari ordinari és el de l’escola. Aquí pots afegir activitats específiques del grup dins d’aquelles hores (per exemple, pati, menjador o una classe). Substitueixen el tram equivalent de l’horari general, no el modifiquen. No hi ha horaris ordinaris diferents per fill.</p>
+    ${!school.weeklySchedule.length?'<p class="school-schedule-notice">Configura primer l’horari ordinari a la fitxa de l’escola.</p>':''}
+    ${entries.length?entries.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita l’activitat">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix l’activitat">${icon('trash',15)}</button></div></div>`).join(''):'<p class="settings-note">Aquest grup encara no té activitats afegides. S’aplica l’horari general de l’escola.</p>'}
+  </section>`;
 }
 function scheduleEntriesForEdit(group:ClassGroup,childId:string,mode:ScheduleMode):WeeklySession[]|undefined{
- return mode==='reduced'
-  ?(childId?group.reducedChildSchedules?.[childId]:group.reducedWeeklySchedule)
-  :(childId?group.childSchedules?.[childId]:group.weeklySchedule);
+  if(childId)return undefined; // Els horaris individuals antics són de lectura, però no es poden continuar editant.
+  return mode==='reduced'?group.reducedWeeklySchedule:group.weeklySchedule;
 }
 function schoolReducedPanel(school:School,year:SchoolYear,group:ClassGroup):string {
- const childId=group.childIds.includes(schoolNav.scheduleChildId??'')?schoolNav.scheduleChildId??'':'';
- const own=childId?Object.hasOwn(group.reducedChildSchedules??{},childId):group.reducedWeeklySchedule!==undefined;
- const sessions=reducedScheduleForChild(group,year,childId).sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
- const base=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}" data-mode="reduced"`;
- const target=(id:string,name:string)=>`<button type="button" class="school-schedule-target ${id===childId?'active':''}" aria-pressed="${id===childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
- return `<section class="card">
- <div class="panel-header"><h2 class="section-title">Jornada reduïda</h2>${own&&year.reducedWindow?`<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus',14)} Franja</button>`:''}</div>
- <p class="section-description">De manera automàtica, les activitats ordinàries es retallen a les hores de jornada reduïda. Pots definir un horari especial en lloc d'aquest càlcul. S'aplica a tots els dies reduïts del curs, segons el dia de la setmana.</p>
- <div class="school-schedule-targets" role="group" aria-label="Jornada reduïda del grup o del fill">${target('','Grup')}${group.childIds.map(id=>target(id,childById(id)?.name??'Fill')).join('')}</div>
- ${year.reducedWindow?`<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
- <div class="school-schedule-notice">${own?`Horari reduït específic${childId?` de <strong>${escapeHtml(childById(childId)?.name??'')}</strong>`:' del grup'}. <button class="soft-btn" data-action="schedule-inherit" ${base}>${childId?'Recupera l’horari del grup':'Recupera el càlcul automàtic'}</button>`:`<span>${childId?'Horari reduït heretat o calculat automàticament.':'Horari calculat retallant les franges ordinàries.'}</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
- ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${own?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<p class="settings-note">La jornada reduïda no conté franges en aquest horari.</p>'}`:
- `<div class="school-schedule-notice">No es pot calcular la jornada reduïda fins que indiquis les hores reals del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
- </section>`;
+  const own=group.reducedWeeklySchedule!==undefined;
+  const base=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-mode="reduced"`;
+  const core=(window as Window & {schoolScheduleCore?:{combine:(a:WeeklySession[],b:WeeklySession[])=>WeeklySession[]}}).schoolScheduleCore;
+  const ordinary=core?core.combine(school.weeklySchedule,group.weeklySchedule):[...school.weeklySchedule,...group.weeklySchedule];
+  const automatic=year.reducedWindow?clippedWeeklySchedule(ordinary,year.reducedWindow):[];
+  const sessions=[...(group.reducedWeeklySchedule??automatic)].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+  return `<section class="card">
+    <div class="panel-header"><h2 class="section-title">Jornada reduïda del grup</h2>${own&&year.reducedWindow?`<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus',14)} Franja</button>`:''}</div>
+    <p class="section-description">La jornada reduïda es calcula retallant l’horari de l’escola i les activitats del grup a l’interval establert. Si cal, pots definir un horari reduït específic del grup.</p>
+    ${year.reducedWindow?`<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
+    <div class="school-schedule-notice">${own?`<span>Horari reduït específic del grup.</span><button class="soft-btn" data-action="schedule-inherit" ${base}>Recupera el càlcul automàtic</button>`:`<span>Horari reduït calculat automàticament.</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
+    ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${own?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<p class="settings-note">No hi ha activitats en aquesta jornada reduïda.</p>'}`:
+    `<div class="school-schedule-notice">Cal configurar les hores de jornada reduïda del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
+  </section>`;
 }
 function schoolsPage():string {
  const school=schoolById(schoolNav.schoolId),year=yearById(school,schoolNav.yearId),group=groupById(year,schoolNav.groupId);
@@ -615,7 +622,7 @@ function schoolsPage():string {
  <div class="school-details"><p><span class="school-color-dot" style="background:${school.color}"></span><strong>Color de l’escola</strong></p>${school.address?`<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>`:''}${school.phone?`<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g,''))}">${escapeHtml(school.phone)}</a></p>`:''}${!school.address&&!school.phone?'<p class="settings-note">Sense adreça ni telèfon.</p>':''}</div>
  <div class="action-row"><button class="danger-btn" data-action="school-delete" data-school="${escapeHtml(school.id)}">Suprimeix l’escola</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Cursos escolars</h2><button class="secondary-btn" data-action="year-add" data-school="${escapeHtml(school.id)}">${icon('plus',15)} Afegir curs</button></div>
- ${school.years.length?[...school.years].sort((a,b)=>b.startDate.localeCompare(a.startDate)).map(y=>`<div class="school-row">${schoolNavButton(schoolYearName(y),{schoolId:school.id,yearId:y.id})}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join(''):'<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>`;
+ ${school.years.length?[...school.years].sort((a,b)=>b.startDate.localeCompare(a.startDate)).map(y=>`<div class="school-row">${schoolNavButton(schoolYearName(y),{schoolId:school.id,yearId:y.id})}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join(''):'<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>${schoolBasePanel(school)}`;
  if(!group) return `<header class="page-heading"><div>${schoolCrumb(school.name,{schoolId:school.id})}<div class="eyebrow">${escapeHtml(school.name)}</div><h1 class="page-title">${schoolYearName(year)}</h1><p class="page-subtitle">Del ${shortDate(year.startDate)} al ${shortDate(year.endDate)}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Calendari escolar</h2><button class="soft-btn" data-action="year-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil',14)} Dates</button></div>
  <p class="section-description">Els festius i els dies d’horari reduït han d’estar compresos dins del curs. Són dies concrets, no es repeteixen automàticament.</p>
