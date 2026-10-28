@@ -17,10 +17,8 @@
         visible:Boolean(guardian&&visibleGuardianIds.includes(guardian.id))};
     });
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime) {
-    if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
-    const height=DAY_MINUTES*PX_PER_MINUTE;
-    const tickMarks=Array.from({length:25},(_,i)=>`<span class="day-time-tick" style="top:${i*60*PX_PER_MINUTE}px">${fmt(i*60)}</span>`).join('');
+  /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
+  function buildColumns(date,children,activities,nightSegments,height) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
       const nights=segments.filter(s=>s.visible).map(s=>{
@@ -46,12 +44,51 @@
       }).join('');
       return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${school}</div>`;
     }).join('');
+    return columns;
+  }
+  function renderWeek(startDate,days,children) {
+    if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
+    const height=DAY_MINUTES*PX_PER_MINUTE;
+    const ticks=Array.from({length:25},(_,i)=>
+      `<span class="day-time-tick" style="top:${i*60*PX_PER_MINUTE}px">${fmt(i*60)}</span>`).join('');
+    const childHeaders=children.map(c=>`<span class="week-child-label">${escape(c.name)}</span>`).join('');
+    const head=days.map(day=>`<div class="week-day-header">
+      <button type="button" class="week-date-button" data-action="show-calendar-day" data-date="${escape(day.date)}" title="Obre el dia ${escape(day.label)}">${escape(day.label)}</button>
+      <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
+    </div>`).join('');
+    const dayColumns=days.map(day=>`<div class="week-date-columns" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
+      ${buildColumns(day.date,children,day.activities,day.nightSegments,height)}</div>`).join('');
+    const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
+      const parts=day.nightSegments[c.id]??[];
+      return `<li>${escape(c.name)}: ${parts.filter(x=>x.visible).map(x=>`${fmt(x.from)}–${fmt(x.to)} ${escape(x.guardianName)}`).join('; ')||'Sense responsable visible'}${day.activities.filter(a=>a.childId===c.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
+    }).join('')}</ul></li>`).join('');
+    return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
+      <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
+           aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
+           data-timeline-key="week:${escape(startDate)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
+        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};min-width:${52+days.length*children.length*145}px">
+          <div class="week-timeline-head">
+            <div class="week-time-corner">Hora</div>${head}
+          </div>
+          <div class="week-timeline-grid">
+            <div class="day-time-axis week-time-axis" style="height:${height}px">${ticks}</div>${dayColumns}
+          </div>
+        </div>
+      </div>
+      <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
+    </section>`;
+  }
+  function render(date,dateLabel,children,activities,nightSegments,changeTime) {
+    if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
+    const height=DAY_MINUTES*PX_PER_MINUTE;
+    const tickMarks=Array.from({length:25},(_,i)=>`<span class="day-time-tick" style="top:${i*60*PX_PER_MINUTE}px">${fmt(i*60)}</span>`).join('');
+    const columns=buildColumns(date,children,activities,nightSegments,height);
     const list=children.map(child=>{
       const nights=nightSegments[child.id]??[];
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
     }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
-      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
+      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
         <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*145}px">
           <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
           <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${tickMarks}</div>${columns}</div>
@@ -60,5 +97,5 @@
       <details class="day-timeline-summary"><summary>Consultar les assignacions i les activitats en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  window.dayTimelineUI={overnightSegments,render,PX_PER_MINUTE,FOCUS_MINUTE};
+  window.dayTimelineUI={overnightSegments,render,renderWeek,PX_PER_MINUTE,FOCUS_MINUTE};
 })();
