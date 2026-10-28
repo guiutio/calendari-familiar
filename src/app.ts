@@ -526,6 +526,22 @@ function schoolSchedulePanel(school:School,year:SchoolYear,group:ClassGroup):str
   ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${editable?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${data} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${data} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<div class="empty-state">Encara no hi ha franges horàries definides.</div>'}
  </section>`;
 }
+function schoolReducedPanel(school:School,year:SchoolYear,group:ClassGroup):string {
+ const childId=group.childIds.includes(schoolNav.scheduleChildId??'')?schoolNav.scheduleChildId??'':'';
+ const own=childId?Object.hasOwn(group.reducedChildSchedules??{},childId):group.reducedWeeklySchedule!==undefined;
+ const sessions=reducedScheduleForChild(group,year,childId).sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+ const base=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}" data-mode="reduced"`;
+ const target=(id:string,name:string)=>`<button type="button" class="school-schedule-target ${id===childId?'active':''}" aria-pressed="${id===childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
+ return `<section class="card">
+ <div class="panel-header"><h2 class="section-title">Jornada reduïda</h2>${own&&year.reducedWindow?`<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus',14)} Franja</button>`:''}</div>
+ <p class="section-description">De manera automàtica, les activitats ordinàries es retallen a les hores de jornada reduïda. Pots definir un horari especial en lloc d'aquest càlcul. S'aplica a tots els dies reduïts del curs, segons el dia de la setmana.</p>
+ <div class="school-schedule-targets" role="group" aria-label="Jornada reduïda del grup o del fill">${target('','Grup')}${group.childIds.map(id=>target(id,childById(id)?.name??'Fill')).join('')}</div>
+ ${year.reducedWindow?`<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
+ <div class="school-schedule-notice">${own?`Horari reduït específic${childId?` de <strong>${escapeHtml(childById(childId)?.name??'')}</strong>`:' del grup'}. <button class="soft-btn" data-action="schedule-inherit" ${base}>${childId?'Recupera l’horari del grup':'Recupera el càlcul automàtic'}</button>`:`<span>${childId?'Horari reduït heretat o calculat automàticament.':'Horari calculat retallant les franges ordinàries.'}</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
+ ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${own?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<p class="settings-note">La jornada reduïda no conté franges en aquest horari.</p>'}`:
+ `<div class="school-schedule-notice">No es pot calcular la jornada reduïda fins que indiquis les hores reals del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
+ </section>`;
+}
 function schoolsPage():string {
  const school=schoolById(schoolNav.schoolId),year=yearById(school,schoolNav.yearId),group=groupById(year,schoolNav.groupId);
  if(!school) return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
@@ -545,6 +561,8 @@ function schoolsPage():string {
  ${year.holidays.length?`<div class="school-day-list">${year.holidays.map(d=>`<span class="school-day-pill">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix el festiu ${d}">${icon('close',13)}</button></span>`).join('')}</div>`:'<p class="settings-note">No hi ha dies festius.</p>'}</div>
  <div class="school-period"><div class="panel-header"><strong>Horari reduït (${year.reducedDays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Dia</button></div>
  ${year.reducedDays.length?`<div class="school-day-list">${year.reducedDays.map(d=>`<span class="school-day-pill reduced">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix l’horari reduït ${d}">${icon('close',13)}</button></span>`).join('')}</div>`:'<p class="settings-note">No hi ha dies d’horari reduït.</p>'}</div>
+ <div class="school-period"><div class="panel-header"><strong>Hores de jornada reduïda</strong><button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil',14)} ${year.reducedWindow?'Edita':'Configura'}</button></div>
+ <p class="settings-note">${year.reducedWindow?`De ${year.reducedWindow.startTime} a ${year.reducedWindow.endTime}. Aquestes hores s'apliquen a tots els dies reduïts del curs.`:"Encara no s'han especificat les hores de jornada reduïda; no se'n calcula un horari fins que les configuris."}</p></div>
  <div class="action-row"><button class="danger-btn" data-action="year-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Suprimeix el curs</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Grups classe</h2><button class="secondary-btn" data-action="group-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Afegir grup</button></div>
  ${year.groups.length?year.groups.map(g=>`<div class="school-row">${schoolNavButton(g.name,{schoolId:school.id,yearId:year.id,groupId:g.id})}<span class="school-meta">${g.childIds.length} ${g.childIds.length===1?'fill':'fills'}${g.tutorName?` · ${escapeHtml(g.tutorName)}`:''}</span></div>`).join(''):'<div class="empty-state">Encara no hi ha cap grup. Pots afegir-hi «Segon», «Sisè A» o qualsevol altre.</div>'}</section>`;
@@ -554,7 +572,7 @@ function schoolsPage():string {
  <div class="action-row"><button class="danger-btn" data-action="group-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">Suprimeix el grup</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Fills del grup</h2></div><p class="section-description">Selecciona els fills que pertanyen a aquest grup aquest curs. Un fill només pot estar en un grup del mateix curs i escola.</p>
  ${state.children.map(c=>{const selected=group.childIds.includes(c.id),other=year.groups.find(g=>g.id!==group.id&&g.childIds.includes(c.id));return `<button class="school-child-choice ${selected?'selected':''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other?`<small>Actualment a ${escapeHtml(other.name)}</small>`:''}</span>${selected?icon('check',18):icon('plus',17)}</button>`;}).join('')}
- </section>${schedulePanel}`;
+ </section>${schedulePanel}${schoolReducedPanel(school,year,group)}`;
 }
 function schoolFormMarkup():string {
  if(!sheet)return '';
@@ -577,6 +595,14 @@ function schoolFormMarkup():string {
  if(sheet.type==='schoolDayForm'){
   const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId);if(!year)return '';
   return heading(sheet.kind==='holiday'?'Afegeix dia festiu':'Afegeix dia d’horari reduït',`${schoolYearName(year)} · ${shortDate(year.startDate)} – ${shortDate(year.endDate)}`)+`<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}"><div class="school-form-fields"><div class="field"><label for="school-date">Data</label><input id="school-date" name="date" type="date" min="${year.startDate}" max="${year.endDate}" value="${year.startDate}" required /></div></div>${actions}</form>`;
+ }
+ if(sheet.type==='reducedWindowForm'){
+   const year=yearById(schoolById(sheet.schoolId),sheet.yearId);
+   if(!year)return '';
+   return heading('Hores de jornada reduïda',schoolYearName(year))+`<form data-school-form="reducedWindow" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}"><div class="school-form-fields">
+   <p class="settings-note">Introdueix les hores conegudes: l'aplicació no les assumeix. Els horaris ordinaris es retallaran a aquest interval sense modificar-ne els originals.</p>
+   <div class="form-row">${field('Inici','startTime','time',year.reducedWindow?.startTime??'',true)}${field('Final','endTime','time',year.reducedWindow?.endTime??'',true)}</div>
+   </div>${actions}</form>`;
  }
  if(sheet.type==='scheduleForm'){
   const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId),group=groupById(year,sheet.groupId);
