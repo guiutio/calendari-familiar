@@ -985,9 +985,23 @@ document.addEventListener('submit',event=>{
   const days=kind==='holiday'?year.holidays:year.reducedDays;
   days.push(date);days.sort();finish(kind==='holiday'?'Festiu afegit':'Dia d’horari reduït afegit');return;
  }
+ if(formKind==='reducedWindow'){
+  if(!year)return;
+  const startTime=get('startTime'),endTime=get('endTime');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){
+    notify('Indica unes hores vàlides, amb el final posterior a l’inici');return;
+  }
+  const window:ReducedWindow={startTime,endTime};
+  if(year.groups.some(g=>(g.reducedWeeklySchedule!==undefined&&!inReducedWindow(g.reducedWeeklySchedule,window))||Object.values(g.reducedChildSchedules??{}).some(a=>!inReducedWindow(a,window)))){
+    notify('Hi ha franges especials fora d’aquest interval. Modifica-les abans de canviar les hores.');return;
+  }
+  year.reducedWindow=window;finish('Hores de jornada reduïda desades');return;
+ }
  if(formKind==='schedule'){
   if(!group)return;
-  const childId=form.dataset.child??'',entries=childId?group.childSchedules?.[childId]:group.weeklySchedule;
+  const childId=form.dataset.child??'',mode:ScheduleMode=form.dataset.mode==='reduced'?'reduced':'ordinary';
+  const entries=scheduleEntriesForEdit(group,childId,mode);
+  if(mode==='reduced'&&!year?.reducedWindow){notify('Primer cal configurar les hores de jornada reduïda');return;}
   if(!entries)return; // Primer cal personalitzar l'horari d'aquest fill.
   const existing=entries.find(a=>a.id===form.dataset.session);
   if(form.dataset.session&&!existing){notify('Aquesta franja ja no existeix');return;}
@@ -995,6 +1009,9 @@ document.addEventListener('submit',event=>{
   const startTime=get('startTime'),endTime=get('endTime'),kind=get('kind');
   if(!days.length||days.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(days).size!==days.length){notify('Selecciona com a mínim un dia vàlid');return;}
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){notify('L’hora final ha de ser posterior a la inicial');return;}
+  if(mode==='reduced'&&year?.reducedWindow&&(startTime<year.reducedWindow.startTime||endTime>year.reducedWindow.endTime)){
+    notify('Aquesta franja queda fora de les hores de jornada reduïda');return;
+  }
   if(!SESSION_KINDS.includes(kind as SessionKind)){notify('Tria un tipus d’activitat vàlid');return;}
   if(days.some(day=>entries.some(a=>a.id!==existing?.id&&a.weekday===day&&a.startTime<endTime&&a.endTime>startTime))){notify('Hi ha una franja que se solapa amb aquest horari');return;}
   const label=get('label').slice(0,80);
