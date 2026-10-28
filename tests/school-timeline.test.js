@@ -46,6 +46,6 @@ test('els recursos s’inclouen a la PWA i el JS d’inici',()=>{
  assert.match(sw,/school-timeline\.js\?v=0\.5\.0/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/schoolCalendarUI\?\.render/);
- assert.match(app,/const schoolRange = schoolCalendarUI\?\.range/);
+ assert.match(app,/dayTimelineUI\.renderWeek/);
  assert.match(app,/schoolActivities\(date, children\)\.length/);
 });
