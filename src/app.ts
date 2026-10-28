@@ -8,8 +8,10 @@ const SESSION_KINDS:readonly SessionKind[]=['classe','pati','menjador','extraesc
 const SESSION_KIND_NAMES:Record<SessionKind,string>={classe:'Classe',pati:'Pati',menjador:'Menjador',extraescolar:'Extraescolar',altres:'Altres'};
 function sessionKind(value:unknown):SessionKind{return SESSION_KINDS.includes(value as SessionKind)?value as SessionKind:'classe';}
 type WeeklySession = { id:string; weekday:number; startTime:string; endTime:string; label:string; kind?:SessionKind };
-type ClassGroup = { id:string; name:string; tutorName:string; weeklySchedule:WeeklySession[]; childIds:string[]; childSchedules?:Record<string,WeeklySession[]> };
-type SchoolYear = { id:string; startDate:string; endDate:string; holidays:string[]; reducedDays:string[]; groups:ClassGroup[] };
+type ClassGroup = { id:string; name:string; tutorName:string; weeklySchedule:WeeklySession[]; childIds:string[]; childSchedules?:Record<string,WeeklySession[]>; reducedWeeklySchedule?:WeeklySession[]; reducedChildSchedules?:Record<string,WeeklySession[]> };
+type ReducedWindow = {startTime:string;endTime:string};
+type ScheduleMode = 'ordinary' | 'reduced';
+type SchoolYear = { id:string; startDate:string; endDate:string; holidays:string[]; reducedDays:string[]; groups:ClassGroup[]; reducedWindow?:ReducedWindow };
 type School = { id:string; name:string; address:string; phone:string; color:string; years:SchoolYear[] };
 
 type ThemeMode = 'auto' | 'light' | 'dark';
@@ -22,13 +24,39 @@ const BAND_RANGES:Partial<Record<TimeBand,[number,number]>>={mati:[8*60,12*60],d
 function isTimeBand(value:string):value is TimeBand{return BANDS.some(b=>b===value);}
 function timeMinutes(value:string):number {const [h,m]=value.split(':').map(Number);return (h??0)*60+(m??0);}
 
+
+/** Retalla les franges a l'interval reduït conegut, sense modificar el patró original. */
+function clippedWeeklySchedule(sessions:WeeklySession[],window:ReducedWindow):WeeklySession[]{
+ return sessions.map(a=>({...a,startTime:a.startTime<window.startTime?window.startTime:a.startTime,endTime:a.endTime>window.endTime?window.endTime:a.endTime}))
+   .filter(a=>a.startTime<a.endTime);
+}
+function ordinaryScheduleForChild(group:ClassGroup,childId:string):WeeklySession[]{
+ return childId&&Object.hasOwn(group.childSchedules??{},childId)?group.childSchedules![childId]!:group.weeklySchedule;
+}
+function reducedScheduleForChild(group:ClassGroup,year:SchoolYear,childId:string):WeeklySession[]{
+ if(!year.reducedWindow)return [];
+ const specific=childId&&Object.hasOwn(group.reducedChildSchedules??{},childId)
+   ?group.reducedChildSchedules![childId]
+   :group.reducedWeeklySchedule;
+ return clippedWeeklySchedule(specific??ordinaryScheduleForChild(group,childId),year.reducedWindow);
+}
+function scheduleForSchoolDay(group:ClassGroup,year:SchoolYear,childId:string,date:string):WeeklySession[]{
+ if(date<year.startDate||date>year.endDate||year.holidays.includes(date))return [];
+ const weekday=(parseDate(date).getDay()+6)%7;
+ const weekly=year.reducedDays.includes(date)?reducedScheduleForChild(group,year,childId):ordinaryScheduleForChild(group,childId);
+ return weekly.filter(a=>a.weekday===weekday);
+}
+function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
+ return sessions.every(a=>a.startTime>=window.startTime&&a.endTime<=window.endTime);
+}
+
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode };
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; preferences: Preferences; schools:School[] };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string} | null;
+type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.1.9';
+const APP_VERSION = '0.1.10';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -136,6 +164,9 @@ function cleanSchools(raw:unknown,children:Child[]):School[]{
         return [...new Set(days as string[])].sort();
       };
       const holidays=validateDays(year.holidays??[]),reducedDays=validateDays(year.reducedDays??[]);
+      const windowRaw=year.reducedWindow;
+      if(windowRaw!==undefined&&(!windowRaw||!validTime(windowRaw.startTime)||!validTime(windowRaw.endTime)||windowRaw.startTime>=windowRaw.endTime))throw Error('L’interval de jornada reduïda no és vàlid');
+      const reducedWindow=windowRaw?{startTime:windowRaw.startTime,endTime:windowRaw.endTime}:undefined;
       if(reducedDays.some(d=>holidays.includes(d)))throw Error('Un dia no pot ser festiu i d’horari reduït alhora');
       const groupIds=new Set<string>(),enrolled=new Set<string>();
       const groups=year.groups.map(g=>{
@@ -169,9 +200,20 @@ function cleanSchools(raw:unknown,children:Child[]):School[]{
             childSchedules[id]=parseSchedule(sessions);
           }
         }
-        return {id:g.id,name:name(g.name,80),tutorName:name(g.tutorName,100),weeklySchedule,childIds,childSchedules};
+        const reducedWeeklySchedule=g.reducedWeeklySchedule===undefined?undefined:parseSchedule(g.reducedWeeklySchedule);
+        const reducedChildSchedules:Record<string,WeeklySession[]>={};
+        if(g.reducedChildSchedules!==undefined){
+          if(!g.reducedChildSchedules||typeof g.reducedChildSchedules!=='object'||Array.isArray(g.reducedChildSchedules)||Object.keys(g.reducedChildSchedules).length>30)throw Error('Els horaris de jornada reduïda no són vàlids');
+          for(const [id,sessions] of Object.entries(g.reducedChildSchedules)){
+            if(!childIds.includes(id))throw Error('Hi ha un horari reduït per a un fill no matriculat');
+            reducedChildSchedules[id]=parseSchedule(sessions);
+          }
+        }
+        if((reducedWeeklySchedule!==undefined||Object.keys(reducedChildSchedules).length>0)&&!reducedWindow)throw Error('Cal definir les hores de jornada reduïda abans dels horaris especials');
+        if(reducedWindow&&(reducedWeeklySchedule!==undefined&&!inReducedWindow(reducedWeeklySchedule,reducedWindow)||Object.values(reducedChildSchedules).some(a=>!inReducedWindow(a,reducedWindow))))throw Error('Hi ha activitats fora de les hores de jornada reduïda');
+        return {id:g.id,name:name(g.name,80),tutorName:name(g.tutorName,100),weeklySchedule,childIds,childSchedules,reducedWeeklySchedule,reducedChildSchedules};
       });
-      return {id:year.id,startDate:year.startDate,endDate:year.endDate,holidays,reducedDays,groups};
+      return {id:year.id,startDate:year.startDate,endDate:year.endDate,holidays,reducedDays,groups,reducedWindow};
     });
     return {id:school.id!,name:name(school.name,100),address:name(school.address,200),phone:name(school.phone,50),color,years};
   });
@@ -267,7 +309,7 @@ let viewYear=new Date().getFullYear(),viewMonth=new Date().getMonth();
 let calendarView:CalendarView='month';
 let selectedDate=localDate(new Date());
 let tab:Tab='calendar';
-let schoolNav:{schoolId?:string;yearId?:string;groupId?:string;scheduleChildId?:string}={};
+let schoolNav:{schoolId?:string;yearId?:string;groupId?:string;scheduleChildId?:string;scheduleMode?:ScheduleMode}={};
 let sheet:Sheet=null;
 let rotationDraft:Rotation|null=null;
 let rotationUnit:'days'|'weeks'='weeks';
@@ -658,7 +700,7 @@ function removeChild(id:string){
   if(state.children.length<2)return;
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
   state.children=state.children.filter(x=>x.id!==id);delete state.rotation.assignments[id];
-  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];})));
+  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];})));
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   Object.keys(state.bandOverrides).forEach(key=>{if(key.split('|')[1]===id)delete state.bandOverrides[key];});
   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;update();
@@ -723,7 +765,7 @@ function clickAction(button:HTMLElement){
       const year=yearById(schoolById(button.dataset.school),button.dataset.year),group=groupById(year,button.dataset.group),id=button.dataset.child!;
       if(!year||!group||!childById(id))break;
       if(group.childIds.includes(id)){group.childIds=group.childIds.filter(x=>x!==id);if(group.childSchedules)delete group.childSchedules[id];}
-      else {year.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];});group.childIds.push(id);}
+      else {year.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];});group.childIds.push(id);}
       update();notify('Assignació al grup actualitzada');break;
     }
     case 'school-delete':{
