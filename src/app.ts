@@ -688,12 +688,41 @@ function clickAction(button:HTMLElement){
     case 'group-add':sheet={type:'groupForm',schoolId:button.dataset.school!,yearId:button.dataset.year!};render();break;
     case 'group-edit':sheet={type:'groupForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!};render();break;
     case 'school-day-add':sheet={type:'schoolDayForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,kind:button.dataset.kind==='holiday'?'holiday':'reduced'};render();break;
-    case 'schedule-add':sheet={type:'scheduleForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!};render();break;
+    case 'schedule-target':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group);
+      const childId=button.dataset.child??'';
+      if(!group||(childId&&!group.childIds.includes(childId)))break;
+      schoolNav.scheduleChildId=childId;render();break;
+    }
+    case 'schedule-customize':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group),childId=button.dataset.child??'';
+      if(!group||!group.childIds.includes(childId))break;
+      group.childSchedules??={};
+      if(Object.hasOwn(group.childSchedules,childId))break;
+      group.childSchedules[childId]=group.weeklySchedule.map(a=>({...a,id:newId()}));
+      schoolNav.scheduleChildId=childId;update();notify('Horari individual creat');break;
+    }
+    case 'schedule-inherit':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group),childId=button.dataset.child??'';
+      if(!group||!group.childSchedules||!Object.hasOwn(group.childSchedules,childId)||!confirm('Vols descartar l’horari individual i recuperar el del grup?'))break;
+      delete group.childSchedules[childId];update();notify('Horari del grup recuperat');break;
+    }
+    case 'schedule-add':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group),childId=button.dataset.child??'';
+      if(!group||(childId&&!Object.hasOwn(group.childSchedules??{},childId)))break;
+      sheet={type:'scheduleForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!,childId};render();break;
+    }
+    case 'schedule-edit':{
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group),childId=button.dataset.child??'',sessionId=button.dataset.session??'';
+      const entries=childId?group?.childSchedules?.[childId]:group?.weeklySchedule;
+      if(!entries?.some(a=>a.id===sessionId))break;
+      sheet={type:'scheduleForm',schoolId:button.dataset.school!,yearId:button.dataset.year!,groupId:button.dataset.group!,childId,sessionId};render();break;
+    }
     case 'school-child-toggle':{
       const year=yearById(schoolById(button.dataset.school),button.dataset.year),group=groupById(year,button.dataset.group),id=button.dataset.child!;
       if(!year||!group||!childById(id))break;
-      if(group.childIds.includes(id))group.childIds=group.childIds.filter(x=>x!==id);
-      else {year.groups.forEach(g=>g.childIds=g.childIds.filter(x=>x!==id));group.childIds.push(id);}
+      if(group.childIds.includes(id)){group.childIds=group.childIds.filter(x=>x!==id);if(group.childSchedules)delete group.childSchedules[id];}
+      else {year.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];});group.childIds.push(id);}
       update();notify('Assignació al grup actualitzada');break;
     }
     case 'school-delete':{
@@ -718,8 +747,13 @@ function clickAction(button:HTMLElement){
       update();notify('Dia eliminat');break;
     }
     case 'schedule-delete':{
-      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group);
-      if(!group)break;group.weeklySchedule=group.weeklySchedule.filter(a=>a.id!==button.dataset.session);
+      const group=groupById(yearById(schoolById(button.dataset.school),button.dataset.year),button.dataset.group),childId=button.dataset.child??'';
+      if(!group)break;
+      const entries=childId?group.childSchedules?.[childId]:group.weeklySchedule;
+      if(!entries)break;
+      const filtered=entries.filter(a=>a.id!==button.dataset.session);
+      if(filtered.length===entries.length)break;
+      if(childId)group.childSchedules![childId]=filtered;else group.weeklySchedule=filtered;
       update();notify('Franja suprimida');break;
     }
     case 'tab':changeTab(button.dataset.tab as Tab);break;
@@ -829,7 +863,7 @@ document.addEventListener('submit',event=>{
   const name=get('name').slice(0,80),tutorName=get('tutorName').slice(0,100);
   if(!name){notify('Indica el nom del grup classe');return;}
   if(group){group.name=name;group.tutorName=tutorName;finish('Grup classe actualitzat');}
-  else{const id=newId();year.groups.push({id,name,tutorName,weeklySchedule:[],childIds:[]});schoolNav={schoolId:school.id,yearId:year.id,groupId:id};finish('Grup classe afegit');}
+  else{const id=newId();year.groups.push({id,name,tutorName,weeklySchedule:[],childIds:[],childSchedules:{}});schoolNav={schoolId:school.id,yearId:year.id,groupId:id};finish('Grup classe afegit');}
   return;
  }
  if(formKind==='day'){
