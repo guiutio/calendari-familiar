@@ -54,10 +54,10 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize };
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; preferences: Preferences; schools:School[] };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | null;
+type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
 const DB_NAME = 'calendari-familiar-db';
@@ -413,6 +413,23 @@ function activeChildren(){return state.children.filter(c=>state.preferences.visi
 function activeBands(){return BANDS.filter(b=>state.preferences.visibleBands.includes(b));}
 function bandKey(date:string,childId:string,band:TimeBand){return `${date}|${childId}|${band}`;}
 function shortChildLabel(c:Child){return initial(c.name);}
+type SchoolCalendarItem={id:string;schoolId:string;schoolName:string;color:string;childId:string;startTime:string;endTime:string;start:number;end:number;kind:string;description:string};
+type SchoolCalendarUI={
+  collect:(date:string,children:Child[],schools:School[],visibleIds:string[],getSessions:typeof scheduleForSchoolDay)=>SchoolCalendarItem[];
+  range:(items:SchoolCalendarItem[])=>[number,number]|null;
+  render:(date:string,dateLabel:string,children:Child[],activities:SchoolCalendarItem[],commonRange?:[number,number]|null,empty?:boolean,reduced?:boolean)=>string;
+};
+const schoolCalendarUI=(window as Window & {schoolCalendarUI?:SchoolCalendarUI}).schoolCalendarUI;
+function schoolActivities(date:string,children:Child[]):SchoolCalendarItem[]{
+  return schoolCalendarUI?.collect(date,children,state.schools,state.preferences.visibleSchools,scheduleForSchoolDay)??[];
+}
+function schoolReducedDay(date:string,children:Child[]):boolean{
+  return state.schools.some(s=>state.preferences.visibleSchools.includes(s.id)&&s.years.some(y=>date>=y.startDate&&date<=y.endDate&&y.reducedDays.includes(date)&&y.groups.some(g=>g.childIds.some(id=>children.some(c=>c.id===id)))));
+}
+function schoolTimeline(date:string,children:Child[],range?:[number,number]|null,empty=false):string{
+  if(!state.preferences.visibleSchools.length||!children.length)return '';
+  return schoolCalendarUI?.render(date,fullDate(date),children,schoolActivities(date,children),range,empty,schoolReducedDay(date,children))??'';
+}
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
   if(!children.length||!bands.length)return '<span class="mini-empty">—</span>';
   return `<span class="mini-children" style="--child-count:${children.length}">${children.map(c=>`<span title="${escapeHtml(c.name)}">${escapeHtml(shortChildLabel(c))}</span>`).join('')}</span>
@@ -463,8 +480,9 @@ function calendarPage(){
       const date=addDays(starting,i),d=parseDate(date),other=d.getMonth()!==viewMonth;
       const changed=children.some(c=>overridden(date,c.id)||bands.some(b=>b!=='nit'&&Object.hasOwn(state.bandOverrides,bandKey(date,c.id,b))));
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
-      return `<button type="button" class="day-cell ${other?'other-month':''} ${date===today?'today':''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. Toca per veure les franges i els fills.">
-        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}</span>
+      const schoolCount=schoolActivities(date,children).length;
+      return `<button type="button" class="day-cell ${other?'other-month':''} ${date===today?'today':''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Toca per veure les franges i els fills.">
+        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}${schoolCount?`<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount} act.</span>`:''}</span>
         ${miniBands(date,children,bands)}
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
@@ -472,12 +490,14 @@ function calendarPage(){
     content=`<div class="weekdays">${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
   } else if(calendarView==='week'){
     const start=weekStart(selectedDate);
+    const weekDates=Array.from({length:7},(_,i)=>addDays(start,i));
+    const schoolRange=schoolCalendarUI?.range(weekDates.flatMap(d=>schoolActivities(d,children)));
     content=`<div class="week-agendas">${Array.from({length:7},(_,i)=>{
       const date=addDays(start,i);
-      return `<section class="week-day"><div class="agenda-day-heading"><strong>${weekLong[i]} ${parseDate(date).getDate()}</strong><button class="soft-btn" data-action="open-day" data-date="${date}">Detall</button></div>${fullAgenda(date)}</section>`;
+      return `<section class="week-day"><div class="agenda-day-heading"><strong>${weekLong[i]} ${parseDate(date).getDate()}</strong><button class="soft-btn" data-action="open-day" data-date="${date}">Detall</button></div>${fullAgenda(date)}${schoolRange?schoolTimeline(date,children,schoolRange):''}</section>`;
     }).join('')}</div>`;
   } else {
-    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${fullAgenda(selectedDate)}${schoolInfoForDay(selectedDate)}</section>`;
+    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${fullAgenda(selectedDate)}${schoolInfoForDay(selectedDate)}${schoolTimeline(selectedDate,children,undefined,true)}</section>`;
   }
   const visibleNames=bands.map(b=>BAND_NAMES[b]).join(' · ');
   return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Responsables per fill i moment del dia.</p></div>
@@ -684,7 +704,12 @@ function sheetMarkup(){
     const date=sheet.date,bdays=birthdays(date).filter(c=>state.preferences.visibleChildren.includes(c.id));
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${bdays.length?`<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c=>`${c.name} fa ${birthdayAge(date,c)} anys`).join(' · '))}</div>`:''}
-    ${fullAgenda(date)}${schoolInfoForDay(date)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+    ${fullAgenda(date)}${schoolInfoForDay(date)}${schoolTimeline(date,activeChildren(),undefined,true)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+  } else if(sheet?.type==='schoolActivity'){
+    const activity=schoolActivities(sheet.date,activeChildren()).find(a=>a.id===sheet.sessionId&&a.schoolId===sheet.schoolId&&a.childId===sheet.childId);
+    const c=childById(sheet.childId);
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
   } else if(sheet?.type==='bandEdit'){
     const {date,childId,band}=sheet,c=childById(childId),value=responsibility(date,childId,band);
     const isNight=band==='nit';
@@ -896,6 +921,11 @@ function clickAction(button:HTMLElement){
     case 'calendar-navigate':navigateCalendar(Number(button.dataset.step)===-1?-1:1);break;
     case 'prev-month':goToMonth(-1);break;
     case 'next-month':goToMonth(1);break;
+    case 'open-school-activity':{
+      const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
+      if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
+      break;
+    }
     case 'open-day':selectedDate=button.dataset.date!;sheet={type:'day',date:selectedDate};render();break;
     case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){selectedDate=date;sheet={type:'bandEdit',date,childId,band};render();}break;}
     case 'toggle-band':{const b=button.dataset.band??'';if(!isTimeBand(b))break;const selected=state.preferences.visibleBands;state.preferences.visibleBands=selected.includes(b)?selected.filter(x=>x!==b):BANDS.filter(x=>selected.includes(x)||x===b);update();break;}

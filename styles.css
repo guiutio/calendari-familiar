@@ -432,3 +432,39 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   :root[data-font-size="xlarge"] .calendar-view-switch {flex-wrap:wrap;}
   :root[data-font-size="xlarge"] .calendar-view-switch button {min-width:28%;}
 }
+
+/* v0.3.0 · Cronologia proporcional en minuts dels horaris escolars */
+.school-month-count {font-size:calc(8px * var(--font-scale,1));font-weight:750;color:#54759b;white-space:nowrap;margin-left:auto;}
+.school-timeline {margin:15px 0 8px;padding:12px;border:1px solid #dde6f0;border-radius:13px;background:#fafcff;min-width:0;}
+.school-timeline-heading {display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:10px;color:#50657e;font-size:calc(12px * var(--font-scale,1));}
+.school-timeline-heading strong {color:#274f7f;font-size:calc(13px * var(--font-scale,1));}
+.school-timeline-reduced {background:#fff4cf;color:#82621b;border-radius:8px;padding:3px 7px;font-weight:700;}
+.school-timeline-empty {font-size:calc(12px * var(--font-scale,1));color:#73839a;margin:14px 0;line-height:1.5;}
+.school-timeline-scroll {overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;}
+.school-timeline-inner {display:grid;grid-template-columns:48px repeat(var(--child-count),minmax(0,1fr));min-width:100%;}
+.school-timeline-corner,.school-timeline-child {padding:7px 3px;font-size:calc(11px * var(--font-scale,1));font-weight:700;color:#506982;text-align:center;min-width:0;overflow-wrap:anywhere;}
+.school-timeline-axis {position:relative;border-top:1px solid #dfe7f0;}
+.school-time-tick {position:absolute;left:0;width:100%;font-size:calc(10px * var(--font-scale,1));color:#8091a6;transform:translateY(-45%);pointer-events:none;white-space:nowrap;}
+.school-timeline-column {position:relative;border-top:1px solid #dfe7f0;border-left:1px solid #e1e8f0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 53px,#e8eef5 53px,#e8eef5 54px);}
+.school-timeline-event {position:absolute;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;overflow:hidden;gap:2px;padding:2px 4px;border:0;border-left:4px solid var(--activity-color);border-radius:4px;background:color-mix(in srgb,var(--activity-color) 33%,white);color:#27364d;text-align:left;cursor:pointer;min-height:0;}
+.school-timeline-event:focus-visible {outline:2px solid #325a8b;outline-offset:1px;z-index:2;}
+.school-event-hour {font-size:calc(9px * var(--font-scale,1));line-height:1.2;font-weight:750;white-space:nowrap;}
+.school-event-kind {font-size:calc(10px * var(--font-scale,1));line-height:1.2;font-weight:750;}
+.school-event-description {font-size:calc(9px * var(--font-scale,1));line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;}
+.school-timeline-details {font-size:calc(11px * var(--font-scale,1));color:#56718a;margin-top:9px;line-height:1.5;}
+.school-timeline-details summary {cursor:pointer;font-weight:700;padding:4px;}
+.school-timeline-details ul {padding-left:19px;margin:8px 0 0;}
+.school-timeline-details li {margin:4px 0;overflow-wrap:anywhere;}
+.school-activity-info {font-size:calc(14px * var(--font-scale,1));line-height:1.55;padding:8px 0;overflow-wrap:anywhere;}
+.school-activity-info p {margin:10px 0;}
+:root[data-theme="dark"] .school-month-count {color:#b6d3f5;}
+:root[data-theme="dark"] .school-timeline {background:#1d2c41;border-color:#344a64;}
+:root[data-theme="dark"] .school-timeline-heading,:root[data-theme="dark"] .school-timeline-corner,:root[data-theme="dark"] .school-timeline-child,:root[data-theme="dark"] .school-timeline-details {color:#c0d0e3;}
+:root[data-theme="dark"] .school-timeline-heading strong {color:#d5e8ff;}
+:root[data-theme="dark"] .school-time-tick {color:#b3c3d7;}
+:root[data-theme="dark"] .school-timeline-column {border-color:#42546c;background:repeating-linear-gradient(to bottom,transparent 0,transparent 53px,#344960 53px,#344960 54px);}
+:root[data-theme="dark"] .school-timeline-axis {border-color:#42546c;}
+:root[data-theme="dark"] .school-timeline-event {background:color-mix(in srgb,var(--activity-color) 44%,#1c2b3f);color:#f1f6fc;}
+:root[data-theme="dark"] .school-timeline-reduced {background:#51462f;color:#f2d69c;}
+:root[data-theme="dark"] .school-timeline-empty {color:#bccce0;}
+@media(max-width:560px) {.school-timeline {padding:8px;margin:12px 0;}.school-month-count {font-size:calc(7px * var(--font-scale,1));}}

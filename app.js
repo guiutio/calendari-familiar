@@ -35,7 +35,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -483,6 +483,18 @@ function activeChildren() { return state.children.filter(c => state.preferences.
 function activeBands() { return BANDS.filter(b => state.preferences.visibleBands.includes(b)); }
 function bandKey(date, childId, band) { return `${date}|${childId}|${band}`; }
 function shortChildLabel(c) { return initial(c.name); }
+const schoolCalendarUI = window.schoolCalendarUI;
+function schoolActivities(date, children) {
+    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, scheduleForSchoolDay) ?? [];
+}
+function schoolReducedDay(date, children) {
+    return state.schools.some(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => date >= y.startDate && date <= y.endDate && y.reducedDays.includes(date) && y.groups.some(g => g.childIds.some(id => children.some(c => c.id === id)))));
+}
+function schoolTimeline(date, children, range, empty = false) {
+    if (!state.preferences.visibleSchools.length || !children.length)
+        return '';
+    return schoolCalendarUI?.render(date, fullDate(date), children, schoolActivities(date, children), range, empty, schoolReducedDay(date, children)) ?? '';
+}
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
         return '<span class="mini-empty">—</span>';
@@ -550,8 +562,9 @@ function calendarPage() {
             const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== viewMonth;
             const changed = children.some(c => overridden(date, c.id) || bands.some(b => b !== 'nit' && Object.hasOwn(state.bandOverrides, bandKey(date, c.id, b))));
             const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
-            return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. Toca per veure les franges i els fills.">
-        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
+            const schoolCount = schoolActivities(date, children).length;
+            return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Toca per veure les franges i els fills.">
+        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}${schoolCount ? `<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount} act.</span>` : ''}</span>
         ${miniBands(date, children, bands)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
       </button>`;
@@ -560,13 +573,15 @@ function calendarPage() {
     }
     else if (calendarView === 'week') {
         const start = weekStart(selectedDate);
+        const weekDates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+        const schoolRange = schoolCalendarUI?.range(weekDates.flatMap(d => schoolActivities(d, children)));
         content = `<div class="week-agendas">${Array.from({ length: 7 }, (_, i) => {
             const date = addDays(start, i);
-            return `<section class="week-day"><div class="agenda-day-heading"><strong>${weekLong[i]} ${parseDate(date).getDate()}</strong><button class="soft-btn" data-action="open-day" data-date="${date}">Detall</button></div>${fullAgenda(date)}</section>`;
+            return `<section class="week-day"><div class="agenda-day-heading"><strong>${weekLong[i]} ${parseDate(date).getDate()}</strong><button class="soft-btn" data-action="open-day" data-date="${date}">Detall</button></div>${fullAgenda(date)}${schoolRange ? schoolTimeline(date, children, schoolRange) : ''}</section>`;
         }).join('')}</div>`;
     }
     else {
-        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${fullAgenda(selectedDate)}${schoolInfoForDay(selectedDate)}</section>`;
+        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${fullAgenda(selectedDate)}${schoolInfoForDay(selectedDate)}${schoolTimeline(selectedDate, children, undefined, true)}</section>`;
     }
     const visibleNames = bands.map(b => BAND_NAMES[b]).join(' · ');
     return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Responsables per fill i moment del dia.</p></div>
@@ -787,7 +802,13 @@ function sheetMarkup() {
         const date = sheet.date, bdays = birthdays(date).filter(c => state.preferences.visibleChildren.includes(c.id));
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${bdays.length ? `<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c => `${c.name} fa ${birthdayAge(date, c)} anys`).join(' · '))}</div>` : ''}
-    ${fullAgenda(date)}${schoolInfoForDay(date)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+    ${fullAgenda(date)}${schoolInfoForDay(date)}${schoolTimeline(date, activeChildren(), undefined, true)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+    }
+    else if (sheet?.type === 'schoolActivity') {
+        const activity = schoolActivities(sheet.date, activeChildren()).find(a => a.id === sheet.sessionId && a.schoolId === sheet.schoolId && a.childId === sheet.childId);
+        const c = childById(sheet.childId);
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+    ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
     else if (sheet?.type === 'bandEdit') {
         const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band);
@@ -1196,6 +1217,14 @@ function clickAction(button) {
         case 'next-month':
             goToMonth(1);
             break;
+        case 'open-school-activity': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', schoolId = button.dataset.school ?? '', sessionId = button.dataset.session ?? '';
+            if (schoolActivities(date, activeChildren()).some(a => a.id === sessionId && a.schoolId === schoolId && a.childId === childId)) {
+                sheet = { type: 'schoolActivity', date, childId, schoolId, sessionId };
+                render();
+            }
+            break;
+        }
         case 'open-day':
             selectedDate = button.dataset.date;
             sheet = { type: 'day', date: selectedDate };

@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.2.0
+# Calendari Familiar · Web MVP v0.3.0
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -177,3 +177,15 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - El restabliment de dades de mostra conserva les preferències de tema i de mida de lletra.
 
 **Planificació:** la visualització detallada dels horaris escolars passa a la **v0.3.0** i els patrons familiars a la **v0.4.0** (la 0.2.0 es dedica a llegibilitat).
+
+## v0.3.0: horaris escolars detallats al calendari
+
+- **Mes:** marcador del nombre d'activitats escolars amb hores definides en cada dia. El detall és accessible tocant la data.
+- **Setmana:** cada jornada mostra, sota les assignacions familiars, les activitats horàries reals amb una línia temporal d'escala homogènia durant la setmana i columnes per fill.
+- **Dia i detall del mes:** activitats ordinàries o reduïdes per escola i fill, amb hores exactes, classe, pati, menjador, extraescolar o altres activitats, descripció i color identificatiu del centre.
+- **Temps proporcional:** la posició i altura dels blocs depenen dels minuts d'inici, final i durada. No es generen hores inexistents. Les sessions molt curtes poden consultar-se tocant el bloc o a la llista accessible.
+- **Filtres i compatibilitat:** les escoles continuen ocultes per defecte; només es mostren les activitats dels centres activats. Es respecten festius, dates del curs, horaris individuals, jornades reduïdes i personalitzacions. La rotació de nits i les franges familiars no canvien.
+- S'afegeix un llistat alternatiu d'activitats per llegir horaris complets, especialment amb mida de lletra gran o molts fills.
+- No canvia l'estructura del model de dades ni el format dels JSON.
+
+**Següent funcionalitat:** v0.4.0, patrons de responsabilitat familiar recurrents.
