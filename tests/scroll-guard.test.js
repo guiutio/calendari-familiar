@@ -8,7 +8,7 @@ function harness({short = false, mobile = true} = {}) {
   const win = {matchMedia: () => ({matches: mobile})};
   installScrollGuard(doc, win);
   const scroller = {scrollTop: 0, clientHeight: 600, scrollHeight: short ? 400 : 1700};
-  const target = {closest(selector) { return selector === '.sheet, .main-area' ? scroller : null; }};
+  const target = {closest(selector) { return selector === '.day-timeline-viewport, .sheet, .main-area' ? scroller : null; }};
   function touch(name, y, {x = 50, node = target} = {}) {
     let canceled = 0;
     const event = {
@@ -54,7 +54,7 @@ test('no intercepta gestos horitzontals ni pantalles d’escriptori', () => {
 
 test('el gest que comença a la barra inferior no fa scroll', () => {
   const h = harness();
-  const tab = {closest(selector) {return selector === '.sheet, .main-area' ? null : {};}};
+  const tab = {closest(selector) {return selector === '.day-timeline-viewport, .sheet, .main-area' ? null : {};}};
   h.touch('touchstart', 400, {node: tab});
   assert.equal(h.touch('touchmove', 375, {node: tab}), 1);
 });
@@ -64,7 +64,7 @@ test('els recursos de la protecció tàctil estan inclosos a la PWA', async () =
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(html, /scroll-guard\.js\?v=0\.3\.3/);
-  assert.match(sw, /scroll-guard\.js\?v=0\.3\.3/);
+  assert.match(html, /scroll-guard\.js\?v=0\.4\.0/);
+  assert.match(sw, /scroll-guard\.js\?v=0\.4\.0/);
   assert.match(css, /\.main-area,\.sheet \{overscroll-behavior-y:none;/);
 });
