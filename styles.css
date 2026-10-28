@@ -476,8 +476,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 
 /* v0.4.0 · Vista diària de 24 h, scroll intern 00:00–24:00 i franges de pernocta */
 .day-timeline {margin:14px 0 6px;min-width:0;}
-.day-timeline-intro {display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;color:#64768d;font-size:calc(11px * var(--font-scale,1));margin:0 0 12px;line-height:1.4;}
-.day-timeline-intro strong {color:#324e70;font-size:calc(13px * var(--font-scale,1));}
 .day-timeline-viewport {height:768px;max-width:100%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;border:1px solid #dce7f1;border-radius:12px;background:#f8fbff;scrollbar-width:thin;}
 .day-timeline-inner {width:100%;min-width:100%;}
 .day-timeline-headers {position:sticky;top:0;z-index:6;display:grid;grid-template-columns:52px repeat(var(--day-child-count),minmax(0,1fr));background:#eff5fb;border-bottom:1px solid #d4e0ee;}
@@ -500,8 +498,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .day-timeline-summary li {margin:7px 0;overflow-wrap:anywhere;}
 .rotation-change-field {margin:14px 0 5px;max-width:420px;}
 .rotation-change-field input {min-width:160px;}
-:root[data-theme="dark"] .day-timeline-intro {color:#bdcce0;}
-:root[data-theme="dark"] .day-timeline-intro strong {color:#e1edff;}
 :root[data-theme="dark"] .day-timeline-viewport {background:#1b283a;border-color:#34465c;}
 :root[data-theme="dark"] .day-timeline-headers {background:#26354c;border-color:#42566f;}
 :root[data-theme="dark"] .day-timeline-headers span {color:#e1ebf9;}
@@ -513,7 +509,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .day-timeline-summary {color:#c0d0e3;}
 @media (max-width:560px) {
  .day-timeline {margin-left:-2px;margin-right:-2px;}
- .day-timeline-intro {gap:4px 9px;}
  .day-timeline-headers span {font-size:calc(11px * var(--font-scale,1));}
  .day-night-title,.day-school-kind {font-size:calc(11px * var(--font-scale,1));}
 }

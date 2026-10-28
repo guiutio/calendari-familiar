@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.4.0
+# Calendari Familiar · Web MVP v0.4.1
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -230,3 +230,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Es mantenen intactes les cinc franges convencionals a les vistes setmanal i mensual, i al detall mensual.
 
 **Planificació vigent:** v0.5.0, patrons recurrents d'horaris familiars i responsabilitat diürna.
+
+## v0.4.1: eliminació del text redundant de la vista diària
+
+- Es retira el bloc de tres línies situat damunt de la cronologia diària: «Dia complet · 00:00–24:00», «Inici visible: 06:00…» i «Canvi de pernocta: 19:00».
+- La taula **Hora / Fills** queda immediatament sota la data, sense aquest text intermedi.
+- No canvien el scroll de 24 hores, el posicionament inicial a les 06:00, les activitats escolars ni les pernoctes. L'hora de canvi continua essent editable a Rotacions i predeterminada a les 19:00.
+- No hi ha canvis en l'estructura de les dades ni en les còpies JSON.

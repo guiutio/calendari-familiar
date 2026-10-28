@@ -51,7 +51,6 @@
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
     }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
-      <div class="day-timeline-intro"><strong>Dia complet · 00:00–24:00</strong><span>Inici visible: 06:00 · desplaça amunt o avall per veure totes les hores</span><span>Canvi de pernocta: ${escape(changeTime)}</span></div>
       <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
         <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*145}px">
           <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
