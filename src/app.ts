@@ -15,6 +15,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string} | null;
 
 const $app = document.getElementById('app')!;
+const APP_VERSION = '0.1.6';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -266,7 +267,7 @@ function layout(content:string){return `<div class="app-layout"><aside class="si
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('schools','Escoles','school','side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v0.1.5 · Privat per disseny</div></div></main>
+  </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function calendarPage(){
   const today=localDate(new Date());
@@ -405,6 +406,7 @@ function settingsPage(){
   ${state.children.map(c=>`<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" ${state.children.length===1?'disabled':''}>${icon('trash',16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
   ${state.guardians.map(g=>`<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" ${state.guardians.length===1?'disabled':''}>${icon('trash',16)}</button></div>`).join('')}</section>
+  <section class="card"><div class="panel-header"><h2 class="section-title">Actualitzacions</h2><span class="sample-tag">v${APP_VERSION}</span></div><p class="section-description">Si l’iPhone mostra una versió anterior, pots actualitzar els fitxers de l’app sense esborrar les dades del calendari.</p><div class="action-row"><button type="button" class="secondary-btn" data-action="check-update">Comprova actualitzacions</button></div></section>
   <section class="card"><h2 class="section-title">Les teves dades</h2><p class="section-description">Les dades es queden en aquest navegador. Exporta una còpia si canvies de dispositiu o abans de netejar-ne les dades.</p>
   <div class="status-good">${icon('shield',17)} ${escapeHtml(storageDescription)}</div><div class="action-row"><button class="primary-btn" data-action="export">${icon('download',15)} Exporta JSON</button><button class="secondary-btn" data-action="import">${icon('upload',15)} Importa JSON</button><input class="sr-only" id="import-file" type="file" accept=".json,application/json" /></div><hr>
   <div class="panel-header"><h2 class="section-title">Dades d’exemple</h2><span class="sample-tag">Elna i Blai</span></div><p class="settings-note">Restableix les dades fictícies de demostració. Es perdran els canvis actuals, així que exporta una còpia abans si et cal.</p>
@@ -537,6 +539,7 @@ function clickAction(button:HTMLElement){
     }
     case 'tab':changeTab(button.dataset.tab as Tab);break;
     case 'set-theme':state.preferences.theme=validTheme(button.dataset.themeMode);update();break;
+    case 'check-update':window.location.assign('./actualitza.html');break;
     case 'open-filters':sheet={type:'filters'};render();break;
     case 'close-sheet':sheet=null;render();break;
     case 'today':{const now=new Date();viewMonth=now.getMonth();viewYear=now.getFullYear();render();break;}
