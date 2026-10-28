@@ -53,17 +53,21 @@ function schoolScheduleForCalendarDay(school, year, group, childId, date) {
     const ordinary = core ? core.combine(base, extra) : [...base, ...extra];
     if (!year?.reducedDays.includes(date))
         return ordinary;
-    if (!year.reducedWindow)
+    if (!year.reducedWindow || weekday > 4)
         return [];
+    // Els dies reduïts tenen activitats pròpies per grup; els buits mantenen
+    // el context de presència a l'escola, mai activitats ordinàries inventades.
+    const baseReduced = { id: `__reduced_window__${weekday}`, weekday,
+        startTime: year.reducedWindow.startTime, endTime: year.reducedWindow.endTime, kind: 'altres', label: '' };
     const oldReduced = group?.reducedChildSchedules && Object.hasOwn(group.reducedChildSchedules, childId) ? group.reducedChildSchedules[childId] : undefined;
-    const special = oldReduced ?? group?.reducedWeeklySchedule;
-    return special === undefined ? clippedWeeklySchedule(ordinary, year.reducedWindow) : special.filter(s => s.weekday === weekday);
+    const special = (oldReduced ?? group?.reducedWeeklySchedule ?? []).filter(s => s.weekday === weekday);
+    return core ? core.combine([baseReduced], special) : [baseReduced, ...special];
 }
 function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.3.2';
+const APP_VERSION = '0.3.3';
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -694,23 +698,17 @@ function schoolSchedulePanel(school, year, group) {
 function scheduleEntriesForEdit(group, childId, mode) {
     if (childId)
         return undefined; // Els horaris individuals antics són de lectura, però no es poden continuar editant.
-    return mode === 'reduced' ? group.reducedWeeklySchedule : group.weeklySchedule;
+    return mode === 'reduced' ? (group.reducedWeeklySchedule ?? []) : group.weeklySchedule;
 }
 function schoolReducedPanel(school, year, group) {
-    const own = group.reducedWeeklySchedule !== undefined;
+    const sessions = [...(group.reducedWeeklySchedule ?? [])].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
     const base = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-mode="reduced"`;
-    const core = window.schoolScheduleCore;
-    const baseSessions = ordinaryBaseForSchool(school, year);
-    const ordinary = core ? core.combine(baseSessions, group.weeklySchedule) : [...baseSessions, ...group.weeklySchedule];
-    const automatic = year.reducedWindow ? clippedWeeklySchedule(ordinary, year.reducedWindow) : [];
-    const sessions = [...(group.reducedWeeklySchedule ?? automatic)].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
     return `<section class="card">
-    <div class="panel-header"><h2 class="section-title">Jornada reduïda del grup</h2>${own && year.reducedWindow ? `<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus', 14)} Franja</button>` : ''}</div>
-    <p class="section-description">La jornada reduïda es calcula retallant l’interval ordinari i les activitats del grup a les hores establertes. Si cal, pots definir un horari reduït específic del grup.</p>
-    ${year.reducedWindow ? `<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
-    <div class="school-schedule-notice">${own ? `<span>Horari reduït específic del grup.</span><button class="soft-btn" data-action="schedule-inherit" ${base}>Recupera el càlcul automàtic</button>` : `<span>Horari reduït calculat automàticament.</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
-    ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div>${own ? `<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash', 15)}</button></div>` : ''}</div>`).join('') : '<p class="settings-note">No hi ha activitats en aquesta jornada reduïda.</p>'}` :
-        `<div class="school-schedule-notice">Cal configurar les hores de jornada reduïda del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
+    <div class="panel-header"><h2 class="section-title">Activitats en jornada reduïda</h2>${year.reducedWindow ? `<button class="secondary-btn" data-action="schedule-add" ${base}>${icon('plus', 14)} Activitat</button>` : ''}</div>
+    <p class="section-description">Defineix les activitats d’aquest grup i les hores de cadascuna per als dies marcats com a jornada reduïda al curs. Poden ser diferents de les activitats dels dies ordinaris.</p>
+    ${year.reducedWindow ? `<p class="settings-note">Límit horari del curs: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>. Les activitats s’apliquen només als dies de jornada reduïda i segons el dia de la setmana.</p>
+    ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita l’activitat de jornada reduïda">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix l’activitat de jornada reduïda">${icon('trash', 15)}</button></div></div>`).join('') + `<div class="action-row"><button class="soft-btn" data-action="schedule-inherit" ${base}>Esborra totes les activitats reduïdes</button></div>` : '<p class="settings-note">Encara no hi ha activitats específiques de jornada reduïda. Pots afegir-ne amb el botó «Activitat». Al calendari es continua indicant la jornada escolar dins de les hores reduïdes.</p>'}` :
+        `<div class="school-schedule-notice">Configura primer les hores de jornada reduïda al curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
   </section>`;
 }
 function schoolsPage() {
@@ -811,12 +809,12 @@ function schoolFormMarkup() {
         const weekdaysInput = session
             ? `<div class="field"><label for="session-weekday">Dia de la setmana</label><select name="weekday" id="session-weekday">${weekLong.map((label, i) => `<option value="${i}" ${session.weekday === i ? 'selected' : ''}>${label}</option>`).join('')}</select></div>`
             : `<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((label, i) => `<label><input type="checkbox" name="weekdays" value="${i}" ${i < 5 ? 'checked' : ''}/> ${label}</label>`).join('')}</div></fieldset>`;
-        return heading(session ? 'Edita franja horària' : 'Afegeix franja horària', childId ? childById(childId)?.name ?? group.name : group.name) + `<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}" data-child="${escapeHtml(childId)}" data-session="${escapeHtml(session?.id ?? '')}" data-mode="${mode}"><div class="school-form-fields">
+        return heading(session ? 'Edita activitat' : 'Afegeix activitat', mode === 'reduced' ? 'Jornada reduïda · ' + group.name : group.name) + `<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}" data-child="${escapeHtml(childId)}" data-session="${escapeHtml(session?.id ?? '')}" data-mode="${mode}"><div class="school-form-fields">
   ${weekdaysInput}
   <div class="form-row">${field('Inici', 'startTime', 'time', session?.startTime ?? reducedWindow?.startTime ?? ordinaryWindow?.startTime ?? '09:00', true)}${field('Final', 'endTime', 'time', session?.endTime ?? reducedWindow?.endTime ?? ordinaryWindow?.endTime ?? '13:00', true)}</div>
   <div class="field"><label for="session-kind">Tipus d'activitat</label><select name="kind" id="session-kind">${SESSION_KINDS.map(k => `<option value="${k}" ${sessionKind(session?.kind) === k ? 'selected' : ''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
   ${field('Descripció (opcional)', 'label', 'text', session?.label ?? '', false, 80)}</div>
-  <p class="settings-note">Les franges del mateix grup no es poden solapar. Les activitats ordinàries han de quedar entre l’inici i el final de la jornada ordinària del curs. ${reducedWindow ? `La franja ha de ser entre ${reducedWindow.startTime} i ${reducedWindow.endTime}.` : ''}</p>${actions}</form>`;
+  <p class="settings-note">Les activitats del mateix grup i dia no es poden solapar. ${reducedWindow ? `Aquesta activitat només s’aplica als dies de jornada reduïda marcats al curs que coincideixin amb el dia de la setmana seleccionat. Ha de quedar entre les ${reducedWindow.startTime} i les ${reducedWindow.endTime}.` : 'L’activitat s’aplica als dies ordinaris del grup, dins de la jornada del curs.'}</p>${actions}</form>`;
     }
     return '';
 }
@@ -1085,25 +1083,13 @@ function clickAction(button) {
             notify('Fills associats a l’escola actualitzats');
             break;
         }
-        case 'schedule-customize': {
-            const school = schoolById(button.dataset.school), year = yearById(school, button.dataset.year), group = groupById(year, button.dataset.group);
-            if (!school || !group || !year?.reducedWindow || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule !== undefined)
-                break;
-            const core = window.schoolScheduleCore;
-            const base = ordinaryBaseForSchool(school, year);
-            const ordinary = core ? core.combine(base, group.weeklySchedule) : [...base, ...group.weeklySchedule];
-            group.reducedWeeklySchedule = clippedWeeklySchedule(ordinary, year.reducedWindow).map(a => ({ ...a, id: newId() }));
-            update();
-            notify('Horari reduït específic del grup creat');
-            break;
-        }
         case 'schedule-inherit': {
             const group = groupById(yearById(schoolById(button.dataset.school), button.dataset.year), button.dataset.group);
-            if (!group || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule === undefined || !confirm('Vols recuperar el càlcul automàtic de jornada reduïda?'))
+            if (!group || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule === undefined || !confirm('Vols esborrar totes les activitats específiques de jornada reduïda d’aquest grup?'))
                 break;
             delete group.reducedWeeklySchedule;
             update();
-            notify('Càlcul automàtic recuperat');
+            notify('Activitats de jornada reduïda esborrades');
             break;
         }
         case 'schedule-add': {
@@ -1201,8 +1187,12 @@ function clickAction(button) {
             const filtered = entries.filter(a => a.id !== button.dataset.session);
             if (filtered.length === entries.length)
                 break;
-            if (mode === 'reduced')
-                group.reducedWeeklySchedule = filtered;
+            if (mode === 'reduced') {
+                if (filtered.length)
+                    group.reducedWeeklySchedule = filtered;
+                else
+                    delete group.reducedWeeklySchedule;
+            }
             else
                 group.weeklySchedule = filtered;
             update();
@@ -1627,6 +1617,8 @@ document.addEventListener('submit', event => {
             return;
         }
         const label = get('label').slice(0, 80);
+        if (mode === 'reduced' && group.reducedWeeklySchedule === undefined)
+            group.reducedWeeklySchedule = entries;
         if (existing) {
             existing.weekday = days[0];
             existing.startTime = startTime;
