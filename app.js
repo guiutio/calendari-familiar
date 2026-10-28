@@ -1,6 +1,6 @@
 "use strict";
 const $app = document.getElementById('app');
-const APP_VERSION = '0.1.6';
+const APP_VERSION = '0.1.7';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -24,6 +24,7 @@ const icons = {
     plus: '<path d="M12 5v14M5 12h14"/>',
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
     pencil: '<path d="m15 5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"/>',
+    person: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
     home: '<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-8h6v8"/>',
     copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>',
@@ -63,8 +64,25 @@ function seedState() {
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] } },
-        overrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], theme: 'auto' }, schools: []
+        overrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], theme: 'auto' }, schools: []
     };
+}
+const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
+function suggestedSchoolColor(schools) {
+    const used = new Set(schools.map(s => s.color.toLowerCase()));
+    for (const color of SCHOOL_PALETTE)
+        if (!used.has(color))
+            return color;
+    for (let i = 0; i < 360; i++) {
+        const hue = (i * 137 + 57) % 360, rgb = (h) => {
+            const k = (h + hue / 30) % 12, a = .62 * .35;
+            return Math.round(255 * (.62 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0');
+        };
+        const color = '#' + rgb(0) + rgb(8) + rgb(4);
+        if (!used.has(color))
+            return color;
+    }
+    return '#74c6a3';
 }
 function validTheme(value) { return value === 'light' || value === 'dark' ? value : 'auto'; }
 function isValidDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s)) === s; }
@@ -78,11 +96,16 @@ function cleanSchools(raw, children) {
     const isText = (x) => typeof x === 'string';
     const name = (x, max = 120) => typeof x === 'string' ? x.trim().slice(0, max) : '';
     const validTime = (t) => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
-    return raw.map((entry) => {
+    const acceptedColors = new Set();
+    return raw.map((entry, index) => {
         const school = entry;
         if (!school || !isText(school.id) || schoolIds.has(school.id) || !name(school.name) || !Array.isArray(school.years) || school.years.length > 60)
             throw Error('Hi ha una escola invàlida a la còpia');
         schoolIds.add(school.id);
+        const preferredColor = typeof school.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(school.color) ? school.color.toLowerCase() : '';
+        const previouslyColored = [...acceptedColors].map((color, i) => ({ id: String(i), name: '', address: '', phone: '', color, years: [] }));
+        const color = preferredColor && !acceptedColors.has(preferredColor) ? preferredColor : suggestedSchoolColor(previouslyColored);
+        acceptedColors.add(color);
         const yearIds = new Set();
         const years = school.years.map(entryYear => {
             const year = entryYear;
@@ -117,7 +140,7 @@ function cleanSchools(raw, children) {
             });
             return { id: year.id, startDate: year.startDate, endDate: year.endDate, holidays, reducedDays, groups };
         });
-        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), years };
+        return { id: school.id, name: name(school.name, 100), address: name(school.address, 200), phone: name(school.phone, 50), color, years };
     });
 }
 function cleanState(raw) {
@@ -147,7 +170,8 @@ function cleanState(raw) {
         if (date && childId && isValidDate(date) && children.some(c => c.id === childId) && validGuardians.has(value))
             overrides[key] = value;
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments }, overrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), theme: validTheme(obj.preferences.theme) }, schools: cleanSchools(obj.schools, children) };
+    const schools = cleanSchools(obj.schools, children);
+    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments }, overrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), theme: validTheme(obj.preferences.theme) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -319,6 +343,27 @@ function groupAssignments(date) {
     const visible = state.children.filter(c => state.preferences.visibleChildren.includes(c.id));
     return state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => ({ guardian: g, children: visible.filter(c => assigned(date, c.id) === g.id) })).filter(g => g.children.length);
 }
+/** Una escola és visible només en dies de classe: curs vigent, no festiu i dia lectiu. */
+function schoolAssignments(date) {
+    const weekday = (parseDate(date).getDay() + 6) % 7;
+    const visibleChildren = new Set(state.preferences.visibleChildren);
+    return state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => {
+        const children = new Set();
+        for (const year of s.years) {
+            if (date < year.startDate || date > year.endDate || year.holidays.includes(date))
+                continue;
+            for (const group of year.groups) {
+                const active = group.weeklySchedule.length > 0
+                    ? group.weeklySchedule.some(session => session.weekday === weekday)
+                    : weekday < 5;
+                if (!active)
+                    continue;
+                group.childIds.filter(id => visibleChildren.has(id)).forEach(id => children.add(id));
+            }
+        }
+        return { school: s, children: state.children.filter(c => children.has(c.id)) };
+    }).filter(item => item.children.length > 0);
+}
 function navButton(target, label, name, kind) {
     return `<button type="button" class="${kind === 'side' ? 'nav-button' : 'mobile-tab'} ${tab === target ? 'active' : ''}" data-action="tab" data-tab="${target}" aria-current="${tab === target ? 'page' : 'false'}">${icon(name, 20)}<span>${label}</span></button>`;
 }
@@ -334,28 +379,28 @@ function calendarPage() {
     const today = localDate(new Date());
     const visibleCh = state.preferences.visibleChildren.length;
     const visibleG = state.preferences.visibleGuardians.length;
-    const filtered = visibleCh !== state.children.length || visibleG !== state.guardians.length;
+    const filtered = visibleCh !== state.children.length || visibleG !== state.guardians.length || state.preferences.visibleSchools.length > 0;
     const monthStart = new Date(viewYear, viewMonth, 1, 12);
     const firstDay = (monthStart.getDay() + 6) % 7;
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const rows = Math.ceil((firstDay + daysInMonth) / 7);
     const starting = localDate(new Date(viewYear, viewMonth, 1 - firstDay, 12));
     const cells = Array.from({ length: rows * 7 }, (_, i) => {
-        const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== viewMonth, groups = groupAssignments(date);
+        const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== viewMonth, groups = groupAssignments(date), schoolGroups = schoolAssignments(date);
         const bdays = birthdays(date).filter(c => state.preferences.visibleChildren.includes(c.id));
         const overrides = state.children.some(c => overridden(date, c.id));
-        return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${groups.map(g => g.children.map(c => c.name).join(' i ') + ' amb ' + g.guardian.name).join('; ') || 'Sense assignacions visibles'}">
+        return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${[...schoolGroups.map(g => g.children.map(c => c.name).join(' i ') + ' a ' + g.school.name), ...groups.map(g => g.children.map(c => c.name).join(' i ') + ' amb ' + g.guardian.name)].join('; ') || 'Sense assignacions visibles'}">
      <span class="day-top"><span class="day-number">${d.getDate()}</span>${overrides ? '<span class="change-dot" title="Excepció puntual"></span>' : ''}</span>
-     ${groups.slice(0, 3).map(g => `<span class="assignment" style="background:${g.guardian.color}" title="${escapeHtml(g.children.map(c => c.name).join(', ') + ' · ' + g.guardian.name)}">${escapeHtml(g.children.map(c => initial(c.name)).join('+'))}</span>`).join('')}
-     ${groups.length > 3 ? `<span class="birth-label">+${groups.length - 3}</span>` : ''}
+     ${schoolGroups.length ? `<span class="calendar-school-layer">${schoolGroups.slice(0, 3).map(g => `<span class="assignment assignment-school" style="background:${g.school.color}" title="${escapeHtml(g.children.map(c => c.name).join(', ') + ' · Escola ' + g.school.name)}">${escapeHtml(g.children.map(c => initial(c.name)).join('+'))}</span>`).join('')}${schoolGroups.length > 3 ? `<span class="assignment-overflow">+${schoolGroups.length - 3}</span>` : ''}</span>` : ''}
+     ${groups.length ? `<span class="calendar-guardian-layer">${groups.slice(0, 3).map(g => `<span class="assignment assignment-guardian" style="background:${g.guardian.color}" title="${escapeHtml(g.children.map(c => c.name).join(', ') + ' · ' + g.guardian.name)}">${escapeHtml(g.children.map(c => initial(c.name)).join('+'))}</span>`).join('')}${groups.length > 3 ? `<span class="assignment-overflow">+${groups.length - 3}</span>` : ''}</span>` : ''}
      ${bdays.length ? `<span class="birth-label" title="${escapeHtml(bdays.map(c => `${c.name} fa ${birthdayAge(date, c)} anys`).join(', '))}">🎂 ${escapeHtml(bdays.map(c => initial(c.name)).join('+'))}</span>` : ''}
     </button>`;
     });
     return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Qui dorm amb qui, d’un cop d’ull.</p></div>
-   <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills i tutors">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button></div></header>
+   <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button></div></header>
    <section class="calendar-card" aria-label="Calendari mensual"><div class="calendar-toolbar"><div class="calendar-title">${monthTitle(viewYear, viewMonth)}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="prev-month" aria-label="Mes anterior">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="next-month" aria-label="Mes següent">${icon('chevronRight', 18)}</button></div></div>
    <div class="weekdays">${weekdays.map(d => `<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>
-   <footer class="calendar-bottom"><div class="legend">${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}</div><span class="legend-note">● canvi puntual</span></footer></section>
+   <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}</div><span class="legend-note">● canvi puntual</span></footer></section>
    ${!visibleCh || !visibleG ? '<div class="tip-card">No hi ha assignacions visibles. Revisa els filtres per seleccionar algun fill i tutor.</div>' : `<div class="tip-card">${icon('info', 18)}<span><strong>Toca qualsevol dia</strong> per veure qui hi dorm i modificar una nit puntual. Les modificacions no alteren la rotació habitual.</span></div>`}`;
 }
 function rotationPage() {
@@ -391,11 +436,11 @@ function schoolsPage() {
         return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Les escoles</h2><button class="secondary-btn" data-action="school-add">${icon('plus', 15)} Afegir escola</button></div>
  <p class="section-description">Cada escola pot tenir diferents cursos, grups classe, festius i dies d’horari reduït. Les dades són privades i es desen al teu dispositiu.</p>
- ${state.schools.length ? state.schools.map(s => `<div class="school-row">${schoolNavButton(s.name, { schoolId: s.id })}<span class="school-meta">${s.years.length} ${s.years.length === 1 ? 'curs' : 'cursos'}</span></div>`).join('') : '<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
+ ${state.schools.length ? state.schools.map(s => `<div class="school-row"><span class="school-color-dot" style="background:${s.color}" aria-hidden="true"></span>${schoolNavButton(s.name, { schoolId: s.id })}<span class="school-meta">${s.years.length} ${s.years.length === 1 ? 'curs' : 'cursos'}</span></div>`).join('') : '<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
     if (!year)
         return `<header class="page-heading"><div>${schoolCrumb('Escoles')}<div class="eyebrow">ESCOLA</div><h1 class="page-title">${escapeHtml(school.name)}</h1><p class="page-subtitle">${escapeHtml(school.address || 'Adreça no indicada')}${school.phone ? ` · ${escapeHtml(school.phone)}` : ''}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Dades de l’escola</h2><button class="secondary-btn" data-action="school-edit" data-school="${escapeHtml(school.id)}">${icon('pencil', 15)} Edita</button></div>
- <div class="school-details">${school.address ? `<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>` : ''}${school.phone ? `<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g, ''))}">${escapeHtml(school.phone)}</a></p>` : ''}${!school.address && !school.phone ? '<p class="settings-note">Sense adreça ni telèfon.</p>' : ''}</div>
+ <div class="school-details"><p><span class="school-color-dot" style="background:${school.color}"></span><strong>Color de l’escola</strong></p>${school.address ? `<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>` : ''}${school.phone ? `<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g, ''))}">${escapeHtml(school.phone)}</a></p>` : ''}${!school.address && !school.phone ? '<p class="settings-note">Sense adreça ni telèfon.</p>' : ''}</div>
  <div class="action-row"><button class="danger-btn" data-action="school-delete" data-school="${escapeHtml(school.id)}">Suprimeix l’escola</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Cursos escolars</h2><button class="secondary-btn" data-action="year-add" data-school="${escapeHtml(school.id)}">${icon('plus', 15)} Afegir curs</button></div>
  ${school.years.length ? [...school.years].sort((a, b) => b.startDate.localeCompare(a.startDate)).map(y => `<div class="school-row">${schoolNavButton(schoolYearName(y), { schoolId: school.id, yearId: y.id })}<span class="school-meta">${shortDate(y.startDate)} – ${shortDate(y.endDate)}</span></div>`).join('') : '<div class="empty-state">Afegeix un curs escolar indicant les dates d’inici i final.</div>'}</section>`;
@@ -428,7 +473,7 @@ function schoolFormMarkup() {
     const actions = '<div class="action-row"><button class="primary-btn" type="submit">Desa</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div>';
     if (sheet.type === 'schoolForm') {
         const school = schoolById(sheet.schoolId);
-        return heading(school ? 'Edita escola' : 'Afegeix escola', 'Nom obligatori; adreça i telèfon opcionals') + `<form data-school-form="school" data-school="${escapeHtml(school?.id ?? '')}"><div class="school-form-fields">${field('Nom de l’escola', 'name', 'text', school?.name ?? '', true, 100)}${field('Adreça (opcional)', 'address', 'text', school?.address ?? '', false, 200)}${field('Telèfon (opcional)', 'phone', 'tel', school?.phone ?? '', false, 50)}</div>${actions}</form>`;
+        return heading(school ? 'Edita escola' : 'Afegeix escola', 'Nom obligatori; adreça i telèfon opcionals') + `<form data-school-form="school" data-school="${escapeHtml(school?.id ?? '')}"><div class="school-form-fields">${field('Nom de l’escola', 'name', 'text', school?.name ?? '', true, 100)}${field('Adreça (opcional)', 'address', 'text', school?.address ?? '', false, 200)}${field('Telèfon (opcional)', 'phone', 'tel', school?.phone ?? '', false, 50)}${field('Color de l’escola', 'color', 'color', school?.color ?? suggestedSchoolColor(state.schools), true)}</div>${actions}</form>`;
     }
     if (sheet.type === 'yearForm') {
         const school = schoolById(sheet.schoolId), year = yearById(school, sheet.yearId);
@@ -488,6 +533,7 @@ function sheetMarkup() {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Decideix qui vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     <div class="sheet-section-label">Fills</div>${state.children.map(c => filterOption(c.id, c.name, state.preferences.visibleChildren.includes(c.id), 'child')).join('')}
     <div class="sheet-section-label">Tutors</div>${state.guardians.map(g => filterOption(g.id, g.name, state.preferences.visibleGuardians.includes(g.id), 'guardian', g.color)).join('')}
+    <div class="sheet-section-label">Escoles <span class="filter-section-hint">(ocultes per defecte)</span></div>${state.schools.length ? state.schools.map(s => filterOption(s.id, s.name, state.preferences.visibleSchools.includes(s.id), 'school', s.color)).join('') : '<p class="settings-note">Afegeix escoles a la pestanya Escoles.</p>'}
     <div class="action-row"><button class="secondary-btn" data-action="filter-all">Mostra-ho tot</button><button class="primary-btn" data-action="close-sheet">Fet</button></div>`;
     }
     else if (sheet?.type === 'day') {
@@ -518,7 +564,10 @@ function sheetMarkup() {
     }
     return `<div class="overlay" data-action="close-backdrop"><section class="sheet" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
-function filterOption(id, name, selected, kind, color) { return `<button class="option ${selected ? 'selected' : ''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left">${color ? `<span class="color-dot" style="background:${color}"></span>` : icon('home', 16)}${escapeHtml(name)}</span>${selected ? icon('check', 17) : '<span class="badge-soft">Ocult</span>'}</button>`; }
+function filterOption(id, name, selected, kind, color) {
+    const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
+    return `<button class="option ${selected ? 'selected' : ''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol, 18)}</span>${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(name)}</span>${selected ? icon('check', 17) : '<span class="badge-soft">Ocult</span>'}</button>`;
+}
 function render() {
     $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : settingsPage());
     document.body.style.overflow = sheet ? 'hidden' : '';
@@ -670,6 +719,7 @@ function clickAction(button) {
             if (!school || !confirm(`Vols suprimir «${school.name}» amb tots els cursos i grups?`))
                 break;
             state.schools = state.schools.filter(s => s.id !== school.id);
+            state.preferences.visibleSchools = state.preferences.visibleSchools.filter(id => id !== school.id);
             schoolNav = {};
             update();
             notify('Escola suprimida');
@@ -752,7 +802,7 @@ function clickAction(button) {
             render();
             break;
         case 'toggle-filter': {
-            const kind = button.dataset.filterKind === 'child' ? 'visibleChildren' : 'visibleGuardians', id = button.dataset.id;
+            const kind = button.dataset.filterKind === 'child' ? 'visibleChildren' : button.dataset.filterKind === 'school' ? 'visibleSchools' : 'visibleGuardians', id = button.dataset.id;
             const selected = state.preferences[kind];
             state.preferences[kind] = selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id];
             update();
@@ -761,6 +811,7 @@ function clickAction(button) {
         case 'filter-all':
             state.preferences.visibleChildren = state.children.map(c => c.id);
             state.preferences.visibleGuardians = state.guardians.map(g => g.id);
+            state.preferences.visibleSchools = state.schools.map(s => s.id);
             update();
             break;
         case 'assign-night':
@@ -903,15 +954,25 @@ document.addEventListener('submit', event => {
             notify('Indica el nom de l’escola');
             return;
         }
+        const color = get('color').toLowerCase();
+        if (!/^#[0-9a-f]{6}$/.test(color)) {
+            notify('Tria un color vàlid');
+            return;
+        }
+        if (state.schools.some(s => s.id !== school?.id && s.color.toLowerCase() === color)) {
+            notify('Aquest color ja correspon a una altra escola');
+            return;
+        }
         if (school) {
             school.name = name;
             school.address = get('address').slice(0, 200);
             school.phone = get('phone').slice(0, 50);
+            school.color = color;
             finish('Escola actualitzada');
         }
         else {
             const id = newId();
-            state.schools.push({ id, name, address: get('address').slice(0, 200), phone: get('phone').slice(0, 50), years: [] });
+            state.schools.push({ id, name, address: get('address').slice(0, 200), phone: get('phone').slice(0, 50), color, years: [] });
             schoolNav = { schoolId: id };
             finish('Escola afegida');
         }
