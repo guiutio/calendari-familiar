@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1.10
+# Calendari Familiar · Web MVP v0.1.11
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -51,7 +51,7 @@ Aquest prototip de validació és **TypeScript + DOM natiu** per poder-lo execut
 
 ## Limitacions actuals
 
-- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.1.11.
+- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.2.0.
 - No inclou rotacions amb dates d'inici específiques per fill ni múltiples patrons alhora: una rotació global, independentment de les assignacions per fill.
 - No hi ha comptes ni sincronització entre dispositius. Cada origin web/navegador disposa de dades independents.
 - Les dades locals poden desaparèixer en eliminar dades del lloc, de l'app o per polítiques del navegador. **Exporta còpies periòdicament.**
@@ -116,7 +116,7 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - L'horari del grup és el patró comú. A la mateixa pantalla, selecciona un fill i prem **Personalitza l'horari** per crear una còpia independent que pots ajustar sense canviar la resta del grup. **Recupera l'horari del grup** descarta la personalització.
 - Els horaris individuals només existeixen per a fills matriculats al grup: es netegen en moure o esborrar una matrícula i en suprimir el fill.
 - **Compatibilitat:** les còpies i dades de la v0.1.8 continuen sent vàlides; les franges existents es tracten com a activitats de tipus «Classe». L'exportació JSON conserva els horaris individuals.
-- **Abast:** aquesta versió defineix i desa els **horaris ordinaris**. La configuració de jornades reduïdes i els seus horaris especials es reserva per a la v0.1.10; la representació detallada d'aquests horaris a les vistes del calendari es definirà a la v0.1.11. L'indicador escolar bàsic del calendari actual es conserva.
+- **Abast:** aquesta versió defineix i desa els **horaris ordinaris**. La configuració de jornades reduïdes i els seus horaris especials es reserva per a la v0.1.10; la representació detallada d'aquests horaris a les vistes del calendari es definirà a la v0.2.0. L'indicador escolar bàsic del calendari actual es conserva.
 
 ### Com provar la v0.1.9
 
@@ -133,7 +133,7 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - **Horari reduït específic:** si el resultat automàtic no coincideix amb la realitat, pots crear una còpia independent i modificar-la, afegir-hi franges o eliminar-ne. Permet horaris específics per grup o per fill. Les activitats específiques han de ser dins de la finestra i no poden solapar-se.
 - **Herència i recuperació:** els fills hereten l'horari reduït específic del grup, si existeix; en cas contrari s'utilitza el seu horari ordinari retallat. Recuperar l'horari de referència descarta les modificacions reduïdes, no les ordinàries.
 - **Validació i migració:** les dades de 0.1.9 i les còpies JSON anteriors continuen funcionant. Les noves dades es conserven en exportar/importar; es rebutgen intervals invàlids i franges fora dels límits, i es netegen les dades d'un fill en canviar de grup o eliminar-lo.
-- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.1.11**.
+- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.2.0**.
 
 ### Prova manual de la 0.1.10
 
@@ -142,3 +142,13 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 3. Crea un horari reduït específic del grup i edita una franja; comprova que la jornada ordinària no canvia.
 4. Personalitza l'horari reduït d'un fill i després recupera l'horari del grup. Verifica que el resultat és l'esperat.
 5. Exporta/importa les dades i comprova que el límit reduït i les personalitzacions es mantenen.
+
+## v0.1.11: correcció de desplaçament vertical
+
+- En mòbils i tauletes, el contingut té scroll propi; la barra inferior forma part de la graella i no cobreix l'últim element de les pantalles.
+- Es respecta l'àrea segura inferior de l'iPhone i l'alçada visible de la finestra.
+- Es conserva la posició vertical quan es redibuixa la mateixa vista (filtres, canvis i formularis); navegar entre seccions o nivells escolars comença a dalt.
+- Els diàlegs llargs es desplacen independentment, amb alçada adaptada a la pantalla.
+- No canvia cap dada, ni la importació/exportació JSON de versions anteriors.
+
+La visualització detallada dels horaris escolars al calendari queda reservada per a la **v0.2.0**.

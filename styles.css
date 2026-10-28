@@ -392,3 +392,14 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 /* v0.1.10: els horaris ordinaris i reduïts es poden editar independentment. */
 .school-schedule-notice {align-items:center;}
 .school-schedule-notice .secondary-btn,.school-schedule-notice .soft-btn {white-space:normal;text-align:center;}
+
+/* v0.1.11 · Scroll estable al mòbil: la navegació inferior no es desplaça. */
+@media (max-width:900px) {
+  html,body {height:100%;overflow:hidden;}
+  #app {height:100vh;height:100dvh;min-height:0;overflow:hidden;}
+  .app-layout {display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;height:100%;min-height:0;}
+  .main-area {min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-bottom:28px;}
+  .mobile-tabs {position:static;inset:auto;}
+  .overlay {height:100vh;height:100dvh;}
+  .sheet {max-height:min(87vh,830px);max-height:min(87dvh,830px);-webkit-overflow-scrolling:touch;}
+}

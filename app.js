@@ -35,7 +35,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.1.10';
+const APP_VERSION = '0.1.11';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -809,14 +809,27 @@ function sheetMarkup() {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Tria un tutor</h2><p class="sheet-subtitle">${escapeHtml(c?.name ?? 'Fill')} · Dia ${index + 1} · ${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${state.guardians.map(g => `<button class="option ${g.id === current ? 'selected' : ''}" data-action="rotation-set-cell" data-child="${escapeHtml(childId)}" data-index="${index}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>${g.id === current ? icon('check', 17) : ''}</button>`).join('')}`;
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
     return `<button class="option ${selected ? 'selected' : ''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol, 18)}</span>${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(name)}</span>${selected ? icon('check', 17) : '<span class="badge-soft">Ocult</span>'}</button>`;
 }
 function render() {
+    const previousMain = $app.querySelector('.main-area');
+    const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
+    const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
+    const previousSheet = $app.querySelector('.sheet');
+    const sheetScroll = previousSheet?.dataset.sheetKey === JSON.stringify(sheet) ? previousSheet.scrollTop : 0;
     $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : settingsPage());
+    const main = $app.querySelector('.main-area');
+    if (main) {
+        main.dataset.scrollKey = scrollKey;
+        main.scrollTop = mainScroll;
+    }
+    const currentSheet = $app.querySelector('.sheet');
+    if (currentSheet)
+        currentSheet.scrollTop = sheetScroll;
     document.body.style.overflow = sheet ? 'hidden' : '';
 }
 function notify(message) {
