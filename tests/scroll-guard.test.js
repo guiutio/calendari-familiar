@@ -64,7 +64,7 @@ test('els recursos de la protecció tàctil estan inclosos a la PWA', async () =
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(html, /scroll-guard\.js\?v=0\.5\.0/);
-  assert.match(sw, /scroll-guard\.js\?v=0\.5\.0/);
+  assert.match(html, /scroll-guard\.js\?v=0\.5\.1/);
+  assert.match(sw, /scroll-guard\.js\?v=0\.5\.1/);
   assert.match(css, /\.main-area,\.sheet \{overscroll-behavior-y:none;/);
 });

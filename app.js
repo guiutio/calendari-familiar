@@ -69,7 +69,8 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.0';
+const APP_VERSION = '0.5.1';
+const TIMELINE_ZOOM_LEVELS = [50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -135,7 +136,7 @@ function seedState() {
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] }, changeTime: DEFAULT_CHANGE_TIME },
-        overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal' }, schools: []
+        overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 100 }, schools: []
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -157,6 +158,7 @@ function suggestedSchoolColor(schools) {
 }
 function validTheme(value) { return value === 'light' || value === 'dark' ? value : 'auto'; }
 function validFontSize(value) { return value === 'large' || value === 'xlarge' ? value : 'normal'; }
+function validTimelineZoom(value) { return typeof value === 'number' && TIMELINE_ZOOM_LEVELS.includes(value) ? value : 100; }
 function isValidDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s)) === s; }
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
 /** Horari ordinari general de l'escola, independent dels grups. */
@@ -324,7 +326,7 @@ function cleanState(raw) {
             bandOverrides[key] = who;
         }
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize) }, schools };
+    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -562,7 +564,7 @@ function dayTimeline(date, children) {
     const nights = {};
     for (const c of children)
         nights[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime);
+    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom));
 }
 function weekTimeline(start, children) {
     if (!dayTimelineUI)
@@ -575,7 +577,7 @@ function weekTimeline(start, children) {
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
         return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments };
     });
-    return dayTimelineUI.renderWeek(start, days, children);
+    return dayTimelineUI.renderWeek(start, days, children, validTimelineZoom(state.preferences.timelineZoom));
 }
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
@@ -634,6 +636,7 @@ function layout(content) {
 }
 function calendarPage() {
     const today = localDate(new Date()), children = activeChildren(), bands = activeBands();
+    const zoom = validTimelineZoom(state.preferences.timelineZoom), zoomIndex = TIMELINE_ZOOM_LEVELS.indexOf(zoom);
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || bands.length !== BANDS.length;
     let content = '';
     if (calendarView === 'month') {
@@ -664,6 +667,13 @@ function calendarPage() {
     <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button></div></header>
     <section class="calendar-card" aria-label="Calendari familiar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="Anterior">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="Següent">${icon('chevronRight', 18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>
+    ${calendarView === 'day' || calendarView === 'week' ? `<div class="timeline-zoom-toolbar" role="group" aria-label="Zoom vertical de les hores">
+      <label for="timeline-zoom">Zoom</label>
+      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="-1" aria-label="Allunya el zoom per veure més hores" ${zoomIndex === 0 ? 'disabled' : ''}>−</button>
+      <input id="timeline-zoom" data-action="timeline-zoom" type="range" min="0" max="4" step="1" value="${zoomIndex}" aria-label="Zoom de la línia temporal" aria-valuetext="${zoom} per cent" />
+      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="1" aria-label="Apropa el zoom per veure més detall" ${zoomIndex === TIMELINE_ZOOM_LEVELS.length - 1 ? 'disabled' : ''}>+</button>
+      <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
+    </div>` : ''}
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
@@ -937,6 +947,8 @@ function render() {
     const keepTimeline = Boolean(timelineKey && previousTimeline?.dataset.timelineKey === timelineKey);
     const timelineTop = keepTimeline ? previousTimeline.scrollTop : NaN;
     const timelineLeft = keepTimeline ? previousTimeline.scrollLeft : 0;
+    const oldScale = Number(previousTimeline?.dataset.pxPerMinute ?? 0);
+    const timelineMidMinute = keepTimeline && oldScale > 0 ? (timelineTop + previousTimeline.clientHeight / 2) / oldScale : NaN;
     const previousMain = $app.querySelector('.main-area');
     const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
     const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
@@ -953,7 +965,10 @@ function render() {
         currentSheet.scrollTop = sheetScroll;
     const timeline = $app.querySelector('.day-timeline-viewport');
     if (timeline) {
-        timeline.scrollTop = Number.isFinite(timelineTop) ? timelineTop : Number(timeline.dataset.initialScroll ?? 0);
+        const newScale = Number(timeline.dataset.pxPerMinute ?? 0);
+        timeline.scrollTop = Number.isFinite(timelineMidMinute) && newScale > 0 && newScale !== oldScale
+            ? Math.max(0, timelineMidMinute * newScale - timeline.clientHeight / 2)
+            : Number.isFinite(timelineTop) ? timelineTop : Number(timeline.dataset.initialScroll ?? 0);
         timeline.scrollLeft = timelineLeft;
     }
     document.body.style.overflow = sheet ? 'hidden' : '';
@@ -1051,7 +1066,7 @@ async function importData(file) {
     }
 }
 async function resetData() { if (!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))
-    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades de mostra restablertes'); }
+    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize, timelineZoom = state.preferences.timelineZoom; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; state.preferences.timelineZoom = timelineZoom; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades de mostra restablertes'); }
 function clickAction(button) {
     const action = button.dataset.action;
     switch (action) {
@@ -1253,6 +1268,17 @@ function clickAction(button) {
             viewMonth = now.getMonth();
             viewYear = now.getFullYear();
             render();
+            break;
+        }
+        case 'timeline-zoom-step': {
+            if (calendarView === 'month')
+                break;
+            const index = TIMELINE_ZOOM_LEVELS.indexOf(validTimelineZoom(state.preferences.timelineZoom));
+            const next = TIMELINE_ZOOM_LEVELS[Math.max(0, Math.min(TIMELINE_ZOOM_LEVELS.length - 1, index + (button.dataset.step === '-1' ? -1 : 1)))];
+            if (next !== undefined && next !== state.preferences.timelineZoom) {
+                state.preferences.timelineZoom = next;
+                update();
+            }
             break;
         }
         case 'calendar-view': {
@@ -1677,7 +1703,19 @@ document.addEventListener('submit', event => {
 });
 document.addEventListener('input', event => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement) || target.dataset.action !== 'font-size')
+    if (!(target instanceof HTMLInputElement))
+        return;
+    if (target.dataset.action === 'timeline-zoom') {
+        const next = TIMELINE_ZOOM_LEVELS[Number(target.value)];
+        if (next !== undefined) {
+            const output = document.getElementById('timeline-zoom-value');
+            if (output)
+                output.textContent = next + '%';
+            target.setAttribute('aria-valuetext', next + ' per cent');
+        }
+        return;
+    }
+    if (target.dataset.action !== 'font-size')
         return;
     const chosen = FONT_SIZE_OPTIONS[Number(target.value)];
     if (!chosen)
@@ -1694,6 +1732,16 @@ document.addEventListener('change', event => {
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement))
         return;
     const action = target.dataset.action;
+    if (action === 'timeline-zoom') {
+        if (calendarView !== 'month') {
+            const next = TIMELINE_ZOOM_LEVELS[Number(target.value)];
+            if (next !== undefined && next !== state.preferences.timelineZoom) {
+                state.preferences.timelineZoom = next;
+                update();
+            }
+        }
+        return;
+    }
     if (action === 'font-size') {
         const chosen = FONT_SIZE_OPTIONS[Number(target.value)];
         if (chosen) {
