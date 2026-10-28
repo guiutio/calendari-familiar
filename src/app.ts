@@ -87,7 +87,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.5.0';
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
 const DB_NAME = 'calendari-familiar-db';
@@ -481,6 +481,7 @@ function schoolTimeline(date:string,children:Child[],range?:[number,number]|null
 type DayTimelineUI = {
  overnightSegments:(date:string,childId:string,changeTime:string,getNight:(d:string,id:string)=>string,previousDate:(d:string)=>string,lookupGuardian:(id:string)=>Guardian|undefined,visibleIds:string[])=>Array<{from:number;to:number;date:string;guardianId:string;guardianName:string;guardianColor:string;visible:boolean}>;
  render:(date:string,label:string,children:Child[],activities:SchoolCalendarItem[],nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>,changeTime:string)=>string;
+ renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>}>,children:Child[])=>string;
 };
 const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimelineUI;
 function dayTimeline(date:string,children:Child[]):string{
@@ -489,6 +490,17 @@ function dayTimeline(date:string,children:Child[]):string{
  const nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
  for(const c of children)nights[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
  return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime);
+}
+function weekTimeline(start:string,children:Child[]):string{
+ if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
+ const changeTime=validChangeTime(state.rotation.changeTime);
+ const days=Array.from({length:7},(_,i)=>{
+   const date=addDays(start,i);
+   const nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
+   for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
+   return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments};
+ });
+ return dayTimelineUI.renderWeek(start,days,children);
 }
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
   if(!children.length||!bands.length)return '<span class="mini-empty">—</span>';
@@ -549,25 +561,19 @@ function calendarPage(){
     });
     content=`<div class="weekdays">${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
   } else if(calendarView==='week'){
-    const start=weekStart(selectedDate);
-    const weekDates=Array.from({length:7},(_,i)=>addDays(start,i));
-    const schoolRange=schoolCalendarUI?.range(weekDates.flatMap(d=>schoolActivities(d,children)));
-    content=`<div class="week-agendas">${Array.from({length:7},(_,i)=>{
-      const date=addDays(start,i);
-      return `<section class="week-day"><div class="agenda-day-heading"><strong>${weekLong[i]} ${parseDate(date).getDate()}</strong><button class="soft-btn" data-action="open-day" data-date="${date}">Detall</button></div>${fullAgenda(date)}${schoolRange?schoolTimeline(date,children,schoolRange):''}</section>`;
-    }).join('')}</div>`;
+    content=weekTimeline(weekStart(selectedDate),children);
   } else {
     content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>`;
   }
   const visibleNames=bands.map(b=>BAND_NAMES[b]).join(' · ');
-  return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'?'Pernoctes i activitats per fill durant les 24 hores.':'Responsables per fill i moment del dia.'}</p></div>
+  return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'||calendarView==='week'?'Pernoctes i activitats per fill durant les 24 hores.':'Responsables per fill i moment del dia.'}</p></div>
     <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button></div></header>
     <section class="calendar-card" aria-label="Calendari familiar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="Anterior">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="Següent">${icon('chevronRight',18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView==='day'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar abans de les 06:00 o després de les 22:00.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Files de dalt a baix: ${visibleNames||'cap franja visible'}. Columnes: ${children.map(c=>escapeHtml(c.name)).join(' · ')||'cap fill visible'}.</div>
+    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Files de dalt a baix: ${visibleNames||'cap franja visible'}. Columnes: ${children.map(c=>escapeHtml(c.name)).join(' · ')||'cap fill visible'}.</div>
     <div class="tip-card">${icon('info',18)}<span>Les nits segueixen la rotació. La resta de franges són independents i, si no tenen un responsable o escola assignats, queden sense color. Toca una casella per veure'n el detall i editar-la.</span></div>`}`;
 }
 function rotationPage(){
@@ -811,7 +817,8 @@ function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guard
 }
 function render(){
   const previousTimeline=$app.querySelector<HTMLElement>('.day-timeline-viewport');
-  const keepTimeline=tab==='calendar'&&calendarView==='day'&&previousTimeline?.dataset.dayTimeline===selectedDate;
+  const timelineKey=tab==='calendar'?(calendarView==='day'?`day:${selectedDate}`:calendarView==='week'?`week:${weekStart(selectedDate)}`:''):'';
+  const keepTimeline=Boolean(timelineKey&&previousTimeline?.dataset.timelineKey===timelineKey);
   const timelineTop=keepTimeline?previousTimeline!.scrollTop:NaN;
   const timelineLeft=keepTimeline?previousTimeline!.scrollLeft:0;
   const previousMain=$app.querySelector<HTMLElement>('.main-area');
@@ -971,6 +978,11 @@ function clickAction(button:HTMLElement){
       const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
       if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
       break;
+    }
+    case 'show-calendar-day':{
+      const date=button.dataset.date??'';
+      if(!isValidDate(date))break;
+      selectedDate=date;calendarView='day';render();break;
     }
     case 'open-day':selectedDate=button.dataset.date!;sheet={type:'day',date:selectedDate};render();break;
     case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){selectedDate=date;sheet={type:'bandEdit',date,childId,band};render();}break;}

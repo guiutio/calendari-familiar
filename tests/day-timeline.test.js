@@ -54,8 +54,8 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.scrollTop/);
  assert.match(css,/\.day-timeline-viewport \{height:768px;/);
- assert.match(html,/day-timeline\.js\?v=0\.4\.1/);
- assert.match(sw,/day-timeline\.js\?v=0\.4\.1/);
+ assert.match(html,/day-timeline\.js\?v=0\.5\.0/);
+ assert.match(sw,/day-timeline\.js\?v=0\.5\.0/);
 });
 test('la rotació incorpora la nova hora per defecte, el desament i la importació',()=>{
  assert.match(ts,/const DEFAULT_CHANGE_TIME='19:00'/);
