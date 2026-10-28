@@ -21,6 +21,8 @@ jobs:
         run: npm install --no-save --no-package-lock typescript@5.8.3
       - name: Compila el TypeScript
         run: npm run build
+      - name: Verifica que app.js està sincronitzat amb TypeScript
+        run: git diff --exit-code -- app.js
       - name: Comprova la sintaxi del JavaScript
         run: node --check app.js
       - name: Executa les proves

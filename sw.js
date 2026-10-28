@@ -1,5 +1,5 @@
-const CACHE = 'calendari-familiar-v0.1.9';
-const ASSETS = ['./','./index.html','./actualitza.html','./app.js?v=0.1.9','./styles.css?v=0.1.9','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
+const CACHE = 'calendari-familiar-v0.1.10';
+const ASSETS = ['./','./index.html','./actualitza.html','./app.js?v=0.1.10','./styles.css?v=0.1.10','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

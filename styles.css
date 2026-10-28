@@ -388,3 +388,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .school-schedule-edit {background:#20334a;border-color:#405778;color:#bedcff;}
 :root[data-theme="dark"] .school-schedule-weekdays {border-color:#42516a;}
 :root[data-theme="dark"] .school-schedule-weekdays legend {color:#b1c2d7;}
+
+/* v0.1.10: els horaris ordinaris i reduïts es poden editar independentment. */
+.school-schedule-notice {align-items:center;}
+.school-schedule-notice .secondary-btn,.school-schedule-notice .soft-btn {white-space:normal;text-align:center;}
