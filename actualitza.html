@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f7f8">
+  <title>Actualitza · Calendari Familiar</title>
+  <style>
+    :root {color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background: Canvas; color: CanvasText;}
+    body { margin: 0; padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); }
+    main { max-width: 460px; margin: 9vh auto; }
+    h1 {font-size: 27px; line-height: 1.25; margin-bottom: 12px; }
+    p {line-height: 1.55; }
+    button {font:inherit; font-weight:600; border:0; border-radius:12px; padding:15px 18px; background:#3178c6; color:white; width:100%; cursor:pointer; margin: 18px 0 12px; }
+    button:disabled{opacity:.6;cursor:wait;} a {color:LinkText;} .note {opacity:.8;font-size:14px;} #result {min-height:30px;}
+  </style>
+</head>
+<body><main>
+  <h1>Actualitza Calendari Familiar</h1>
+  <p>Actualitzarem els fitxers temporals de l'aplicació a la versió <strong>0.1.6</strong>, que inclou la secció <strong>Escoles</strong>.</p>
+  <p><strong>Les teves dades familiars no s'esborraran:</strong> no es modifica IndexedDB ni LocalStorage, ni els calendaris, rotacions o escoles que hagis desat.</p>
+  <button type="button" id="update">Actualitza ara</button>
+  <p id="result" role="status" aria-live="polite"></p>
+  <p class="note">Necessites connexió a Internet. Si hi ha un error, conservarem les dades i podràs tornar-ho a provar.</p>
+  <p><a href="./index.html">Torna al calendari</a></p>
+</main>
+<script>
+(() => {
+  const button = document.getElementById('update');
+  const result = document.getElementById('result');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    result.textContent = 'Comprovant la versió publicada…';
+    try {
+      if (!navigator.onLine) throw new Error('No hi ha connexió a Internet. Torna-ho a provar quan tinguis connexió.');
+      const response = await fetch('./index.html?comprovacio=0.1.6-' + Date.now(), {cache:'no-store'});
+      if (!response.ok || !(await response.text()).includes('app.js?v=0.1.6')) {
+        throw new Error('GitHub Pages encara no serveix la versió 0.1.6. Torna-ho a provar més tard.');
+      }
+      result.textContent = 'Versió verificada. Renovant els fitxers temporals…';
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+          if (new URL(reg.scope).pathname.endsWith('/calendari-familiar/')) await reg.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          if (key.startsWith('calendari-familiar-v')) await caches.delete(key);
+        }
+      }
+      result.textContent = 'Actualització preparada. Obrint el calendari…';
+      location.replace('./index.html?actualitzat=0.1.6-' + Date.now());
+    } catch (err) {
+      result.textContent = err instanceof Error ? err.message : 'No s’ha pogut actualitzar. Torna-ho a provar.';
+      button.disabled = false;
+    }
+  });
+})();
+</script></body></html>
