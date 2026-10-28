@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.5.2
+# Calendari Familiar · Web MVP v0.5.3
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -266,3 +266,11 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - **Setmana:** la graella manté el scroll horitzontal, però **el gest vertical desplaça la pàgina sencera**, fins i tot quan comença dins del calendari. La vista deixa marges tàctils a esquerra i dreta i mostra les 24 hores a l'alçada real del zoom.
 - El protector de desplaçament d'iOS respecta el scroll de la pàgina quan un gest vertical comença dins de la setmana.
 - Es conserven pernoctes, escoles, filtres, imports i preferències.
+
+## v0.5.3: Dia i Setmana compactes, scroll vertical de pàgina
+
+- **Dia i Setmana:** totes les 24 hores formen part del desplaçament vertical de la **pàgina principal**, no d'una finestra de scroll vertical interior. Els gestos verticals sobre la graella es deleguen a la pàgina; els horitzontals continuen desplaçant el calendari.
+- **Marges tàctils:** el calendari ocupa una amplada lleugerament menor que la pàgina per facilitar el scroll vertical començant fora de la graella, igual a Dia i Setmana.
+- **Columnes més estretes:** cada fill té una columna d'uns **98 px**, en lloc dels **145 px** anteriors, tant en la vista diària com en cadascun dels set dies de la setmana. Quan hi ha molts fills, es manté el scroll horitzontal.
+- **Zoom:** es conserven els sis nivells **25%, 50%, 75%, 100%, 125% i 150%**, amb **50% per defecte**. En ampliar o reduir la cronologia, l'app procura conservar l'hora que es veia al centre, ara ajustant el scroll de la pàgina.
+- La línia temporal completa comença a 00:00 i acaba a 24:00; quan no es mostren totes les hores, el desplaçament de la pàgina permet consultar-les. Les pernoctes, activitats, filtres i còpies JSON no canvien.

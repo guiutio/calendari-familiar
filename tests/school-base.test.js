@@ -53,6 +53,6 @@ test('interfície ordinària d’escola i absència de personalització individu
  assert.match(ts,/data-action="ordinary-window-edit"/);
  assert.doesNotMatch(ts,/Personalitza l'horari/);
  assert.match(source,/case 'ordinary-window-edit'/);
- assert.match(html,/school-schedule-core\.js\?v=0\.5\.2/);
- assert.match(sw,/school-schedule-core\.js\?v=0\.5\.2/);
+ assert.match(html,/school-schedule-core\.js\?v=0\.5\.3/);
+ assert.match(sw,/school-schedule-core\.js\?v=0\.5\.3/);
 });

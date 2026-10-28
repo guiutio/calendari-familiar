@@ -8,7 +8,7 @@ function harness({short = false, mobile = true} = {}) {
   const win = {matchMedia: () => ({matches: mobile})};
   installScrollGuard(doc, win);
   const scroller = {scrollTop: 0, clientHeight: 600, scrollHeight: short ? 400 : 1700};
-  const target = {closest(selector) { return selector === '.day-timeline-viewport, .sheet, .main-area' ? scroller : null; }};
+  const target = {closest(selector) { return selector === '.sheet, .main-area' ? scroller : null; }};
   function touch(name, y, {x = 50, node = target} = {}) {
     let canceled = 0;
     const event = {
@@ -59,10 +59,10 @@ test('el gest que comença a la barra inferior no fa scroll', () => {
   assert.equal(h.touch('touchmove', 375, {node: tab}), 1);
 });
 
-test('els gestos verticals sobre Setmana es deleguen a la pàgina principal', () => {
+test('els gestos verticals sobre Dia i Setmana es deleguen a la pàgina principal', () => {
   const h = harness();
   const weekly = {closest(selector) {
-    if(selector === '.week-timeline-viewport')return {scrollTop:0,scrollHeight:500,clientHeight:500};
+    if(selector === '.day-timeline-viewport')return {scrollTop:0,scrollHeight:500,clientHeight:500};
     if(selector === '.main-area')return h.scroller;
     return null;
   }};
@@ -79,7 +79,7 @@ test('els recursos de la protecció tàctil estan inclosos a la PWA', async () =
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(html, /scroll-guard\.js\?v=0\.5\.2/);
-  assert.match(sw, /scroll-guard\.js\?v=0\.5\.2/);
+  assert.match(html, /scroll-guard\.js\?v=0\.5\.3/);
+  assert.match(sw, /scroll-guard\.js\?v=0\.5\.3/);
   assert.match(css, /\.main-area,\.sheet \{overscroll-behavior-y:none;/);
 });

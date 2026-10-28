@@ -69,7 +69,7 @@
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
            data-timeline-key="week:${escape(startDate)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
-        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};min-width:${52+days.length*children.length*145}px">
+        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};--week-day-width:${children.length*98}px;min-width:${52+days.length*children.length*98}px">
           <div class="week-timeline-head">
             <div class="week-time-corner">Hora</div>${head}
           </div>
@@ -94,8 +94,8 @@
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
     }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
-      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px;height:${Math.min(768,Math.ceil(height+42))}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
-        <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*145}px">
+      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
+        <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*98}px">
           <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
           <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${tickMarks}</div>${columns}</div>
         </div>

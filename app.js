@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.2';
+const APP_VERSION = '0.5.3';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -945,13 +945,15 @@ function render() {
     const previousTimeline = $app.querySelector('.day-timeline-viewport');
     const timelineKey = tab === 'calendar' ? (calendarView === 'day' ? `day:${selectedDate}` : calendarView === 'week' ? `week:${weekStart(selectedDate)}` : '') : '';
     const keepTimeline = Boolean(timelineKey && previousTimeline?.dataset.timelineKey === timelineKey);
-    const timelineTop = keepTimeline ? previousTimeline.scrollTop : NaN;
     const timelineLeft = keepTimeline ? previousTimeline.scrollLeft : 0;
     const oldScale = Number(previousTimeline?.dataset.pxPerMinute ?? 0);
-    const timelineMidMinute = keepTimeline && oldScale > 0 ? (timelineTop + previousTimeline.clientHeight / 2) / oldScale : NaN;
     const previousMain = $app.querySelector('.main-area');
     const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
     const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
+    const oldTimelineOffset = previousMain && previousTimeline
+        ? previousMain.scrollTop + previousTimeline.getBoundingClientRect().top - previousMain.getBoundingClientRect().top : NaN;
+    const minuteAtCenter = keepTimeline && previousMain && oldScale > 0
+        ? Math.max(0, Math.min(1440, (previousMain.scrollTop + previousMain.clientHeight / 2 - oldTimelineOffset) / oldScale)) : NaN;
     const previousSheet = $app.querySelector('.sheet');
     const sheetScroll = previousSheet?.dataset.sheetKey === JSON.stringify(sheet) ? previousSheet.scrollTop : 0;
     $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : settingsPage());
@@ -966,10 +968,13 @@ function render() {
     const timeline = $app.querySelector('.day-timeline-viewport');
     if (timeline) {
         const newScale = Number(timeline.dataset.pxPerMinute ?? 0);
-        timeline.scrollTop = Number.isFinite(timelineMidMinute) && newScale > 0 && newScale !== oldScale
-            ? Math.max(0, timelineMidMinute * newScale - timeline.clientHeight / 2)
-            : Number.isFinite(timelineTop) ? timelineTop : Number(timeline.dataset.initialScroll ?? 0);
+        // Dia i Setmana: l'alçada completa és part del scroll principal, no d'un scroll intern.
+        timeline.scrollTop = 0;
         timeline.scrollLeft = timelineLeft;
+        if (main && Number.isFinite(minuteAtCenter) && newScale > 0 && newScale !== oldScale) {
+            const newOffset = main.scrollTop + timeline.getBoundingClientRect().top - main.getBoundingClientRect().top;
+            main.scrollTop = Math.max(0, newOffset + minuteAtCenter * newScale - main.clientHeight / 2);
+        }
     }
     document.body.style.overflow = sheet ? 'hidden' : '';
 }
