@@ -177,7 +177,7 @@ function cleanSchools(raw, children) {
             throw Error('Hi ha una escola invàlida a la còpia');
         schoolIds.add(school.id);
         const preferredColor = typeof school.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(school.color) ? school.color.toLowerCase() : '';
-        const previouslyColored = [...acceptedColors].map((color, i) => ({ id: String(i), name: '', address: '', phone: '', color, years: [] }));
+        const previouslyColored = [...acceptedColors].map((color, i) => ({ id: String(i), name: '', address: '', phone: '', color, years: [], weeklySchedule: [], childIds: [] }));
         const color = preferredColor && !acceptedColors.has(preferredColor) ? preferredColor : suggestedSchoolColor(previouslyColored);
         acceptedColors.add(color);
         const yearIds = new Set();
@@ -778,7 +778,8 @@ function schoolFormMarkup() {
         const school = schoolById(sheet.schoolId);
         if (!school)
             return '';
-        const session = school.weeklySchedule.find(a => a.id === sheet.sessionId);
+        const sessionId = sheet.sessionId;
+        const session = school.weeklySchedule.find(a => a.id === sessionId);
         const weekdaysInput = session
             ? `<div class="field"><label for="school-weekday">Dia de la setmana</label><select name="weekday" id="school-weekday">${weekLong.map((day, i) => `<option value="${i}" ${session.weekday === i ? 'selected' : ''}>${day}</option>`).join('')}</select></div>`
             : `<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((day, i) => `<label><input type="checkbox" name="weekdays" value="${i}" ${i < 5 ? 'checked' : ''}/> ${day}</label>`).join('')}</div></fieldset>`;
