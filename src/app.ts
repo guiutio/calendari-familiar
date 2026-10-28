@@ -184,7 +184,7 @@ function cleanSchools(raw:unknown,children:Child[]):School[]{
     if(!school||!isText(school.id)||schoolIds.has(school.id!)||!name(school.name)||!Array.isArray(school.years)||school.years.length>60)throw Error('Hi ha una escola invàlida a la còpia');
     schoolIds.add(school.id!);
     const preferredColor=typeof school.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(school.color)?school.color.toLowerCase():'';
-    const previouslyColored=[...acceptedColors].map((color,i)=>({id:String(i),name:'',address:'',phone:'',color,years:[]} as School));
+    const previouslyColored=[...acceptedColors].map((color,i)=>({id:String(i),name:'',address:'',phone:'',color,years:[],weeklySchedule:[],childIds:[]} as School));
     const color=preferredColor&&!acceptedColors.has(preferredColor)?preferredColor:suggestedSchoolColor(previouslyColored);
     acceptedColors.add(color);
     const yearIds=new Set<string>();
@@ -445,7 +445,7 @@ function bandKey(date:string,childId:string,band:TimeBand){return `${date}|${chi
 function shortChildLabel(c:Child){return initial(c.name);}
 type SchoolCalendarItem={id:string;schoolId:string;schoolName:string;color:string;childId:string;startTime:string;endTime:string;start:number;end:number;kind:string;description:string};
 type SchoolCalendarUI={
-  collect:(date:string,children:Child[],schools:School[],visibleIds:string[],getSessions:typeof scheduleForSchoolDay)=>SchoolCalendarItem[];
+  collect:(date:string,children:Child[],schools:School[],visibleIds:string[],getSessions:typeof schoolScheduleForCalendarDay)=>SchoolCalendarItem[];
   range:(items:SchoolCalendarItem[])=>[number,number]|null;
   render:(date:string,dateLabel:string,children:Child[],activities:SchoolCalendarItem[],commonRange?:[number,number]|null,empty?:boolean,reduced?:boolean)=>string;
 };
@@ -675,7 +675,8 @@ function schoolFormMarkup():string {
  }
  if(sheet.type==='schoolScheduleForm'){
    const school=schoolById(sheet.schoolId);if(!school)return '';
-   const session=school.weeklySchedule.find(a=>a.id===sheet.sessionId);
+   const sessionId=sheet.sessionId;
+   const session=school.weeklySchedule.find(a=>a.id===sessionId);
    const weekdaysInput=session
      ?`<div class="field"><label for="school-weekday">Dia de la setmana</label><select name="weekday" id="school-weekday">${weekLong.map((day,i)=>`<option value="${i}" ${session.weekday===i?'selected':''}>${day}</option>`).join('')}</select></div>`
      :`<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((day,i)=>`<label><input type="checkbox" name="weekdays" value="${i}" ${i<5?'checked':''}/> ${day}</label>`).join('')}</div></fieldset>`;
