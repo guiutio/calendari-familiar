@@ -8,18 +8,20 @@
     const result=[];
     for(const school of schools) {
       if(!visibleIds.includes(school.id))continue;
-      for(const year of school.years) {
-        if(date<year.startDate||date>year.endDate||year.holidays.includes(date))continue;
-        for(const group of year.groups) {
-          for(const child of children) {
-            if(!group.childIds.includes(child.id))continue;
-            for(const session of getSessions(group,year,child.id,date)) {
-              const start=minutes(session.startTime),end=minutes(session.endTime);
-              if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)continue;
-              result.push({id:session.id,childId:child.id,schoolId:school.id,schoolName:school.name,color:school.color,
-                startTime:session.startTime,endTime:session.endTime,start,end,
-                kind:types[session.kind]??types.classe,description:session.label??''});
-            }
+      const years=school.years??[];
+      const applicable=years.filter(year=>date>=year.startDate&&date<=year.endDate);
+      if(years.length&&!applicable.length)continue;
+      for(const year of applicable.length?applicable:[undefined]) {
+        if(year?.holidays.includes(date))continue;
+        for(const child of children) {
+          const group=year?.groups.find(g=>g.childIds.includes(child.id));
+          if(!(school.childIds??[]).includes(child.id)&&!group)continue;
+          for(const session of getSessions(school,year,group,child.id,date)) {
+            const start=minutes(session.startTime),end=minutes(session.endTime);
+            if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)continue;
+            result.push({id:session.id,childId:child.id,schoolId:school.id,schoolName:school.name,color:school.color,
+              startTime:session.startTime,endTime:session.endTime,start,end,
+              kind:types[session.kind]??types.classe,description:session.label??''});
           }
         }
       }
