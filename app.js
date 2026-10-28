@@ -31,12 +31,22 @@ function scheduleForSchoolDay(group, year, childId, date) {
     const weekly = year.reducedDays.includes(date) ? reducedScheduleForChild(group, year, childId) : ordinaryScheduleForChild(group, childId);
     return weekly.filter(a => a.weekday === weekday);
 }
+/** Les hores comunes delimiten l'estada, sense atribuir activitats al centre. */
+function ordinaryBaseForSchool(school, year) {
+    if (year?.ordinaryWindow)
+        return Array.from({ length: 5 }, (_, weekday) => ({
+            id: `__school_window__${weekday}`, weekday, startTime: year.ordinaryWindow.startTime,
+            endTime: year.ordinaryWindow.endTime, kind: 'altres', label: ''
+        }));
+    // Compatibilitat no destructiva amb horaris generals definits a la v0.3.1.
+    return school.weeklySchedule ?? [];
+}
 /** Mescla l'horari de centre amb activitats de grup; preserva els registres antics per fill en mode lectura. */
 function schoolScheduleForCalendarDay(school, year, group, childId, date) {
     if (year && (date < year.startDate || date > year.endDate || year.holidays.includes(date)))
         return [];
     const weekday = (parseDate(date).getDay() + 6) % 7;
-    const base = (school.weeklySchedule ?? []).filter(s => s.weekday === weekday);
+    const base = ordinaryBaseForSchool(school, year).filter(s => s.weekday === weekday);
     const oldChild = group?.childSchedules && Object.hasOwn(group.childSchedules, childId) ? group.childSchedules[childId] : undefined;
     const extra = (oldChild ?? group?.weeklySchedule ?? []).filter(s => s.weekday === weekday);
     const core = window.schoolScheduleCore;
@@ -53,7 +63,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.3.2';
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
@@ -196,6 +206,10 @@ function cleanSchools(raw, children) {
             if (windowRaw !== undefined && (!windowRaw || !validTime(windowRaw.startTime) || !validTime(windowRaw.endTime) || windowRaw.startTime >= windowRaw.endTime))
                 throw Error('L’interval de jornada reduïda no és vàlid');
             const reducedWindow = windowRaw ? { startTime: windowRaw.startTime, endTime: windowRaw.endTime } : undefined;
+            const ordinaryRaw = year.ordinaryWindow;
+            if (ordinaryRaw !== undefined && (!ordinaryRaw || !validTime(ordinaryRaw.startTime) || !validTime(ordinaryRaw.endTime) || ordinaryRaw.startTime >= ordinaryRaw.endTime))
+                throw Error('L’interval de jornada ordinària no és vàlid');
+            const ordinaryWindow = ordinaryRaw ? { startTime: ordinaryRaw.startTime, endTime: ordinaryRaw.endTime } : undefined;
             if (reducedDays.some(d => holidays.includes(d)))
                 throw Error('Un dia no pot ser festiu i d’horari reduït alhora');
             const groupIds = new Set(), enrolled = new Set();
@@ -254,7 +268,7 @@ function cleanSchools(raw, children) {
                     throw Error('Hi ha activitats fora de les hores de jornada reduïda');
                 return { id: g.id, name: name(g.name, 80), tutorName: name(g.tutorName, 100), weeklySchedule, childIds, childSchedules, reducedWeeklySchedule, reducedChildSchedules };
             });
-            return { id: year.id, startDate: year.startDate, endDate: year.endDate, holidays, reducedDays, groups, reducedWindow };
+            return { id: year.id, startDate: year.startDate, endDate: year.endDate, holidays, reducedDays, groups, reducedWindow, ordinaryWindow };
         });
         const schoolChildIds = school.childIds === undefined ? [] : school.childIds;
         if (!Array.isArray(schoolChildIds) || schoolChildIds.length > 30 || schoolChildIds.some(id => typeof id !== 'string' || !childSet.has(id)) || new Set(schoolChildIds).size !== schoolChildIds.length)
@@ -498,7 +512,7 @@ function schoolForBand(date, childId, band) {
         if (!s.childIds.includes(childId) && !group)
             return false;
         const sessions = schoolScheduleForCalendarDay(s, year, group, childId, date);
-        if (!sessions.length && !s.weeklySchedule.length && !group?.weeklySchedule.length && !year?.reducedDays.includes(date))
+        if (!sessions.length && !year?.ordinaryWindow && !s.weeklySchedule.length && !group?.weeklySchedule.length && !year?.reducedDays.includes(date))
             return !!group && weekday < 5 && (band === 'mati' || band === 'tarda');
         const covered = sessions.reduce((sum, a) => sum + Math.max(0, Math.min(timeMinutes(a.endTime), range[1]) - Math.max(timeMinutes(a.startTime), range[0])), 0);
         return covered >= (range[1] - range[0]) / 2;
@@ -693,7 +707,8 @@ function schoolReducedPanel(school, year, group) {
     const own = group.reducedWeeklySchedule !== undefined;
     const base = `data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-mode="reduced"`;
     const core = window.schoolScheduleCore;
-    const ordinary = core ? core.combine(school.weeklySchedule, group.weeklySchedule) : [...school.weeklySchedule, ...group.weeklySchedule];
+    const base = ordinaryBaseForSchool(school, year);
+    const ordinary = core ? core.combine(base, group.weeklySchedule) : [...base, ...group.weeklySchedule];
     const automatic = year.reducedWindow ? clippedWeeklySchedule(ordinary, year.reducedWindow) : [];
     const sessions = [...(group.reducedWeeklySchedule ?? automatic)].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
     return `<section class="card">
@@ -1106,7 +1121,8 @@ function clickAction(button) {
             if (!school || !group || !year?.reducedWindow || button.dataset.mode !== 'reduced' || group.reducedWeeklySchedule !== undefined)
                 break;
             const core = window.schoolScheduleCore;
-            const ordinary = core ? core.combine(school.weeklySchedule, group.weeklySchedule) : [...school.weeklySchedule, ...group.weeklySchedule];
+            const base = ordinaryBaseForSchool(school, year);
+    const ordinary = core ? core.combine(base, group.weeklySchedule) : [...base, ...group.weeklySchedule];
             group.reducedWeeklySchedule = clippedWeeklySchedule(ordinary, year.reducedWindow).map(a => ({ ...a, id: newId() }));
             update();
             notify('Horari reduït específic del grup creat');
