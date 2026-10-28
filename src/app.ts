@@ -706,7 +706,8 @@ function sheetMarkup(){
     ${bdays.length?`<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c=>`${c.name} fa ${birthdayAge(date,c)} anys`).join(' · '))}</div>`:''}
     ${fullAgenda(date)}${schoolInfoForDay(date)}${schoolTimeline(date,activeChildren(),undefined,true)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
   } else if(sheet?.type==='schoolActivity'){
-    const activity=schoolActivities(sheet.date,activeChildren()).find(a=>a.id===sheet.sessionId&&a.schoolId===sheet.schoolId&&a.childId===sheet.childId);
+    const {date,childId,schoolId,sessionId}=sheet;
+    const activity=schoolActivities(date,activeChildren()).find(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId);
     const c=childById(sheet.childId);
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
