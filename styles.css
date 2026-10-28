@@ -473,3 +473,47 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .school-month-count {font-size:calc(10px * var(--font-scale,1));line-height:1.2;letter-spacing:-.3px;}
 .school-month-count::before {content:'🏫';font-size:calc(9px * var(--font-scale,1));padding-right:1px;}
 @media(max-width:560px) {.school-month-count {font-size:calc(9px * var(--font-scale,1));}}
+
+/* v0.4.0 · Vista diària de 24 h, scroll intern 00:00–24:00 i franges de pernocta */
+.day-timeline {margin:14px 0 6px;min-width:0;}
+.day-timeline-intro {display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center;color:#64768d;font-size:calc(11px * var(--font-scale,1));margin:0 0 12px;line-height:1.4;}
+.day-timeline-intro strong {color:#324e70;font-size:calc(13px * var(--font-scale,1));}
+.day-timeline-viewport {height:768px;max-width:100%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;border:1px solid #dce7f1;border-radius:12px;background:#f8fbff;scrollbar-width:thin;}
+.day-timeline-inner {width:100%;min-width:100%;}
+.day-timeline-headers {position:sticky;top:0;z-index:6;display:grid;grid-template-columns:52px repeat(var(--day-child-count),minmax(0,1fr));background:#eff5fb;border-bottom:1px solid #d4e0ee;}
+.day-timeline-headers span {display:block;text-align:center;font-weight:750;font-size:calc(12px * var(--font-scale,1));padding:8px 2px;overflow-wrap:anywhere;color:#3c587a;}
+.day-timeline-grid {display:grid;grid-template-columns:52px repeat(var(--day-child-count),minmax(0,1fr));}
+.day-time-axis {position:relative;border-right:1px solid #d4e0ee;}
+.day-time-tick {position:absolute;left:3px;right:2px;transform:translateY(-45%);font-size:calc(10px * var(--font-scale,1));color:#60788f;white-space:nowrap;pointer-events:none;line-height:1.15;}
+.day-time-column {position:relative;min-width:0;border-left:1px solid #e2eaf3;background:repeating-linear-gradient(to bottom,transparent 0,transparent 47px,#e2ebf5 47px,#e2ebf5 48px);}
+.day-night-block,.day-school-block {position:absolute;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;overflow:hidden;border-radius:5px;text-align:left;cursor:pointer;min-width:0;min-height:0;overflow-wrap:anywhere;}
+.day-night-block {z-index:1;left:3px;width:calc(100% - 6px);padding:8px 5px;background:color-mix(in srgb,var(--night-color) 79%,white);color:#203a53;border:1px solid color-mix(in srgb,var(--night-color) 78%,#55718d);}
+.day-school-block {z-index:3;padding:4px 5px;border:0;border-left:4px solid var(--school-event-color);background:color-mix(in srgb,var(--school-event-color) 63%,white);color:#213947;}
+.day-night-block:focus-visible,.day-school-block:focus-visible {outline:3px solid #1e4e93;outline-offset:1px;z-index:5;}
+.day-night-title,.day-school-kind {font-size:calc(12px * var(--font-scale,1));line-height:1.2;font-weight:800;}
+.day-night-subtitle,.day-school-hours,.day-school-label {font-size:calc(10px * var(--font-scale,1));line-height:1.3;}
+.day-school-hours {font-weight:750;white-space:nowrap;}
+.day-school-label {display:block;overflow:hidden;}
+.day-timeline-summary {font-size:calc(11px * var(--font-scale,1));margin-top:9px;color:#58708b;line-height:1.5;}
+.day-timeline-summary summary {font-weight:750;cursor:pointer;padding:6px 1px;}
+.day-timeline-summary ul {padding:0 0 0 20px;}
+.day-timeline-summary li {margin:7px 0;overflow-wrap:anywhere;}
+.rotation-change-field {margin:14px 0 5px;max-width:420px;}
+.rotation-change-field input {min-width:160px;}
+:root[data-theme="dark"] .day-timeline-intro {color:#bdcce0;}
+:root[data-theme="dark"] .day-timeline-intro strong {color:#e1edff;}
+:root[data-theme="dark"] .day-timeline-viewport {background:#1b283a;border-color:#34465c;}
+:root[data-theme="dark"] .day-timeline-headers {background:#26354c;border-color:#42566f;}
+:root[data-theme="dark"] .day-timeline-headers span {color:#e1ebf9;}
+:root[data-theme="dark"] .day-time-axis {border-color:#42566f;}
+:root[data-theme="dark"] .day-time-tick {color:#bdcce0;}
+:root[data-theme="dark"] .day-time-column {border-color:#40516b;background:repeating-linear-gradient(to bottom,transparent 0,transparent 47px,#34465b 47px,#34465b 48px);}
+:root[data-theme="dark"] .day-night-block {background:color-mix(in srgb,var(--night-color) 52%,#172333);color:#f0f7ff;border-color:color-mix(in srgb,var(--night-color) 60%,#172333);}
+:root[data-theme="dark"] .day-school-block {background:color-mix(in srgb,var(--school-event-color) 49%,#182739);color:#fff;}
+:root[data-theme="dark"] .day-timeline-summary {color:#c0d0e3;}
+@media (max-width:560px) {
+ .day-timeline {margin-left:-2px;margin-right:-2px;}
+ .day-timeline-intro {gap:4px 9px;}
+ .day-timeline-headers span {font-size:calc(11px * var(--font-scale,1));}
+ .day-night-title,.day-school-kind {font-size:calc(11px * var(--font-scale,1));}
+}

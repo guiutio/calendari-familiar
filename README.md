@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.3.3
+# Calendari Familiar · Web MVP v0.4.0
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -218,3 +218,13 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - **Calendari:** en un dia reduït es mostra la jornada escolar com a context entre les hores del curs i les activitats específiques del grup, si n'hi ha. Les activitats ordinàries del grup no s'atribueixen automàticament a dies reduïts. Els dies no marcats com a jornada reduïda continuen mostrant l'horari ordinari.
 - **Compatibilitat:** es preserven les activitats reduïdes que l'usuari havia introduït prèviament, així com els horaris individuals històrics (només lectura). El format de dades es manté.
 - Correcció **v0.3.3** sense canviar la planificació de la v0.4.0.
+
+## v0.4.0: vista diària de 24 hores i canvi de pernocta
+
+- **Calendari → Dia:** substitueix exclusivament la graella de cinc franges familiars per una sola línia temporal de 24 hores, amb una columna per fill, les hores proporcionals als minuts reals i les activitats escolars superposades. Les vistes mensual i setmanal no es modifiquen.
+- La línia temporal té scroll vertical propi de **00:00 a 24:00**, s'obre posicionada a les **06:00** i presenta inicialment aproximadament les hores **06:00–22:00**; es pot desplaçar per veure el tram anterior i posterior. També admet scroll horitzontal quan hi ha molts fills.
+- **Rotacions → Hora de canvi de pernocta:** valor inicial **19:00**, editable amb selector horari. La nit assignada a una data s'aplica des de l'hora de canvi d'aquella data fins a la mateixa hora de l'endemà.
+- A la vista diària, **00:00–19:00** correspon a l'assignació de la nit anterior i **19:00–24:00** a la de la nit actual, per defecte. Els canvis puntuals de nits es respecten. Els blocs permeten obrir l'editor de la nit.
+- Els horaris escolars s'apilen per damunt del color de pernocta, però no alteren la rotació ni les assignacions. Els filtres de fills, tutors i escoles segueixen actius.
+- L'hora de canvi es conserva amb la rotació al desament i a les còpies JSON; les còpies anteriors sense l'hora de canvi es migren amb **19:00**, sense alterar altres dades.
+- Es mantenen intactes les cinc franges convencionals a les vistes setmanal i mensual, i al detall mensual.
