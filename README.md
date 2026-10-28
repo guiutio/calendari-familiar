@@ -100,3 +100,11 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - Cada escola pot triar un color propi, distint dels altres centres; migració automàtica dels antics registres sense color.
 - Es mostra una escola en dies de curs no festius; es respecta l’horari setmanal del grup i, si és buit, s’assumeix de dilluns a divendres.
 - Les dades existents, la configuració de pernoctes i les còpies JSON antigues són compatibles.
+
+## v0.1.8: franges i columnes per fill
+
+- Calendari mensual amb cinc files per dia (Matí, Dinar, Tarda, Sopar, Nit) i una columna per fill. Els fills no s'agrupen.
+- Vistes mensual, setmanal i diària, totes amb les mateixes franges. Al panell de filtres, cada franja es pot mostrar o ocultar. Les escoles continuen ocultes per defecte.
+- La nit segueix la rotació de 10 setmanes i manté les excepcions; les altres franges són independents i queden buides si no estan assignades. Es poden assignar tutors a una data i una franja puntual.
+- Escoles: si hi ha horari setmanal, es mostra l'escola a les franges de matí/dinar/tarda quan cobreix com a mínim la meitat de la franja aproximada (08–12, 12–15, 15–18). Sense horari, s'assumeixen matí i tarda de dilluns a divendres, però no el dinar. En festius no es mostra; en dies reduïts només es mostra el matí.
+- Les preferències i les assignacions puntuals de franges es desen en IndexedDB i en les còpies JSON; els fitxers de versions antigues s'importen sense necessitat de migració destructiva.
