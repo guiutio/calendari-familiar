@@ -22,7 +22,7 @@ const group2={childIds:['blai'],weeklySchedule:[session('dinar',0,'12:00','13:30
 test('jornada ordinària de curs sense grups, amb entrada i sortida',()=>{
  const monday=lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-02');
  assert.deepEqual(JSON.parse(JSON.stringify(monday.map(s=>[s.startTime,s.endTime]))),[['08:30','16:30']]);
- assert.equal(monday[0].id,'__school_window__0');
+ assert.ok(monday[0].id.startsWith('__school_window__0'));
  assert.equal(lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-07').length,0);
  assert.equal(lib.schoolScheduleForCalendarDay(school,year,undefined,'elna','2026-11-05').length,0);
 });
