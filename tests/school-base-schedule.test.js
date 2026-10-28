@@ -44,10 +44,13 @@ test('festius i reduïdes es respecten, conservant les activitats del grup',()=>
  assert.equal(collect('2026-11-03',children,[school],['centre'],resolver).length,0);
  assert.equal(collect('2027-07-01',children,[school],['centre'],resolver).length,0);
 });
-test('controls ordinaris per fill eliminats i formularis de centre disponibles',()=>{
- assert.match(app,/function schoolBasePanel\(/);
- assert.match(app,/data-action="school-schedule-add"/);
- assert.match(app,/data-school-form="schoolSchedule"/);
+test('hores de jornada ordinària al curs, sense franges d’activitats a l’escola',()=>{
+ assert.match(app,/function schoolMembershipPanel\(/);
+ assert.match(app,/Hores de jornada ordinària/);
+ assert.match(app,/data-action="ordinary-window-edit"/);
+ assert.match(app,/data-school-form="ordinaryWindow"/);
+ assert.doesNotMatch(app,/data-action="school-schedule-add"/);
+ assert.doesNotMatch(app,/data-school-form="schoolSchedule"/);
  assert.doesNotMatch(app,/Personalitza l'horari/);
  assert.doesNotMatch(app,/data-action="schedule-target"/);
 });
