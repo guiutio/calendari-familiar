@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.5.1
+# Calendari Familiar · Web MVP v0.5.2
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -248,7 +248,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - La vista Dia i el Mes no canvien d'estructura; el desplaçament vertical i horitzontal de la vista Setmana es preserva en actualitzar dades sense navegar a una altra setmana.
 - No canvia el model de dades, la persistència local o l'exportació/importació JSON. La funcionalitat planificada de patrons familiars recurrents es posposa a una futura versió (a partir de la v0.6.0).
 
-## v0.5.1: Zoom horari a Dia i Setmana
+## v0.5.2: Zoom horari a Dia i Setmana
 
 - **Calendari → Dia / Setmana** incorpora un control de zoom vertical amb botons **−** i **+** i un lliscador de cinc nivells: **50%, 75%, 100%, 125%, 150%**.
 - El valor per defecte és **100%**, igual que l'escala de la v0.5.0. A **50%** la cronologia de 24 hores ocupa aproximadament la meitat d'alçada i s'hi veuen moltes més hores de cop; a **150%** els blocs són més alts i les activitats es poden llegir amb més detall.
@@ -256,4 +256,13 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - En canviar el zoom, es procura mantenir **la mateixa hora al centre** de la vista; el desplaçament horitzontal setmanal també es conserva. Els límits naturals del scroll s'apliquen quan entra tot el dia.
 - La preferència queda desada localment, s'inclou a les exportacions/importacions JSON i es manté en restablir les dades de mostra. Les còpies antigues sense zoom adopten **100%**.
 - Les activitats molt breus poden quedar visualment petites als zooms més baixos; són consultables tocant-les o a la llista accessible de sota la cronologia.
-- No modifica les vistes mensual ni les franges familiars. És una millora puntual de la **v0.5.1**.
+- No modifica les vistes mensual ni les franges familiars. És una millora puntual de la **v0.5.2**.
+
+## v0.5.2: zoom 50 % per defecte, mínim 25 % i scroll setmanal natural
+
+- **Dia i Setmana:** sis nivells de zoom: **25 %, 50 %, 75 %, 100 %, 125 % i 150 %**. El predeterminat és **50 %** per a noves dades i còpies antigues sense aquesta preferència. Una preferència ja desada es manté.
+- **25 %:** les 24 hores ocupen **288 px**, amb etiquetes horàries cada dues hores per evitar superposicions. **50 %:** les 24 hores ocupen **576 px**.
+- **Dia:** el contenidor ajusta l'alçada quan el calendari és més petit per evitar espais buits.
+- **Setmana:** la graella manté el scroll horitzontal, però **el gest vertical desplaça la pàgina sencera**, fins i tot quan comença dins del calendari. La vista deixa marges tàctils a esquerra i dreta i mostra les 24 hores a l'alçada real del zoom.
+- El protector de desplaçament d'iOS respecta el scroll de la pàgina quan un gest vertical comença dins de la setmana.
+- Es conserven pernoctes, escoles, filtres, imports i preferències.

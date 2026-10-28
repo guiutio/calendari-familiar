@@ -24,7 +24,7 @@ const days=dates.map((date,i)=>{
 test('set dies, amb dues subcolumnes per dia i un sol eix de 24 hores',()=>{
  const markup=ui.renderWeek(dates[0],days,children);
  assert.match(markup,/data-timeline-key="week:2026-10-26"/);
- assert.match(markup,/data-initial-scroll="288"/);
+ assert.match(markup,/data-initial-scroll="144"/);
  assert.match(markup,/--week-day-count:7/);
  assert.match(markup,/--week-child-count:2/);
  assert.equal((markup.match(/class="week-day-header"/g)||[]).length,7);
