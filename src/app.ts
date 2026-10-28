@@ -875,10 +875,20 @@ document.addEventListener('submit',event=>{
  }
  if(formKind==='schedule'){
   if(!group)return;
-  const weekday=Number(get('weekday')),startTime=get('startTime'),endTime=get('endTime');
-  if(!Number.isInteger(weekday)||weekday<0||weekday>6||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){notify('L’horari ha de tenir una hora final posterior a la inicial');return;}
-  if(group.weeklySchedule.some(a=>a.weekday===weekday&&a.startTime<endTime&&a.endTime>startTime)){notify('Aquesta franja se solapa amb una altra del mateix dia');return;}
-  group.weeklySchedule.push({id:newId(),weekday,startTime,endTime,label:get('label').slice(0,80)});finish('Franja horària afegida');
+  const childId=form.dataset.child??'',entries=childId?group.childSchedules?.[childId]:group.weeklySchedule;
+  if(!entries)return; // Primer cal personalitzar l'horari d'aquest fill.
+  const existing=entries.find(a=>a.id===form.dataset.session);
+  if(form.dataset.session&&!existing){notify('Aquesta franja ja no existeix');return;}
+  const days=existing?[Number(get('weekday'))]:values.getAll('weekdays').map(Number);
+  const startTime=get('startTime'),endTime=get('endTime'),kind=get('kind');
+  if(!days.length||days.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(days).size!==days.length){notify('Selecciona com a mínim un dia vàlid');return;}
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){notify('L’hora final ha de ser posterior a la inicial');return;}
+  if(!SESSION_KINDS.includes(kind as SessionKind)){notify('Tria un tipus d’activitat vàlid');return;}
+  if(days.some(day=>entries.some(a=>a.id!==existing?.id&&a.weekday===day&&a.startTime<endTime&&a.endTime>startTime))){notify('Hi ha una franja que se solapa amb aquest horari');return;}
+  const label=get('label').slice(0,80);
+  if(existing){existing.weekday=days[0]!;existing.startTime=startTime;existing.endTime=endTime;existing.kind=kind as SessionKind;existing.label=label;finish('Franja horària actualitzada');}
+  else{for(const weekday of days)entries.push({id:newId(),weekday,startTime,endTime,kind:kind as SessionKind,label});finish('Franges horàries afegides');}
+  return;
  }
 });
 
