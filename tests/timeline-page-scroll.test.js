@@ -14,7 +14,7 @@ test('dia: columnes compactes i alçada de 24h sense límit de scroll intern',()
  const html=render('2026-10-28','Dimecres',children,[],empty,'19:00',50);
  assert.match(html,/min-width:346px/); // 52+3*98
  assert.match(html,/data-zoom="50"/);
- assert.doesNotMatch(html,/style="[^"]*height:.*?px" data-day-timeline/);
+ assert.match(html,/style="--hour-height:24px" data-day-timeline/);
  assert.match(html,/class="day-timeline-viewport"/);
  assert.match(html,/height:576px/); // graella completa de 24h
 });
