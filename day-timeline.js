@@ -69,7 +69,7 @@
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
            data-timeline-key="week:${escape(startDate)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
-        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};min-width:${52+days.length*children.length*98}px">
+        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};--week-day-width:${children.length*98}px;min-width:${52+days.length*children.length*98}px">
           <div class="week-timeline-head">
             <div class="week-time-corner">Hora</div>${head}
           </div>
