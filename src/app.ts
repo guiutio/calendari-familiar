@@ -542,7 +542,8 @@ function schoolFormMarkup():string {
   const childId=group.childIds.includes(sheet.childId??'')?sheet.childId??'':'';
   const entries=childId?group.childSchedules?.[childId]:group.weeklySchedule;
   if(!entries)return '';
-  const session=entries.find(a=>a.id===sheet.sessionId);
+  const sessionId=sheet.sessionId;
+  const session=entries.find(a=>a.id===sessionId);
   const weekdaysInput=session
     ?`<div class="field"><label for="session-weekday">Dia de la setmana</label><select name="weekday" id="session-weekday">${weekLong.map((label,i)=>`<option value="${i}" ${session.weekday===i?'selected':''}>${label}</option>`).join('')}</select></div>`
     :`<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((label,i)=>`<label><input type="checkbox" name="weekdays" value="${i}" ${i<5?'checked':''}/> ${label}</label>`).join('')}</div></fieldset>`;
