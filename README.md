@@ -1,6 +1,6 @@
-# Calendari Familiar · Web MVP v0.1.3
+# Calendari Familiar · Web MVP v0.1.9
 
-Prototip funcional **mobile-first** en català per planificar les nits dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
+Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
 ## Provar-lo al Mac
 **Via ràpida (macOS):** fes doble clic a `Inicia-al-Mac.command` o executa `./Inicia-al-Mac.command` des del Terminal. Obrirà el navegador i mantindrà un servidor local actiu fins que tanquis el Terminal.
@@ -51,7 +51,7 @@ Aquest prototip de validació és **TypeScript + DOM natiu** per poder-lo execut
 
 ## Limitacions actuals
 
-- Només vista **mensual** (amb full de detall i edició del dia). Les vistes setmanal/diària amb horaris encara no estan implementades.
+- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.1.11.
 - No inclou rotacions amb dates d'inici específiques per fill ni múltiples patrons alhora: una rotació global, independentment de les assignacions per fill.
 - No hi ha comptes ni sincronització entre dispositius. Cada origin web/navegador disposa de dades independents.
 - Les dades locals poden desaparèixer en eliminar dades del lloc, de l'app o per polítiques del navegador. **Exporta còpies periòdicament.**
@@ -108,3 +108,20 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - La nit segueix la rotació de 10 setmanes i manté les excepcions; les altres franges són independents i queden buides si no estan assignades. Es poden assignar tutors a una data i una franja puntual.
 - Escoles: si hi ha horari setmanal, es mostra l'escola a les franges de matí/dinar/tarda quan cobreix com a mínim la meitat de la franja aproximada (08–12, 12–15, 15–18). Sense horari, s'assumeixen matí i tarda de dilluns a divendres, però no el dinar. En festius no es mostra; en dies reduïts només es mostra el matí.
 - Les preferències i les assignacions puntuals de franges es desen en IndexedDB i en les còpies JSON; els fitxers de versions antigues s'importen sense necessitat de migració destructiva.
+
+## v0.1.9: horari escolar ordinari
+
+- **Escoles → Curs → Grup:** crea horaris ordinaris setmanals, amb dia de la setmana, hora d'inici i final, tipus d'activitat (classe, pati, menjador, extraescolar o altres) i descripció opcional.
+- Es poden crear franges per a **diversos dies alhora** (dilluns a divendres per defecte), editar franges existents i suprimir-les. Es rebutgen els solapaments dins d'un mateix horari.
+- L'horari del grup és el patró comú. A la mateixa pantalla, selecciona un fill i prem **Personalitza l'horari** per crear una còpia independent que pots ajustar sense canviar la resta del grup. **Recupera l'horari del grup** descarta la personalització.
+- Els horaris individuals només existeixen per a fills matriculats al grup: es netegen en moure o esborrar una matrícula i en suprimir el fill.
+- **Compatibilitat:** les còpies i dades de la v0.1.8 continuen sent vàlides; les franges existents es tracten com a activitats de tipus «Classe». L'exportació JSON conserva els horaris individuals.
+- **Abast:** aquesta versió defineix i desa els **horaris ordinaris**. La configuració de jornades reduïdes i els seus horaris especials es reserva per a la v0.1.10; la representació detallada d'aquests horaris a les vistes del calendari es definirà a la v0.1.11. L'indicador escolar bàsic del calendari actual es conserva.
+
+### Com provar la v0.1.9
+
+1. Afegeix una escola, curs i grup; assigna-hi un fill.
+2. A l'horari del **Grup**, crea una franja per a dilluns-divendres i prova de crear-ne una altra que se solapi: no s'ha de permetre.
+3. Selecciona el fill, personalitza l'horari, edita una franja i comprova que les franges del grup no canvien.
+4. Recupera l'horari del grup i comprova que es tornen a veure les franges compartides.
+5. Exporta un JSON, torna a importar-lo i comprova que es conserven els horaris.
