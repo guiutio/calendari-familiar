@@ -468,6 +468,22 @@ function schoolNavButton(label:string,nav:{schoolId?:string;yearId?:string;group
 function schoolCrumb(text:string,nav:{schoolId?:string;yearId?:string;groupId?:string}={}){
  return `<button class="school-breadcrumb" type="button" data-action="school-nav" ${nav.schoolId?`data-school="${escapeHtml(nav.schoolId)}"`:''} ${nav.yearId?`data-year="${escapeHtml(nav.yearId)}"`:''}>${icon('chevronLeft',15)} ${escapeHtml(text)}</button>`;
 }
+function schoolSchedulePanel(school:School,year:SchoolYear,group:ClassGroup):string {
+ const childId=group.childIds.includes(schoolNav.scheduleChildId??'')?schoolNav.scheduleChildId??'':'';
+ const child=childById(childId);
+ const own=!!childId&&Object.hasOwn(group.childSchedules??{},childId);
+ const editable=!childId||own;
+ const sessions=[...(own?(group.childSchedules?.[childId]??[]):group.weeklySchedule)].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+ const data=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(childId)}"`;
+ const target=(id:string,name:string)=>`<button type="button" class="school-schedule-target ${id===childId?'active':''}" aria-pressed="${id===childId}" data-action="schedule-target" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(id)}">${escapeHtml(name)}</button>`;
+ return `<section class="card">
+  <div class="panel-header"><h2 class="section-title">Horari escolar ordinari</h2>${editable?`<button class="secondary-btn" data-action="schedule-add" ${data}>${icon('plus',14)} Franja</button>`:''}</div>
+  <p class="section-description">Defineix les activitats que es repeteixen cada setmana. L'horari del grup s'aplica als seus fills mentre no tinguin un horari propi.</p>
+  <div class="school-schedule-targets" role="group" aria-label="Selecciona l'horari">${target('','Grup')}${group.childIds.map(id=>target(id,childById(id)?.name??'Fill')).join('')}</div>
+  ${child?(own?`<div class="school-schedule-notice">Horari personalitzat de <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="soft-btn" data-action="schedule-inherit" ${data}>Recupera l'horari del grup</button></div>`:`<div class="school-schedule-notice">S'aplica l'horari del grup a <strong>${escapeHtml(child.name)}</strong>. <button type="button" class="secondary-btn" data-action="schedule-customize" ${data}>Personalitza l'horari</button></div>`):'<p class="settings-note">Horari de referència del grup, compartit pels fills sense personalització.</p>'}
+  ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label?` · ${escapeHtml(a.label)}`:''}</span></div>${editable?`<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${data} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil',15)}</button><button class="delete-icon" data-action="schedule-delete" ${data} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash',15)}</button></div>`:''}</div>`).join(''):'<div class="empty-state">Encara no hi ha franges horàries definides.</div>'}
+ </section>`;
+}
 function schoolsPage():string {
  const school=schoolById(schoolNav.schoolId),year=yearById(school,schoolNav.yearId),group=groupById(year,schoolNav.groupId);
  if(!school) return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
@@ -490,15 +506,13 @@ function schoolsPage():string {
  <div class="action-row"><button class="danger-btn" data-action="year-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Suprimeix el curs</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Grups classe</h2><button class="secondary-btn" data-action="group-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus',14)} Afegir grup</button></div>
  ${year.groups.length?year.groups.map(g=>`<div class="school-row">${schoolNavButton(g.name,{schoolId:school.id,yearId:year.id,groupId:g.id})}<span class="school-meta">${g.childIds.length} ${g.childIds.length===1?'fill':'fills'}${g.tutorName?` · ${escapeHtml(g.tutorName)}`:''}</span></div>`).join(''):'<div class="empty-state">Encara no hi ha cap grup. Pots afegir-hi «Segon», «Sisè A» o qualsevol altre.</div>'}</section>`;
- const sessions=[...group.weeklySchedule].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+ const schedulePanel=schoolSchedulePanel(school,year,group);
  return `<header class="page-heading"><div>${schoolCrumb(schoolYearName(year),{schoolId:school.id,yearId:year.id})}<div class="eyebrow">${escapeHtml(school.name)} · ${schoolYearName(year)}</div><h1 class="page-title">${escapeHtml(group.name)}</h1><p class="page-subtitle">${group.tutorName?`Tutor/a: ${escapeHtml(group.tutorName)}`:'Tutor/a no especificat'}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Grup classe</h2><button class="secondary-btn" data-action="group-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">${icon('pencil',15)} Edita</button></div>
  <div class="action-row"><button class="danger-btn" data-action="group-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">Suprimeix el grup</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Fills del grup</h2></div><p class="section-description">Selecciona els fills que pertanyen a aquest grup aquest curs. Un fill només pot estar en un grup del mateix curs i escola.</p>
  ${state.children.map(c=>{const selected=group.childIds.includes(c.id),other=year.groups.find(g=>g.id!==group.id&&g.childIds.includes(c.id));return `<button class="school-child-choice ${selected?'selected':''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other?`<small>Actualment a ${escapeHtml(other.name)}</small>`:''}</span>${selected?icon('check',18):icon('plus',17)}</button>`;}).join('')}
- </section><section class="card"><div class="panel-header"><h2 class="section-title">Horari setmanal</h2><button class="secondary-btn" data-action="schedule-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">${icon('plus',14)} Franja</button></div>
- <p class="section-description">Opcional. Pots afegir més d’una franja per dia (per exemple, matí i tarda).</p>
- ${sessions.length?sessions.map(a=>`<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}${a.label?`<span class="school-meta">${escapeHtml(a.label)}</span>`:''}</div><button class="delete-icon" aria-label="Suprimeix franja" data-action="schedule-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-session="${escapeHtml(a.id)}">${icon('trash',15)}</button></div>`).join(''):'<div class="empty-state">Encara no s’ha introduït cap franja horària.</div>'}</section>`;
+ </section>${schedulePanel}`;
 }
 function schoolFormMarkup():string {
  if(!sheet)return '';
