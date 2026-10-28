@@ -18,14 +18,14 @@
     });
   }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
-  function buildColumns(date,children,activities,nightSegments,height) {
+  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
       const nights=segments.filter(s=>s.visible).map(s=>{
-        const h=(s.to-s.from)*PX_PER_MINUTE;
+        const h=(s.to-s.from)*pxPerMinute;
         const name=escape(s.guardianName);
         const title=`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`;
-        return `<button type="button" class="day-night-block" data-action="edit-band" data-date="${escape(s.date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*PX_PER_MINUTE}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
+        return `<button type="button" class="day-night-block" data-action="edit-band" data-date="${escape(s.date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
       }).join('');
       const childActivities=activities.filter(a=>a.childId===child.id).sort((a,b)=>a.start-b.start||a.end-b.end);
       const laneEnds=[];
@@ -39,25 +39,27 @@
         const start=Math.max(0,a.start),end=Math.min(DAY_MINUTES,a.end);
         if(end<=start)return '';
         const caption=`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
-        const top=start*PX_PER_MINUTE, h=(end-start)*PX_PER_MINUTE;
+        const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
         return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${lane} * 100% / ${laneCount} + 3px);width:calc(100% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}"><span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span><span class="day-school-kind">${escape(a.kind)}</span>${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
       return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${school}</div>`;
     }).join('');
     return columns;
   }
-  function renderWeek(startDate,days,children) {
+  function renderWeek(startDate,days,children,zoom=100) {
+    const safeZoom=[50,75,100,125,150].includes(zoom)?zoom:100;
+    const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
-    const height=DAY_MINUTES*PX_PER_MINUTE;
+    const height=DAY_MINUTES*pxPerMinute;
     const ticks=Array.from({length:25},(_,i)=>
-      `<span class="day-time-tick" style="top:${i*60*PX_PER_MINUTE}px">${fmt(i*60)}</span>`).join('');
+      `<span class="day-time-tick" style="top:${i*60*pxPerMinute}px">${fmt(i*60)}</span>`).join('');
     const childHeaders=children.map(c=>`<span class="week-child-label">${escape(c.name)}</span>`).join('');
     const head=days.map(day=>`<div class="week-day-header">
       <button type="button" class="week-date-button" data-action="show-calendar-day" data-date="${escape(day.date)}" title="Obre el dia ${escape(day.label)}">${escape(day.label)}</button>
       <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
     </div>`).join('');
     const dayColumns=days.map(day=>`<div class="week-date-columns" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
-      ${buildColumns(day.date,children,day.activities,day.nightSegments,height)}</div>`).join('');
+      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute)}</div>`).join('');
     const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
       const parts=day.nightSegments[c.id]??[];
       return `<li>${escape(c.name)}: ${parts.filter(x=>x.visible).map(x=>`${fmt(x.from)}–${fmt(x.to)} ${escape(x.guardianName)}`).join('; ')||'Sense responsable visible'}${day.activities.filter(a=>a.childId===c.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
@@ -65,7 +67,7 @@
     return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
-           data-timeline-key="week:${escape(startDate)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
+           data-timeline-key="week:${escape(startDate)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
         <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};min-width:${52+days.length*children.length*145}px">
           <div class="week-timeline-head">
             <div class="week-time-corner">Hora</div>${head}
@@ -78,17 +80,19 @@
       <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime) {
+  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=100) {
+    const safeZoom=[50,75,100,125,150].includes(zoom)?zoom:100;
+    const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
-    const height=DAY_MINUTES*PX_PER_MINUTE;
-    const tickMarks=Array.from({length:25},(_,i)=>`<span class="day-time-tick" style="top:${i*60*PX_PER_MINUTE}px">${fmt(i*60)}</span>`).join('');
-    const columns=buildColumns(date,children,activities,nightSegments,height);
+    const height=DAY_MINUTES*pxPerMinute;
+    const tickMarks=Array.from({length:25},(_,i)=>`<span class="day-time-tick" style="top:${i*60*pxPerMinute}px">${fmt(i*60)}</span>`).join('');
+    const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute);
     const list=children.map(child=>{
       const nights=nightSegments[child.id]??[];
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
     }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
-      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*PX_PER_MINUTE}">
+      <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
         <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*145}px">
           <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
           <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${tickMarks}</div>${columns}</div>
