@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1.9
+# Calendari Familiar · Web MVP v0.1.10
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -125,3 +125,20 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 3. Selecciona el fill, personalitza l'horari, edita una franja i comprova que les franges del grup no canvien.
 4. Recupera l'horari del grup i comprova que es tornen a veure les franges compartides.
 5. Exporta un JSON, torna a importar-lo i comprova que es conserven els horaris.
+
+## v0.1.10: jornades escolars reduïdes
+
+- **Escoles → Curs → Hores de jornada reduïda:** especifica les hores d'inici i final reals del tipus de jornada reduïda. No se n'assumeix cap hora per defecte. Els dies del curs marcats com a «Horari reduït» comparteixen aquesta finestra horària.
+- **Escoles → Curs → Grup → Jornada reduïda:** veu el resultat automàtic de retallar cada activitat de l'horari ordinari a la finestra establerta. Les activitats que no coincideixen amb la finestra s'ometen; les que hi coincideixen parcialment es retallen. L'horari ordinari no es modifica.
+- **Horari reduït específic:** si el resultat automàtic no coincideix amb la realitat, pots crear una còpia independent i modificar-la, afegir-hi franges o eliminar-ne. Permet horaris específics per grup o per fill. Les activitats específiques han de ser dins de la finestra i no poden solapar-se.
+- **Herència i recuperació:** els fills hereten l'horari reduït específic del grup, si existeix; en cas contrari s'utilitza el seu horari ordinari retallat. Recuperar l'horari de referència descarta les modificacions reduïdes, no les ordinàries.
+- **Validació i migració:** les dades de 0.1.9 i les còpies JSON anteriors continuen funcionant. Les noves dades es conserven en exportar/importar; es rebutgen intervals invàlids i franges fora dels límits, i es netegen les dades d'un fill en canviar de grup o eliminar-lo.
+- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.1.11**.
+
+### Prova manual de la 0.1.10
+
+1. Al curs, afegeix un dia de jornada reduïda i configura una finestra, per exemple de 09:00 a 13:00.
+2. Al grup, defineix una activitat ordinària 08:30–10:30 i una altra de 12:30–14:00. A «Jornada reduïda» s'han de veure 09:00–10:30 i 12:30–13:00.
+3. Crea un horari reduït específic del grup i edita una franja; comprova que la jornada ordinària no canvia.
+4. Personalitza l'horari reduït d'un fill i després recupera l'horari del grup. Verifica que el resultat és l'esperat.
+5. Exporta/importa les dades i comprova que el límit reduït i les personalitzacions es mantenen.
