@@ -604,8 +604,8 @@ function schoolReducedPanel(school:School,year:SchoolYear,group:ClassGroup):stri
   const own=group.reducedWeeklySchedule!==undefined;
   const base=`data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-mode="reduced"`;
   const core=(window as Window & {schoolScheduleCore?:{combine:(a:WeeklySession[],b:WeeklySession[])=>WeeklySession[]}}).schoolScheduleCore;
-  const base=ordinaryBaseForSchool(school,year);
-  const ordinary=core?core.combine(base,group.weeklySchedule):[...base,...group.weeklySchedule];
+  const baseSessions=ordinaryBaseForSchool(school,year);
+  const ordinary=core?core.combine(baseSessions,group.weeklySchedule):[...baseSessions,...group.weeklySchedule];
   const automatic=year.reducedWindow?clippedWeeklySchedule(ordinary,year.reducedWindow):[];
   const sessions=[...(group.reducedWeeklySchedule??automatic)].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
   return `<section class="card">
