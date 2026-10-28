@@ -148,7 +148,7 @@ function cleanSchoolWeeklySchedule(raw) {
     if (!Array.isArray(raw) || raw.length > 200)
         throw Error('L’horari ordinari de l’escola no és vàlid');
     const ids = new Set();
-    const result = raw.map(x => {
+    const result = raw.map((x) => {
         if (!x || typeof x.id !== 'string' || ids.has(x.id) || !Number.isInteger(x.weekday) || x.weekday < 0 || x.weekday > 6 ||
             !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(x.endTime) ||
             x.startTime >= x.endTime || (x.kind !== undefined && !SESSION_KINDS.includes(x.kind)))
@@ -702,7 +702,7 @@ function schoolReducedPanel(school, year, group) {
     ${year.reducedWindow ? `<p class="settings-note">Hores de jornada reduïda: <strong>${year.reducedWindow.startTime}–${year.reducedWindow.endTime}</strong>.</p>
     <div class="school-schedule-notice">${own ? `<span>Horari reduït específic del grup.</span><button class="soft-btn" data-action="schedule-inherit" ${base}>Recupera el càlcul automàtic</button>` : `<span>Horari reduït calculat automàticament.</span><button class="secondary-btn" data-action="schedule-customize" ${base}>Defineix horari específic</button>`}</div>
     ${sessions.length ? sessions.map(a => `<div class="school-schedule-row"><div><strong>${weekLong[a.weekday]}</strong> · ${a.startTime}–${a.endTime}<span class="school-meta">${SESSION_KIND_NAMES[sessionKind(a.kind)]}${a.label ? ` · ${escapeHtml(a.label)}` : ''}</span></div>${own ? `<div class="school-schedule-actions"><button class="school-schedule-edit" data-action="schedule-edit" ${base} data-session="${escapeHtml(a.id)}" aria-label="Edita la franja">${icon('pencil', 15)}</button><button class="delete-icon" data-action="schedule-delete" ${base} data-session="${escapeHtml(a.id)}" aria-label="Suprimeix la franja">${icon('trash', 15)}</button></div>` : ''}</div>`).join('') : '<p class="settings-note">No hi ha activitats en aquesta jornada reduïda.</p>'}` :
-    `<div class="school-schedule-notice">Cal configurar les hores de jornada reduïda del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
+        `<div class="school-schedule-notice">Cal configurar les hores de jornada reduïda del curs. <button class="secondary-btn" data-action="reduced-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Configura les hores</button></div>`}
   </section>`;
 }
 function schoolsPage() {
@@ -1622,7 +1622,7 @@ document.addEventListener('submit', event => {
         }
         else
             for (const weekday of days)
-                school.weeklySchedule.push({ id: newId(), weekday, startTime, endTime, kind, label });
+                school.weeklySchedule.push({ id: newId(), weekday, startTime, endTime, kind: kind, label });
         finish('Horari ordinari de l’escola desat');
         return;
     }
