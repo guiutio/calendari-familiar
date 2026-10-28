@@ -1081,21 +1081,16 @@ document.addEventListener('submit',event=>{
   }
   year.reducedWindow=window;finish('Hores de jornada reduïda desades');return;
  }
- if(formKind==='schoolSchedule'){
-   if(!school)return;
-   const sessionId=form.dataset.session??'',existing=school.weeklySchedule.find(a=>a.id===sessionId);
-   if(sessionId&&!existing){notify('Aquesta franja ja no existeix');return;}
-   const days=existing?[Number(get('weekday'))]:values.getAll('weekdays').map(Number);
-   const startTime=get('startTime'),endTime=get('endTime'),kind=get('kind'),label=get('label').slice(0,80);
-   if(!days.length||days.some(d=>!Number.isInteger(d)||d<0||d>6)||new Set(days).size!==days.length){notify('Selecciona com a mínim un dia vàlid');return;}
-   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){notify('Indica unes hores vàlides');return;}
-   if(!SESSION_KINDS.includes(kind as SessionKind)){notify('Tria un tipus d’activitat vàlid');return;}
-   if(days.some(day=>school.weeklySchedule.some(a=>a.id!==sessionId&&a.weekday===day&&a.startTime<endTime&&a.endTime>startTime))){notify('Hi ha franges solapades a l’horari de l’escola');return;}
-   if(existing){existing.weekday=days[0]!;existing.startTime=startTime;existing.endTime=endTime;existing.kind=kind as SessionKind;existing.label=label;}
-   else for(const weekday of days)school.weeklySchedule.push({id:newId(),weekday,startTime,endTime,kind:kind as SessionKind,label});
-   finish('Horari ordinari de l’escola desat');return;
-  }
-  if(formKind==='schedule'){
+ if(formKind==='ordinaryWindow'){
+    if(!year)return;
+    const startTime=get('startTime'),endTime=get('endTime');
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){
+      notify('Indica unes hores vàlides, amb el final posterior a l’inici');return;
+    }
+    year.ordinaryWindow={startTime,endTime};
+    finish('Hores de jornada ordinària desades');return;
+   }
+   if(formKind==='schedule'){
   if(!group)return;
   const childId='',mode:ScheduleMode=form.dataset.mode==='reduced'?'reduced':'ordinary';
   const entries=scheduleEntriesForEdit(group,childId,mode);
