@@ -3,8 +3,12 @@ type Child = { id: string; name: string; birthDate: string };
 type Guardian = { id: string; name: string; color: string };
 type Rotation = { startDate: string; length: number; assignments: Record<string, string[]> };
 // Les inscripcions són per grup i curs: l'historial es conserva en canviar de curs.
-type WeeklySession = { id:string; weekday:number; startTime:string; endTime:string; label:string };
-type ClassGroup = { id:string; name:string; tutorName:string; weeklySchedule:WeeklySession[]; childIds:string[] };
+type SessionKind = 'classe' | 'pati' | 'menjador' | 'extraescolar' | 'altres';
+const SESSION_KINDS:readonly SessionKind[]=['classe','pati','menjador','extraescolar','altres'];
+const SESSION_KIND_NAMES:Record<SessionKind,string>={classe:'Classe',pati:'Pati',menjador:'Menjador',extraescolar:'Extraescolar',altres:'Altres'};
+function sessionKind(value:unknown):SessionKind{return SESSION_KINDS.includes(value as SessionKind)?value as SessionKind:'classe';}
+type WeeklySession = { id:string; weekday:number; startTime:string; endTime:string; label:string; kind?:SessionKind };
+type ClassGroup = { id:string; name:string; tutorName:string; weeklySchedule:WeeklySession[]; childIds:string[]; childSchedules?:Record<string,WeeklySession[]> };
 type SchoolYear = { id:string; startDate:string; endDate:string; holidays:string[]; reducedDays:string[]; groups:ClassGroup[] };
 type School = { id:string; name:string; address:string; phone:string; color:string; years:SchoolYear[] };
 
@@ -21,10 +25,10 @@ function timeMinutes(value:string):number {const [h,m]=value.split(':').map(Numb
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode };
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; preferences: Preferences; schools:School[] };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string} | null;
+type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.1.8';
+const APP_VERSION = '0.1.9';
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -140,13 +144,32 @@ function cleanSchools(raw:unknown,children:Child[]):School[]{
         const childIds=g.childIds.filter(id=>childSet.has(id));
         if(new Set(childIds).size!==childIds.length||childIds.some(id=>enrolled.has(id)))throw Error('Un fill no pot pertànyer a dos grups del mateix curs');
         childIds.forEach(id=>enrolled.add(id));
-        const sessionIds=new Set<string>();
-        const weeklySchedule=g.weeklySchedule.map(a=>{
-          if(!a||!isText(a.id)||sessionIds.has(a.id)||!Number.isInteger(a.weekday)||a.weekday<0||a.weekday>6||!validTime(a.startTime)||!validTime(a.endTime)||a.startTime>=a.endTime)throw Error('Hi ha un horari setmanal incorrecte');
-          sessionIds.add(a.id);
-          return {id:a.id,weekday:a.weekday,startTime:a.startTime,endTime:a.endTime,label:name(a.label,80)};
-        });
-        return {id:g.id,name:name(g.name,80),tutorName:name(g.tutorName,100),weeklySchedule,childIds};
+        // Les còpies 0.1.8 no tenen categoria ni horaris particulars.
+        const parseSchedule=(entries:unknown):WeeklySession[]=>{
+          if(!Array.isArray(entries)||entries.length>200)throw Error('Un horari escolar no és vàlid');
+          const ids=new Set<string>();
+          const sessions:WeeklySession[]=entries.map((a:WeeklySession)=>{
+            if(!a||!isText(a.id)||ids.has(a.id)||!Number.isInteger(a.weekday)||a.weekday<0||a.weekday>6||!validTime(a.startTime)||!validTime(a.endTime)||a.startTime>=a.endTime||(a.kind!==undefined&&!SESSION_KIN.includes(a.kind)))throw Error('Hi ha un horari setmanal incorrecte');
+            ids.add(a.id);
+            return {id:a.id,weekday:a.weekday,startTime:a.startTime,endTime:a.endTime,label:name(a.label,80),kind:sessionKind(a.kind)};
+          });
+          const ordered=[...sessions].sort((a,b)=>a.weekday-b.weekday||a.startTime.localeCompare(b.startTime));
+          for(let i=1;i<ordered.length;i++){
+            const prev=ordered[i-1]!,next=ordered[i]!;
+            if(prev.weekday===next.weekday&&prev.endTime>next.startTime)throw Error('Hi ha franges escolars solapades');
+          }
+          return sessions;
+        };
+        const weeklySchedule=parseSchedule(g.weeklySchedule);
+        const childSchedules:Record<string,WeeklySession[]>={};
+        if(g.childSchedules!==undefined){
+          if(!g.childSchedules||typeof g.childSchedules!=='object'||Array.isArray(g.childSchedules)||Object.keys(g.childSchedules).length>30)throw Error('Els horaris individuals no són vàlids');
+          for(const [id,sessions] of Object.entries(g.childSchedules)){
+            if(!childIds.includes(id))throw Error('Hi ha un horari per a un fill que no pertany al grup');
+            childSchedules[id]=parseSchedule(sessions);
+          }
+        }
+        return {id:g.id,name:name(g.name,80),tutorName:name(g.tutorName,100),weeklySchedule,childIds,childSchedules};
       });
       return {id:year.id,startDate:year.startDate,endDate:year.endDate,holidays,reducedDays,groups};
     });
@@ -244,7 +267,7 @@ let viewYear=new Date().getFullYear(),viewMonth=new Date().getMonth();
 let calendarView:CalendarView='month';
 let selectedDate=localDate(new Date());
 let tab:Tab='calendar';
-let schoolNav:{schoolId?:string;yearId?:string;groupId?:string}={};
+let schoolNav:{schoolId?:string;yearId?:string;groupId?:string;scheduleChildId?:string}={};
 let sheet:Sheet=null;
 let rotationDraft:Rotation|null=null;
 let rotationUnit:'days'|'weeks'='weeks';
@@ -607,7 +630,7 @@ function removeChild(id:string){
   if(state.children.length<2)return;
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
   state.children=state.children.filter(x=>x.id!==id);delete state.rotation.assignments[id];
-  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>g.childIds=g.childIds.filter(x=>x!==id))));
+  state.schools.forEach(s=>s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];})));
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   Object.keys(state.bandOverrides).forEach(key=>{if(key.split('|')[1]===id)delete state.bandOverrides[key];});
   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;update();
