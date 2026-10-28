@@ -35,7 +35,9 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.1.13';
+const APP_VERSION = '0.2.0';
+const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
+const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
 const DB_NAME = 'calendari-familiar-db';
 const DB_STORE = 'data';
 const DB_KEY = 'app-v1';
@@ -99,7 +101,7 @@ function seedState() {
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] } },
-        overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto' }, schools: []
+        overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal' }, schools: []
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -120,6 +122,7 @@ function suggestedSchoolColor(schools) {
     return '#74c6a3';
 }
 function validTheme(value) { return value === 'light' || value === 'dark' ? value : 'auto'; }
+function validFontSize(value) { return value === 'large' || value === 'xlarge' ? value : 'normal'; }
 function isValidDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s)) === s; }
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
 function cleanSchools(raw, children) {
@@ -262,7 +265,7 @@ function cleanState(raw) {
             bandOverrides[key] = who;
         }
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme) }, schools };
+    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -346,6 +349,7 @@ function applyTheme() {
     }
     catch { /* Emmagatzematge opcional */ }
 }
+function applyFontSize() { document.documentElement.dataset.fontSize = validFontSize(state.preferences.fontSize); }
 themeMedia.addEventListener?.('change', () => { if (state.preferences.theme === 'auto')
     applyTheme(); });
 async function openDB() {
@@ -417,7 +421,7 @@ function saveState() {
             localStorage.setItem('calendari-familiar-v1', JSON.stringify(snapshot));
     }).catch(e => { console.error('No s’han desat els canvis', e); notify('No s’ha pogut desar. Exporta una còpia.'); });
 }
-function update() { applyTheme(); saveState(); render(); }
+function update() { applyTheme(); applyFontSize(); saveState(); render(); }
 function guardian(id) { return state.guardians.find(g => g.id === id); }
 function childById(id) { return state.children.find(c => c.id === id); }
 function defaultGuardian() { return state.guardians[0]?.id ?? ''; }
@@ -755,6 +759,10 @@ function settingsPage() {
     return `<header class="page-heading"><div><div class="eyebrow">PREFERÈNCIES</div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
   <section class="card appearance-card"><h2 class="section-title">Aparença</h2><p class="section-description">Tria el tema de l'aplicació. Automàtic segueix l'aparença de l'iPhone.</p>
   <div class="theme-options" role="group" aria-label="Mode d’aparença">${[['auto', 'Automàtic', 'monitor'], ['light', 'Clar', 'sun'], ['dark', 'Fosc', 'moon']].map(([mode, label, glyph]) => `<button type="button" class="theme-choice ${validTheme(state.preferences.theme) === mode ? 'is-selected' : ''}" data-action="set-theme" data-theme-mode="${mode}" aria-pressed="${validTheme(state.preferences.theme) === mode}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}</div></section>
+  <section class="card font-size-card"><div class="panel-header"><h2 class="section-title">Mida de lletra</h2><output id="font-size-current" for="font-size-slider" class="sample-tag">${FONT_SIZE_LABELS[validFontSize(state.preferences.fontSize)]}</output></div>
+  <p class="section-description">Augmenta la lletra de totes les vistes per llegir més còmodament.</p>
+  <input id="font-size-slider" type="range" class="font-size-range" min="0" max="2" step="1" value="${FONT_SIZE_OPTIONS.indexOf(validFontSize(state.preferences.fontSize))}" data-action="font-size" aria-label="Mida de lletra" aria-valuetext="${FONT_SIZE_LABELS[validFontSize(state.preferences.fontSize)]}" />
+  <div class="font-size-labels"><span>Normal</span><span>Gran</span><span>Molt gran</span></div></section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari.</p>
   ${state.children.map(c => `<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" ${state.children.length === 1 ? 'disabled' : ''}>${icon('trash', 16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus', 14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
@@ -925,7 +933,7 @@ async function importData(file) {
     }
 }
 async function resetData() { if (!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))
-    return; const theme = state.preferences.theme; state = seedState(); state.preferences.theme = theme; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades de mostra restablertes'); }
+    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades de mostra restablertes'); }
 function clickAction(button) {
     const action = button.dataset.action;
     switch (action) {
@@ -1555,11 +1563,34 @@ document.addEventListener('submit', event => {
         return;
     }
 });
+document.addEventListener('input', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.dataset.action !== 'font-size')
+        return;
+    const chosen = FONT_SIZE_OPTIONS[Number(target.value)];
+    if (!chosen)
+        return;
+    state.preferences.fontSize = chosen;
+    applyFontSize();
+    const current = document.getElementById('font-size-current');
+    if (current)
+        current.textContent = FONT_SIZE_LABELS[chosen];
+    target.setAttribute('aria-valuetext', FONT_SIZE_LABELS[chosen]);
+});
 document.addEventListener('change', event => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement))
         return;
     const action = target.dataset.action;
+    if (action === 'font-size') {
+        const chosen = FONT_SIZE_OPTIONS[Number(target.value)];
+        if (chosen) {
+            state.preferences.fontSize = chosen;
+            applyFontSize();
+            saveState();
+        }
+        return;
+    }
     if (action === 'rotation-start' && rotationDraft && isValidDate(target.value)) {
         rotationDraft.startDate = target.value;
         render();
@@ -1622,6 +1653,7 @@ document.addEventListener('keydown', event => { if (event.key === 'Escape' && sh
 async function init() {
     await loadState();
     applyTheme();
+    applyFontSize();
     render();
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => reg.update().catch(() => { })).catch(err => console.warn('Service worker no registrat:', err));

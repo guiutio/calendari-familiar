@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.1.13
+# Calendari Familiar · Web MVP v0.2.0
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -51,7 +51,7 @@ Aquest prototip de validació és **TypeScript + DOM natiu** per poder-lo execut
 
 ## Limitacions actuals
 
-- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.2.0.
+- Hi ha vistes **mensual, setmanal i diària**, però la representació detallada de les noves activitats de l'horari escolar ordinari a les cel·les es definirà a la v0.3.0.
 - No inclou rotacions amb dates d'inici específiques per fill ni múltiples patrons alhora: una rotació global, independentment de les assignacions per fill.
 - No hi ha comptes ni sincronització entre dispositius. Cada origin web/navegador disposa de dades independents.
 - Les dades locals poden desaparèixer en eliminar dades del lloc, de l'app o per polítiques del navegador. **Exporta còpies periòdicament.**
@@ -116,7 +116,7 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - L'horari del grup és el patró comú. A la mateixa pantalla, selecciona un fill i prem **Personalitza l'horari** per crear una còpia independent que pots ajustar sense canviar la resta del grup. **Recupera l'horari del grup** descarta la personalització.
 - Els horaris individuals només existeixen per a fills matriculats al grup: es netegen en moure o esborrar una matrícula i en suprimir el fill.
 - **Compatibilitat:** les còpies i dades de la v0.1.8 continuen sent vàlides; les franges existents es tracten com a activitats de tipus «Classe». L'exportació JSON conserva els horaris individuals.
-- **Abast:** aquesta versió defineix i desa els **horaris ordinaris**. La configuració de jornades reduïdes i els seus horaris especials es reserva per a la v0.1.10; la representació detallada d'aquests horaris a les vistes del calendari es definirà a la v0.2.0. L'indicador escolar bàsic del calendari actual es conserva.
+- **Abast:** aquesta versió defineix i desa els **horaris ordinaris**. La configuració de jornades reduïdes i els seus horaris especials es reserva per a la v0.1.10; la representació detallada d'aquests horaris a les vistes del calendari es definirà a la v0.3.0. L'indicador escolar bàsic del calendari actual es conserva.
 
 ### Com provar la v0.1.9
 
@@ -133,7 +133,7 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - **Horari reduït específic:** si el resultat automàtic no coincideix amb la realitat, pots crear una còpia independent i modificar-la, afegir-hi franges o eliminar-ne. Permet horaris específics per grup o per fill. Les activitats específiques han de ser dins de la finestra i no poden solapar-se.
 - **Herència i recuperació:** els fills hereten l'horari reduït específic del grup, si existeix; en cas contrari s'utilitza el seu horari ordinari retallat. Recuperar l'horari de referència descarta les modificacions reduïdes, no les ordinàries.
 - **Validació i migració:** les dades de 0.1.9 i les còpies JSON anteriors continuen funcionant. Les noves dades es conserven en exportar/importar; es rebutgen intervals invàlids i franges fora dels límits, i es netegen les dades d'un fill en canviar de grup o eliminar-lo.
-- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.2.0**.
+- **Calendari:** manté les vistes i els contenidors de la 0.1.9. El color escolar bàsic consulta les activitats corresponents a la jornada reduïda; la representació detallada de les activitats a les cel·les resta per a la **v0.3.0**.
 
 ### Prova manual de la 0.1.10
 
@@ -151,14 +151,14 @@ Les excepcions formen part del patró que es repeteix, no són canvis d'una sola
 - Els diàlegs llargs es desplacen independentment, amb alçada adaptada a la pantalla.
 - No canvia cap dada, ni la importació/exportació JSON de versions anteriors.
 
-La visualització detallada dels horaris escolars al calendari queda reservada per a la **v0.2.0**.
+La visualització detallada dels horaris escolars al calendari queda reservada per a la **v0.3.0**.
 
 ## v0.1.12: barra inferior estable amb contingut curt
 
 - Corregeix la barra de navegació inferior, que es podia aixecar en algunes pantalles d'**Escoles** amb poc contingut.
 - En mòbils, el contenidor global ocupa sempre l'espai de pantalla real disponible i distribueix l'espai vertical amb Flexbox, sense dependre de `100dvh` ni de l'alçada del contingut.
 - La barra inferior queda fora de la zona desplaçable i conserva l'àrea segura de l'iPhone. Les vistes llargues continuen permetent arribar fins al final.
-- Sense canvis a dades, horaris, rotacions ni còpies JSON. La següent versió funcional continua sent **v0.2.0**.
+- Sense canvis a dades, horaris, rotacions ni còpies JSON. La següent versió funcional continua sent **v0.3.0**.
 
 ## v0.1.13: evitar el rebot tàctil d'iOS a Escoles
 
@@ -166,4 +166,14 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - A les pantalles llargues, el scroll vertical continua funcionant en tots dos sentits fins al primer i l'últim element; es bloqueja només el gest que ultrapassa els extrems.
 - Els formularis i filtres poden continuar desplaçant-se de forma independent; els gestos horitzontals i l'escriptori no es veuen afectats.
 - Correcció complementària de `overscroll-behavior` i de la gestió de `touchmove`, amb listener explícit no passiu i proves de regressió.
-- Sense canvis en les dades locals o les còpies de seguretat. La següent versió funcional segueix sent **v0.2.0**.
+- Sense canvis en les dades locals o les còpies de seguretat. La següent versió funcional segueix sent **v0.3.0**.
+
+## v0.2.0: mida de lletra ajustable
+
+- A **Configuració → Mida de lletra**, un control lliscant ofereix tres nivells: **Normal (100 %)**, **Gran (125 %)** i **Molt gran (150 %)**.
+- El canvi és immediat mentre es mou el control, tant en mode clar com fosc. Escala tots els textos de les vistes, dels botons, del calendari i dels formularis.
+- Les pantalles estretes adapten l'espai disponible perquè els títols, els botons i les pestanyes no quedin tallats.
+- La preferència es desa automàticament amb la resta de dades i s'inclou en exportar/importar JSON. Les còpies anteriors, sense aquesta propietat, importen el nivell Normal.
+- El restabliment de dades de mostra conserva les preferències de tema i de mida de lletra.
+
+**Planificació:** la visualització detallada dels horaris escolars passa a la **v0.3.0** i els patrons familiars a la **v0.4.0** (la 0.2.0 es dedica a llegibilitat).
