@@ -538,7 +538,20 @@ function schoolFormMarkup():string {
  }
  if(sheet.type==='scheduleForm'){
   const school=schoolById(sheet.schoolId),year=yearById(school,sheet.yearId),group=groupById(year,sheet.groupId);
-  return heading('Afegeix franja horària',group?.name??'Grup classe')+`<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}"><div class="school-form-fields"><div class="field"><label for="session-weekday">Dia de la setmana</label><select name="weekday" id="session-weekday">${weekLong.map((label,i)=>`<option value="${i}">${label}</option>`).join('')}</select></div><div class="form-row">${field('Inici','startTime','time','09:00',true)}${field('Final','endTime','time','13:00',true)}</div>${field('Descripció (opcional)','label','text','',false,80)}</div>${actions}</form>`;
+  if(!group)return '';
+  const childId=group.childIds.includes(sheet.childId??'')?sheet.childId??'':'';
+  const entries=childId?group.childSchedules?.[childId]:group.weeklySchedule;
+  if(!entries)return '';
+  const session=entries.find(a=>a.id===sheet.sessionId);
+  const weekdaysInput=session
+    ?`<div class="field"><label for="session-weekday">Dia de la setmana</label><select name="weekday" id="session-weekday">${weekLong.map((label,i)=>`<option value="${i}" ${session.weekday===i?'selected':''}>${label}</option>`).join('')}</select></div>`
+    :`<fieldset class="school-schedule-weekdays"><legend>Dies de la setmana</legend><div>${weekLong.map((label,i)=>`<label><input type="checkbox" name="weekdays" value="${i}" ${i<5?'checked':''}/> ${label}</label>`).join('')}</div></fieldset>`;
+  return heading(session?'Edita franja horària':'Afegeix franja horària',childId?childById(childId)?.name??group.name:group.name)+`<form data-school-form="schedule" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}" data-group="${escapeHtml(sheet.groupId)}" data-child="${escapeHtml(childId)}" data-session="${escapeHtml(session?.id??'')}"><div class="school-form-fields">
+  ${weekdaysInput}
+  <div class="form-row">${field('Inici','startTime','time',session?.startTime??'09:00',true)}${field('Final','endTime','time',session?.endTime??'13:00',true)}</div>
+  <div class="field"><label for="session-kind">Tipus d'activitat</label><select name="kind" id="session-kind">${SESSION_KINDS.map(k=>`<option value="${k}" ${sessionKind(session?.kind)===k?'selected':''}>${SESSION_KIND_NAMES[k]}</option>`).join('')}</select></div>
+  ${field('Descripció (opcional)','label','text',session?.label??'',false,80)}</div>
+  <p class="settings-note">Les franges d'un mateix dia no es poden solapar. Els horaris individuals són independents dels del grup.</p>${actions}</form>`;
  }
  return '';
 }
