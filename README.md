@@ -176,7 +176,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - La preferència es desa automàticament amb la resta de dades i s'inclou en exportar/importar JSON. Les còpies anteriors, sense aquesta propietat, importen el nivell Normal.
 - El restabliment de dades de mostra conserva les preferències de tema i de mida de lletra.
 
-**Planificació:** la visualització detallada dels horaris escolars passa a la **v0.3.0** i els patrons familiars a la **v0.4.0** (la 0.2.0 es dedica a llegibilitat).
+**Planificació:** la visualització detallada dels horaris escolars passa a la **v0.3.0** i els patrons familiars a la **v0.5.0** (la 0.2.0 es dedica a llegibilitat).
 
 ## v0.3.0: horaris escolars detallats al calendari
 
@@ -188,7 +188,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - S'afegeix un llistat alternatiu d'activitats per llegir horaris complets, especialment amb mida de lletra gran o molts fills.
 - No canvia l'estructura del model de dades ni el format dels JSON.
 
-**Següent funcionalitat:** v0.4.0, patrons de responsabilitat familiar recurrents.
+**Planificació actual:** v0.5.0, patrons de responsabilitat familiar recurrents.
 
 ## v0.3.1: correcció de jerarquia dels horaris escolars
 
@@ -198,7 +198,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Es retiren els controls per definir o canviar horaris ordinaris individualitzats per fill. Els antics horaris individuals i les personalitzacions reduïdes es conserven en les dades per compatibilitat, però no es creen de nous.
 - Les jornades reduïdes continuen depenent de l'interval definit al curs i els dies festius no presenten activitats. Els horaris especials de grup continuen disponibles.
 - La còpia de dades antiga s'importa sense errors; les noves propietats d'horari ordinari i fills de l'escola es creen buides en importar fitxers antics.
-- No es canvien nits, rotacions ni preferències de mida de lletra. Propera funcionalitat v0.4.0.
+- No es canvien nits, rotacions ni preferències de mida de lletra. Funcionalitat pendent: patrons recurrents a la v0.5.0.
 
 ## v0.3.2: correcció de les hores generals del curs escolar
 
@@ -217,7 +217,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - En l'editor del grup **només figuren les activitats definides**; no es llisten com a activitats les cinc franges generals «Altres» de 09:00 a 13:00.
 - **Calendari:** en un dia reduït es mostra la jornada escolar com a context entre les hores del curs i les activitats específiques del grup, si n'hi ha. Les activitats ordinàries del grup no s'atribueixen automàticament a dies reduïts. Els dies no marcats com a jornada reduïda continuen mostrant l'horari ordinari.
 - **Compatibilitat:** es preserven les activitats reduïdes que l'usuari havia introduït prèviament, així com els horaris individuals històrics (només lectura). El format de dades es manté.
-- Correcció **v0.3.3** sense canviar la planificació de la v0.4.0.
+- Correcció **v0.3.3** els patrons familiars recurrents passen a la v0.5.0.
 
 ## v0.4.0: vista diària de 24 hores i canvi de pernocta
 
@@ -228,3 +228,5 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Els horaris escolars s'apilen per damunt del color de pernocta, però no alteren la rotació ni les assignacions. Els filtres de fills, tutors i escoles segueixen actius.
 - L'hora de canvi es conserva amb la rotació al desament i a les còpies JSON; les còpies anteriors sense l'hora de canvi es migren amb **19:00**, sense alterar altres dades.
 - Es mantenen intactes les cinc franges convencionals a les vistes setmanal i mensual, i al detall mensual.
+
+**Planificació vigent:** v0.5.0, patrons recurrents d'horaris familiars i responsabilitat diürna.
