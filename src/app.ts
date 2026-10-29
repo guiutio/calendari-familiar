@@ -488,7 +488,7 @@ type DayTimelineUI = {
  renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>;customSlots?:Record<string,any[]>}>,children:Child[],zoom?:number)=>string;
 };
 const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimelineUI;
-const monthDayUI=(window as Window & {monthDayUI:any}).monthDayUI;
+const monthDayUI=(window as Window & {monthDayUI?:any}).monthDayUI;
 function monthData(date:string,children:Child[]){
   const nights:Record<string,any[]>={};
   const changeTime=validChangeTime(state.rotation.changeTime);
