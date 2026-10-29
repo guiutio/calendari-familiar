@@ -837,7 +837,7 @@ function sheetMarkup(){
     ${dayTimeline(date,activeChildren())}${schoolInfoForDay(date)}
     <p class="settings-note">Les excepcions només s'apliquen a aquesta data. Restaurar el dia elimina les excepcions d'aquesta data, sense modificar la rotació ni l'horari escolar.</p>`;
   } else if(sheet?.type==='daySlotForm'){
-    const date=sheet.date,slot=sheet.slotId?daySlotsForView(date).find(a=>a.id===sheet.slotId):undefined;
+    const {date,slotId}=sheet,slot=slotId?daySlotsForView(date).find(a=>a.id===slotId):undefined;
     const choices=activeChildren().length?activeChildren():state.children;
     const who=slot?.guardianId??state.guardians[0]?.id??'';
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${slot?'Modifica la franja':'Afegeix una franja'}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
