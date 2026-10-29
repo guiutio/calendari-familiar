@@ -41,6 +41,6 @@ test('importació antiga, exportació i reinicialització conserven la mida',()=
   assert.match(js,/fontSize: 'normal'/);
   assert.match(js,/state\.preferences\.fontSize = fontSize/);
   assert.match(js,/document\.documentElement\.dataset\.fontSize = validFontSize/);
-  assert.match(html,/styles\.css\?v=0\.5\.5/);
-  assert.match(html,/app\.js\?v=0\.5\.5/);
+  assert.match(html,/styles\.css\?v=0\.5\.6/);
+  assert.match(html,/app\.js\?v=0\.5\.6/);
 });
