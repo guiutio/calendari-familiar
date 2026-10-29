@@ -652,4 +652,5 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 }
 
 /* v0.5.5 · Les tres cronologies tenen controls tàctils per a nits i escoles. */
+.month-day-timeline .day-night-block,.month-day-timeline .month-day-school{cursor:pointer;touch-action:manipulation;}
 .month-day-timeline .day-night-block:focus-visible,.month-day-timeline .month-day-school:focus-visible{outline:3px solid #1e4e93;outline-offset:1px;z-index:5;}
