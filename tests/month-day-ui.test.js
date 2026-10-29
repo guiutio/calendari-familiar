@@ -76,7 +76,7 @@ test('respecta franges antigues i impedeix solapar-les amb excepcions noves',()=
 test('la miniatura representa proporcionalment 24 h i escola per sobre de pernocta i excepció',()=>{
  const night=timeline.overnightSegments(date,'elna','19:00',d=>d===date?'mare':'pare',()=>yesterday,id=>guardians.find(g=>g.id===id),['pare','mare']);
  const s=state();ui.save(s,date,'elna','',params('09:00','12:00'),newId);
- const schools=[{childId:'elna',start:9*60,end:10*60,color:'#66cc99',schoolName:'Escola',kind:'classe',startTime:'09:00',endTime:'10:00'}];
+ const schools=[{childId:'elna',schoolId:'escola',id:'sessio',start:9*60,end:10*60,color:'#66cc99',schoolName:'Escola',kind:'classe',startTime:'09:00',endTime:'10:00'}];
  const output=ui.mini(children,{elna:night,blai:[]},schools,ui.slots(s,date,children,guardians,['pare','mare']));
  assert.match(output,/month-mini-night/);
  assert.match(output,/month-mini-custom/);
@@ -88,6 +88,10 @@ test('la miniatura representa proporcionalment 24 h i escola per sobre de pernoc
  assert.match(expanded,/00:00/);
  assert.match(expanded,/24:00/);
  assert.match(expanded,/day-slot-edit/);
+ assert.match(expanded,/data-action="edit-band" data-date="2026-10-28" data-view-date="2026-10-29" data-band="nit" data-child="elna"/);
+ assert.match(expanded,/data-action="open-school-activity" data-date="2026-10-29" data-school="escola" data-child="elna" data-session="sessio"/);
+ assert.match(expanded,/Toca una pernocta/);
+ assert.match(ui.form(date,'elna',undefined,children,guardians,s),/data-action="return-detail"/);
  assert.match(expanded,/day-restore/);
 });
 test('les franges noves són visibles també a dia/setmana sense canviar la lògica base',()=>{
@@ -103,9 +107,26 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.5\.4/);
- assert.match(sw,/month-day-ui\.js\?v=0\.5\.4/);
+ assert.match(html,/month-day-ui\.js\?v=0\.5\.5/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.5\.5/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
+});
+
+test('Dia i Setmana obren exactament els mateixos editors i mantenen el dia visible',()=>{
+ const night=timeline.overnightSegments(date,'elna','19:00',d=>d===date?'mare':'pare',()=>yesterday,id=>guardians.find(g=>g.id===id),['pare','mare']);
+ const activities=[{childId:'elna',schoolId:'escola',id:'sessio',start:540,end:720,schoolName:'Escola',color:'#aabbcc',kind:'Classe',description:'Matemàtiques',startTime:'09:00',endTime:'12:00'}];
+ const daily=timeline.render(date,'Dijous',children,activities,{elna:night,blai:[]},'19:00');
+ const weekly=timeline.renderWeek('2026-10-26',[{date,label:'Dijous',activities,nightSegments:{elna:night,blai:[]}}],children,50);
+ for(const markup of [daily,weekly]){
+  assert.match(markup,/data-action="edit-band" data-date="2026-10-28" data-view-date="2026-10-29" data-band="nit"/);
+  assert.match(markup,/data-action="edit-band" data-date="2026-10-29" data-view-date="2026-10-29" data-band="nit"/);
+  assert.match(markup,/data-action="open-school-activity" data-date="2026-10-29" data-school="escola" data-child="elna" data-session="sessio"/);
+ }
+ assert.match(ts,/detailOrigin=button\.closest\('\.month-day-sheet'\)\?'day':'calendar'/);
+ assert.match(ts,/detailReturnDate=button\.dataset\.viewDate\?\?date/);
+ assert.match(ts,/sheet=returnFromDetail\(date\);chooseGuardian/);
+ assert.match(app,/sheet = returnFromDetail\(date\);\s*chooseGuardian/);
+ assert.match(ts,/case 'return-detail'/);
 });
