@@ -310,7 +310,7 @@ function cleanState(raw:unknown):AppState {
       const ids=new Set<string>(),valid:DaySlot[]=[];
       for(const slot of entries as DaySlot[]){
         if(!slot||typeof slot.id!=='string'||!slot.id||ids.has(slot.id)||!children.some(c=>c.id===slot.childId)||!validGuardians.has(slot.guardianId)&&slot.guardianId!==''||
-          typeof slot.startTime!=='string'||typeof slot.endTime!=='string'||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(slot.startTime)||!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(slot.endTime)||slot.startTime>=slot.endTime)continue;
+          typeof slot.startTime!=='string'||typeof slot.endTime!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(slot.startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(slot.endTime)||slot.startTime>=slot.endTime)continue;
         ids.add(slot.id);valid.push({id:slot.id.slice(0,90),childId:slot.childId,startTime:slot.startTime,endTime:slot.endTime,guardianId:slot.guardianId});
       }
       if(valid.length)daySlots[date]=valid;
@@ -831,7 +831,26 @@ function sheetMarkup(){
     const date=sheet.date,bdays=birthdays(date).filter(c=>state.preferences.visibleChildren.includes(c.id));
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${bdays.length?`<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c=>`${c.name} fa ${birthdayAge(date,c)} anys`).join(' · '))}</div>`:''}
-    ${fullAgenda(date)}${schoolInfoForDay(date)}${schoolTimeline(date,activeChildren(),undefined,true)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+    <div class="day-editor-actions"><button type="button" class="primary-btn" data-action="new-day-slot" data-date="${date}">${icon('plus',16)} Afegeix franja</button>
+    <button type="button" class="secondary-btn" data-action="restore-day" data-date="${date}" ${dayHasChanges(date)?'':'disabled'}>Restaura segons la rotació</button></div>
+    <p class="settings-note">Toca una pernocta per canviar de tutor o una franja puntual per modificar-ne les hores, el responsable o eliminar-la.</p>
+    ${dayTimeline(date,activeChildren())}${schoolInfoForDay(date)}
+    <p class="settings-note">Les excepcions només s'apliquen a aquesta data. Restaurar el dia elimina les excepcions d'aquesta data, sense modificar la rotació ni l'horari escolar.</p>`;
+  } else if(sheet?.type==='daySlotForm'){
+    const date=sheet.date,slot=sheet.slotId?daySlotsForView(date).find(a=>a.id===sheet.slotId):undefined;
+    const choices=activeChildren().length?activeChildren():state.children;
+    const who=slot?.guardianId??state.guardians[0]?.id??'';
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${slot?'Modifica la franja':'Afegeix una franja'}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    <form data-day-slot-form="true" data-date="${date}" data-slot="${escapeHtml(slot?.id??'')}" class="day-slot-form">
+      <div class="field"><label for="slot-child">Fill</label><select name="childId" id="slot-child" required>${choices.map(c=>`<option value="${escapeHtml(c.id)}" ${c.id===(slot?.childId??choices[0]?.id)?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select></div>
+      <div class="form-row"><div class="field"><label for="slot-start">Des de</label><input id="slot-start" type="time" name="startTime" value="${slot?.startTime??'09:00'}" required /></div>
+      <div class="field"><label for="slot-end">Fins a</label><input id="slot-end" type="time" name="endTime" value="${slot?.endTime??'10:00'}" required /></div></div>
+      <div class="field"><label for="slot-guardian">Responsable</label><select id="slot-guardian" name="guardianId"><option value="" ${who===''?'selected':''}>Sense assignar</option>${state.guardians.map(g=>`<option value="${escapeHtml(g.id)}" ${who===g.id?'selected':''}>${escapeHtml(g.name)}</option>`).join('')}</select></div>
+      <div class="action-row"><button type="submit" class="primary-btn">${slot?'Desa els canvis':'Afegeix la franja'}</button>
+       ${slot?`<button type="button" class="danger-btn" data-action="delete-day-slot" data-date="${date}" data-slot="${escapeHtml(slot.id)}">Elimina la franja</button>`:''}
+       <button type="button" class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button></div>
+    </form>
+    <p class="settings-note">Franja puntual d’aquest dia. No canvia la rotació, les escoles ni les altres dates.</p>`;
   } else if(sheet?.type==='schoolActivity'){
     const {date,childId,schoolId,sessionId}=sheet;
     const activity=schoolActivities(date,activeChildren()).find(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId);
@@ -1058,7 +1077,25 @@ function clickAction(button:HTMLElement){
       if(!isValidDate(date))break;
       selectedDate=date;calendarView='day';render();break;
     }
-    case 'open-day':selectedDate=button.dataset.date!;sheet={type:'day',date:selectedDate};render();break;
+    case 'open-day':{const date=button.dataset.date??'';if(!isValidDate(date))break;selectedDate=date;sheet={type:'day',date};render();break;}
+    case 'new-day-slot':{const date=button.dataset.date??'';if(!isValidDate(date))break;sheet={type:'daySlotForm',date};render();break;}
+    case 'edit-day-slot':{const date=button.dataset.date??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!daySlotsForView(date).some(a=>a.id===slotId))break;sheet={type:'daySlotForm',date,slotId};render();break;}
+    case 'delete-day-slot':{
+      const date=button.dataset.date??'',slotId=button.dataset.slot??'';
+      if(!isValidDate(date)||!daySlotsForView(date).some(a=>a.id===slotId)||!confirm('Vols eliminar aquesta franja puntual?'))break;
+      const current=daySlotsForView(date).find(a=>a.id===slotId)!;
+      if(current.legacyBand)delete state.bandOverrides[bandKey(date,current.childId,current.legacyBand)];
+      else state.daySlots[date]=(state.daySlots[date]??[]).filter(a=>a.id!==slotId);
+      if(!state.daySlots[date]?.length)delete state.daySlots[date];
+      sheet={type:'day',date};update();notify('Franja puntual eliminada');break;
+    }
+    case 'restore-day':{
+      const date=button.dataset.date??'';if(!isValidDate(date)||!dayHasChanges(date)||!confirm('Restaurar aquest dia segons la rotació? Se suprimiran totes les modificacions puntuals d’aquesta data.'))break;
+      for(const key of Object.keys(state.overrides))if(key.startsWith(date+'|'))delete state.overrides[key];
+      for(const key of Object.keys(state.bandOverrides))if(key.startsWith(date+'|'))delete state.bandOverrides[key];
+      delete state.daySlots[date];
+      sheet={type:'day',date};update();notify('Dia restaurat segons la rotació');break;
+    }
     case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){selectedDate=date;sheet={type:'bandEdit',date,childId,band};render();}break;}
     case 'toggle-band':{const b=button.dataset.band??'';if(!isTimeBand(b))break;const selected=state.preferences.visibleBands;state.preferences.visibleBands=selected.includes(b)?selected.filter(x=>x!==b):BANDS.filter(x=>selected.includes(x)||x===b);update();break;}
     case 'assign-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'',gId=button.dataset.guardian??'';if(!isValidDate(date)||!childById(childId)||!isTimeBand(band)||band==='nit'||(gId&&!guardian(gId)))break;state.bandOverrides[bandKey(date,childId,band)]=gId;sheet={type:'day',date};update();notify('Franja actualitzada');break;}
@@ -1125,7 +1162,28 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('submit',event=>{
  const form=event.target;
- if(!(form instanceof HTMLFormElement)||!form.dataset.schoolForm)return;
+ if(!(form instanceof HTMLFormElement))return;
+ if(form.dataset.daySlotForm){
+   event.preventDefault();
+   const date=form.dataset.date??'',slotId=form.dataset.slot??'',values=new FormData(form);
+   const childId=String(values.get('childId')??''),startTime=String(values.get('startTime')??''),endTime=String(values.get('endTime')??''),guardianId=String(values.get('guardianId')??'');
+   if(!isValidDate(date)||!childById(childId)||guardianId!==''&&!guardian(guardianId)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime)||startTime>=endTime){
+     notify('Indica un fill, un responsable i unes hores vàlides');return;
+   }
+   const existing=slotId?daySlotsForView(date).find(a=>a.id===slotId):undefined;
+   if(slotId&&!existing){notify('Aquesta franja ja no existeix');return;}
+   if(daySlotsForView(date).some(a=>a.id!==slotId&&a.childId===childId&&a.startTime<endTime&&a.endTime>startTime)){
+     notify('Ja hi ha una altra franja puntual solapada per a aquest fill');return;
+   }
+   if(existing?.legacyBand)delete state.bandOverrides[bandKey(date,existing.childId,existing.legacyBand)];
+   if(existing&&!existing.legacyBand)state.daySlots[date]=(state.daySlots[date]??[]).filter(a=>a.id!==slotId);
+   state.daySlots[date]??=[];
+   if(state.daySlots[date].length>=100){notify('Hi ha massa franges en aquest dia');return;}
+   state.daySlots[date].push({id:existing&&!existing.legacyBand?existing.id:newId(),childId,startTime,endTime,guardianId});
+   state.daySlots[date].sort((a,b)=>a.startTime.localeCompare(b.startTime));
+   sheet={type:'day',date};update();notify(existing?'Franja actualitzada':'Franja afegida');return;
+ }
+ if(!form.dataset.schoolForm)return;
  event.preventDefault();
  const values=new FormData(form),get=(key:string)=>String(values.get(key)??'').trim();
  const formKind=form.dataset.schoolForm;
