@@ -88,7 +88,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.5.5';
+const APP_VERSION = '0.5.6';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -564,20 +564,21 @@ function calendarPage(){
     const starting=localDate(new Date(viewYear,viewMonth,1-firstDay,12));
     const cells=Array.from({length:Math.ceil((firstDay+daysInMonth)/7)*7},(_,i)=>{
       const date=addDays(starting,i),d=parseDate(date),other=d.getMonth()!==viewMonth;
+      const iso=i%7===0?monthDayUI.isoWeek(date):null;
       const changed=monthDayUI.hasChanges(state,date);
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
       const snapshot=monthData(date,children),schoolCount=snapshot.activities.length;
-      return `<button type="button" class="day-cell ${other?'other-month':''} ${date===today?'today':''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Toca per veure les franges i els fills.">
+      return `${iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:''}<button type="button" class="day-cell ${other?'other-month':''} ${date===today?'today':''}" data-action="show-calendar-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}${schoolCount?`<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount}</span>`:''}</span>
         ${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots)}
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
     });
-    content=`<div class="weekdays">${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
+    content=`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
   } else if(calendarView==='week'){
     content=weekTimeline(weekStart(selectedDate),children);
   } else {
-    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>`;
+    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions"><button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>${monthDayUI.hasChanges(state,selectedDate)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>`:''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>`;
   }
   const visibleNames=bands.map(b=>BAND_NAMES[b]).join(' · ');
   return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'||calendarView==='week'?'Pernoctes i activitats per fill durant les 24 hores.':'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
@@ -594,8 +595,8 @@ function calendarPage(){
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Les miniatures mostren 00:00–24:00 amb els fills en columnes. Toca un dia per editar franges puntuals sense canviar la rotació.</div>
-    <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes; les activitats escolars se superposen. Les franges puntuals s'editen obrint el dia.</span></div>`}`;
+    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Les miniatures mostren 00:00–24:00. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
+    <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage(){
   const r=rotationDraft??state.rotation;
@@ -1026,16 +1027,23 @@ function clickAction(button:HTMLElement){
       if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
       break;
     }
-    case 'show-calendar-day':{
+    case 'show-calendar-day':
+    case 'open-day':{
       const date=button.dataset.date??'';
       if(!isValidDate(date))break;
-      selectedDate=date;calendarView='day';render();break;
+      selectedDate=date;calendarView='day';sheet=null;
+      const day=parseDate(date);viewYear=day.getFullYear();viewMonth=day.getMonth();
+      render();break;
     }
-    case 'open-day':{const date=button.dataset.date??'';if(isValidDate(date)){selectedDate=date;sheet={type:'day',date};render();}break;}
+    case 'show-calendar-week':{
+      const date=button.dataset.date??'';
+      if(!isValidDate(date))break;
+      selectedDate=weekStart(date);calendarView='week';sheet=null;render();break;
+    }
      case 'day-slot-add':{const date=button.dataset.date??'';if(!isValidDate(date))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId:activeChildren()[0]?.id??state.children[0]?.id??''};render();break;}
      case 'day-slot-edit':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId,slotId};render();break;}
      case 'day-slot-delete':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;if(!confirm('Vols eliminar aquesta franja puntual?'))break;monthDayUI.remove(state,date,childId,slotId);sheet=returnFromDetail(date);update();notify('Franja eliminada');break;}
-     case 'day-restore':{const date=button.dataset.date??'';if(!isValidDate(date)||!monthDayUI.hasChanges(state,date))break;if(!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))break;monthDayUI.restore(state,date);sheet={type:'day',date};update();notify('Dia restaurat segons la rotació');break;}
+     case 'day-restore':{const date=button.dataset.date??'';if(!isValidDate(date)||!monthDayUI.hasChanges(state,date))break;if(!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))break;monthDayUI.restore(state,date);sheet=null;update();notify('Dia restaurat segons la rotació');break;}
     case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=button.dataset.viewDate??date;sheet={type:'bandEdit',date,childId,band};render();}break;}
     case 'toggle-band':{const b=button.dataset.band??'';if(!isTimeBand(b))break;const selected=state.preferences.visibleBands;state.preferences.visibleBands=selected.includes(b)?selected.filter(x=>x!==b):BANDS.filter(x=>selected.includes(x)||x===b);update();break;}
     case 'assign-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'',gId=button.dataset.guardian??'';if(!isValidDate(date)||!childById(childId)||!isTimeBand(band)||band==='nit'||(gId&&!guardian(gId)))break;state.bandOverrides[bandKey(date,childId,band)]=gId;sheet=returnFromDetail(date);update();notify('Franja actualitzada');break;}
