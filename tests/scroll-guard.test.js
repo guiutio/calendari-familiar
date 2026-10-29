@@ -74,12 +74,26 @@ test('els gestos verticals sobre Dia i Setmana es deleguen a la pàgina principa
   h.touch('touchstart',400,{node:weekly});
   assert.equal(h.touch('touchmove',390,{x:120,node:weekly}),0);
 });
+test('la cronologia oberta al full de detall fa scroll dins del full, no al fons', () => {
+  const h = harness();
+  const sheet = {scrollTop: 170, scrollHeight: 1200, clientHeight: 400};
+  const node = {closest(selector) {
+    if(selector === '.day-timeline-viewport')return {};
+    if(selector === '.sheet')return sheet;
+    if(selector === '.main-area')return h.scroller;
+    return null;
+  }};
+  h.touch('touchstart',400,{node});
+  assert.equal(h.touch('touchmove',370,{node}),0);
+  sheet.scrollTop=800;
+  assert.equal(h.touch('touchmove',350,{node}),1);
+});
 test('els recursos de la protecció tàctil estan inclosos a la PWA', async () => {
   const {readFileSync} = await import('node:fs');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(html, /scroll-guard\.js\?v=0\.5\.3/);
-  assert.match(sw, /scroll-guard\.js\?v=0\.5\.3/);
+  assert.match(html, /scroll-guard\.js\?v=0\.5\.4/);
+  assert.match(sw, /scroll-guard\.js\?v=0\.5\.4/);
   assert.match(css, /\.main-area,\.sheet \{overscroll-behavior-y:none;/);
 });

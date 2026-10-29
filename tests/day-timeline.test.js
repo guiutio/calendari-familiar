@@ -49,13 +49,13 @@ test('la línia temporal conté 24 hores, la nit i l’escola en columnes per fi
 });
 test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(ts,/schoolInfoForDay\(selectedDate\)\}\$\{dayTimeline\(selectedDate,children\)/);
- assert.match(ts,/\$\{fullAgenda\(date\)\}/); // setmana conservada
- assert.match(ts,/\$\{miniBands\(date,children,bands\)\}/); // mes conservat
+ assert.match(ts,/\$\{dayTimeline\(date,activeChildren\(\)\)\}/); // editor visual del dia
+ assert.match(ts,/\$\{monthMiniDay\(date,children\)\}/); // miniatura real de 24 hores
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
- assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.5\.3/);
- assert.match(sw,/day-timeline\.js\?v=0\.5\.3/);
+ assert.match(css.slice(css.indexOf('/* v0.5.4')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
+ assert.match(html,/day-timeline\.js\?v=0\.5\.4/);
+ assert.match(sw,/day-timeline\.js\?v=0\.5\.4/);
 });
 test('la rotació incorpora la nova hora per defecte, el desament i la importació',()=>{
  assert.match(ts,/const DEFAULT_CHANGE_TIME='19:00'/);

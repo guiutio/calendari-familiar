@@ -27,12 +27,12 @@ test('setmana: 7 dies i 3 fills en columnes compactes',()=>{
  assert.equal((html.match(/class="day-time-column"/g)||[]).length,21);
 });
 test('marges tàctils per a ambdues vistes i moviment vertical natural de pàgina',()=>{
- const rules=css.slice(css.indexOf('/* v0.5.3'));
+ const rules=css.slice(css.indexOf('/* v0.5.4'));
  assert.match(rules,/\.day-timeline-viewport \{[\s\S]*?height:auto;[\s\S]*?overflow-x:auto;[\s\S]*?overflow-y:hidden;/);
  assert.match(rules,/\.day-timeline-inner \{width:max-content;min-width:0;/);
  assert.match(rules,/\.day-timeline-headers,\.day-timeline-grid \{grid-template-columns:52px repeat\(var\(--day-child-count\),98px\);/);
  assert.match(rules,/\.week-timeline-head,\.week-timeline-grid \{grid-template-columns:52px repeat\(var\(--week-day-count\),var\(--week-day-width,196px\)\);/);
  assert.match(guard,/const timeline = target\.closest\('\.day-timeline-viewport'\)/);
- assert.match(guard,/const scroller = timeline \? target\.closest\('\.main-area'\)/);
+ assert.match(guard,/const scroller = timeline \? \(target\.closest\('\.sheet'\) \|\| target\.closest\('\.main-area'\)\)/);
  assert.match(app,/main\.scrollTop = Math\.max\(0, newOffset \+ minuteAtCenter \* newScale - main\.clientHeight \/ 2\)/);
 });

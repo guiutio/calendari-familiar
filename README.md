@@ -1,4 +1,4 @@
-# Calendari Familiar · Web MVP v0.5.3
+# Calendari Familiar · Web MVP v0.5.4
 
 Prototip funcional **mobile-first** en català per planificar la convivència i els horaris escolars dels fills. **Sense servidor d'aplicació, registre ni sincronització**. La informació familiar roman al navegador del dispositiu.
 
@@ -28,7 +28,8 @@ Per obrir-lo des de l'iPhone, has de servir els mateixos fitxers en una URL **HT
 
 ## Inclou
 
-- Calendari mensual de dilluns a diumenge, avançar/retrocedir mes i tornar a avui.
+- Calendari mensual de dilluns a diumenge, amb miniatures proporcionals de 24 hores per fill, pernoctes, escoles i excepcions puntuals.
+- En tocar un dia del mes, editor visual de 24 hores per afegir, canviar i eliminar franges horàries puntuals (per fill), o restaurar totes les excepcions d'aquella data segons la rotació.
 - Agrupament de fills quan dormen amb el mateix tutor, amb color i inicials dels fills, sense icona o inicial del tutor en les caselles.
 - Filtres compactes de fills i tutors.
 - Editor de rotació amb durada configurable en dies o setmanes (per exemple, 10 setmanes = 70 dies), i assignació setmanal ràpida, aplicació «Tots igual» i «Copiar de ...».
@@ -267,7 +268,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - El protector de desplaçament d'iOS respecta el scroll de la pàgina quan un gest vertical comença dins de la setmana.
 - Es conserven pernoctes, escoles, filtres, imports i preferències.
 
-## v0.5.3: Dia i Setmana compactes, scroll vertical de pàgina
+## v0.5.4: Dia i Setmana compactes, scroll vertical de pàgina
 
 - **Dia i Setmana:** totes les 24 hores formen part del desplaçament vertical de la **pàgina principal**, no d'una finestra de scroll vertical interior. Els gestos verticals sobre la graella es deleguen a la pàgina; els horitzontals continuen desplaçant el calendari.
 - **Marges tàctils:** el calendari ocupa una amplada lleugerament menor que la pàgina per facilitar el scroll vertical començant fora de la graella, igual a Dia i Setmana.

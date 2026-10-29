@@ -26,7 +26,7 @@ export function installScrollGuard(doc, win) {
     // Dia i Setmana només desplacen la graella horitzontalment; el gest vertical
     // pertany a .main-area i no ha de quedar atrapat al calendari interior.
     const timeline = target.closest('.day-timeline-viewport');
-    const scroller = timeline ? target.closest('.main-area') : target.closest('.sheet, .main-area');
+    const scroller = timeline ? (target.closest('.sheet') || target.closest('.main-area')) : target.closest('.sheet, .main-area');
     const block = scroller
       ? shouldPreventBoundaryScroll(scroller.scrollTop, scroller.scrollHeight, scroller.clientHeight, dy)
       : Boolean(target.closest('.mobile-tabs, .overlay'));
