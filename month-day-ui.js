@@ -3,7 +3,7 @@
   const DAY = 1440;
   const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const minutes = time => time === '24:00' ? DAY : Number(time.slice(0,2))*60 + Number(time.slice(3,5));
-  const validTime = time => typeof time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
+  const validTime = time => typeof time === 'string' && (time === '24:00' || /^([01]\d|2[0-3]):[0-5]\d$/.test(time));
   const legacyRanges = {mati:['08:00','12:00'],dinar:['12:00','15:00'],tarda:['15:00','18:00'],sopar:['18:00','21:00']};
   const validDate = date => {
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
@@ -25,7 +25,7 @@
       const ids=new Set(),collected=[];
       for(const item of items){
         if(!item || typeof item.id!=='string' || !item.id || item.id.length>100 || ids.has(item.id) ||
-          !validTime(item.startTime) || !validTime(item.endTime) ||
+          !validTime(item.startTime) || item.startTime === '24:00' || !validTime(item.endTime) ||
           minutes(item.startTime)>=minutes(item.endTime) || typeof item.guardianId!=='string' ||
           (item.guardianId!==''&&!allowedGuardians.has(item.guardianId)))throw Error('Hi ha una franja puntual incorrecta');
         ids.add(item.id);
@@ -158,7 +158,7 @@
         ${children.map(c=>`<option value="${escape(c.id)}" ${c.id===selected?'selected':''}>${escape(c.name)}</option>`).join('')}
       </select></div>
       <div class="form-row"><div class="field"><label for="slot-start">Inici</label><input id="slot-start" type="time" name="startTime" value="${escape(current.startTime)}" required></div>
-      <div class="field"><label for="slot-end">Final</label><input id="slot-end" type="time" name="endTime" value="${escape(current.endTime)}" required></div></div>
+      <div class="field"><label for="slot-end">Final</label><input id="slot-end" type="time" name="endTime" value="${escape(current.endTime==='24:00'?'23:59':current.endTime)}" required><label class="month-slot-midnight"><input type="checkbox" name="endAtMidnight" value="yes" ${current.endTime==='24:00'?'checked':''}> Fins a les 24:00</label></div></div>
       <div class="field"><label for="slot-guardian">Responsable</label><select id="slot-guardian" name="guardianId">
       <option value="" ${current.guardianId===''?'selected':''}>Sense assignar</option>
       ${guardians.map(g=>`<option value="${escape(g.id)}" ${g.id===current.guardianId?'selected':''}>${escape(g.name)}</option>`).join('')}
@@ -180,7 +180,7 @@
     if(!validDate(date)||!state.children.some(c=>c.id===childId))return 'Dia o fill no vàlid';
     const startTime=String(values.get('startTime')??''),endTime=String(values.get('endTime')??''),
       guardianId=String(values.get('guardianId')??'');
-    if(!validTime(startTime)||!validTime(endTime)||minutes(startTime)>=minutes(endTime))
+    if(!validTime(startTime)||startTime==='24:00'||!validTime(endTime)||minutes(startTime)>=minutes(endTime))
       return 'La franja ha de tenir una hora final posterior a la inicial';
     if(guardianId&&!state.guardians.some(g=>g.id===guardianId))return 'Responsable no vàlid';
     const old=id?find(state,date,childId,id):undefined;
