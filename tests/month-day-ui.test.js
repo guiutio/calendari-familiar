@@ -9,6 +9,7 @@ const ts=readFileSync(new URL('../src/app.ts',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
 const context={window:{}};
 vm.runInNewContext(source,context);
 vm.runInNewContext(timelineSource,context);
@@ -107,8 +108,8 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.5\.5/);
- assert.match(sw,/month-day-ui\.js\?v=0\.5\.5/);
+ assert.match(html,/month-day-ui\.js\?v=0\.5\.6/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.5\.6/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
@@ -129,4 +130,39 @@ test('Dia i Setmana obren exactament els mateixos editors i mantenen el dia visi
  assert.match(ts,/sheet=returnFromDetail\(date\);chooseGuardian/);
  assert.match(app,/sheet = returnFromDetail\(date\);\s*chooseGuardian/);
  assert.match(ts,/case 'return-detail'/);
+});
+
+test('les setmanes ISO es numeren correctament al límit de l’any',()=>{
+ for(const [day,week,year] of [
+  ['2020-12-28',53,2020],['2021-01-01',53,2020],
+  ['2021-01-04',1,2021],['2026-10-26',44,2026],
+  ['2026-12-28',53,2026],['2027-01-01',53,2026],
+  ['2027-01-04',1,2027],['2028-01-01',52,2027]
+ ]){
+  assert.deepEqual({...ui.isoWeek(day)},{week,year},day);
+ }
+});
+test('el mes inclou el número de setmana a la primera columna i obre les vistes reals',()=>{
+ assert.match(ts,/const iso=i%7===0\?monthDayUI\.isoWeek\(date\):null/);
+ assert.match(ts,/class="month-week-number" data-action="show-calendar-week" data-date="\$\{date\}"/);
+ assert.match(ts,/class="day-cell[^\n]+data-action="show-calendar-day" data-date="\$\{date\}"/);
+ assert.match(ts,/class="month-week-heading"/);
+ assert.match(ts,/case 'show-calendar-week':\{[\s\S]*?selectedDate=weekStart\(date\);calendarView='week';sheet=null;render\(\);break;/);
+ assert.match(ts,/case 'show-calendar-day':\s*case 'open-day':\{/);
+ assert.match(ts,/selectedDate=date;calendarView='day';sheet=null/);
+ assert.match(app,/case 'show-calendar-week':/);
+ assert.match(app,/selectedDate = weekStart\(date\);/);
+ assert.match(css,/\.weekdays,\.month-grid \{grid-template-columns:38px repeat\(7,minmax\(0,1fr\)\);\}/);
+ assert.match(css,/\.month-week-number:focus-visible/);
+ assert.doesNotMatch(ts,/case 'open-day':\{[^\n]*sheet=\{type:'day'/);
+});
+test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
+ assert.match(ts,/class="day-edit-actions"/);
+ assert.match(ts,/data-action="day-slot-add" data-date="\$\{selectedDate\}"/);
+ assert.match(ts,/monthDayUI\.hasChanges\(state,selectedDate\)/);
+ assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
+ assert.match(ts,/monthDayUI\.restore\(state,date\);sheet=null;update\(\)/);
+ assert.match(app,/monthDayUI\.restore\(state, date\);\s*sheet = null;/);
+ assert.match(html,/app\.js\?v=0\.5\.6/);
+ assert.match(sw,/calendari-familiar-v0\.5\.6/);
 });
