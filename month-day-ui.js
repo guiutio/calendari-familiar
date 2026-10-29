@@ -19,7 +19,8 @@
     let total=0;
     for(const [key,items] of Object.entries(raw)){
       const [date,childId]=key.split('|');
-      if(!validKey(key) || !allowedChildren.has(childId))continue;
+      if(!validKey(key))throw Error('Data de franja puntual incorrecta');
+      if(!allowedChildren.has(childId))continue;
       if(!Array.isArray(items) || items.length>64)throw Error('Hi ha massa franges en un mateix dia');
       const ids=new Set(),collected=[];
       for(const item of items){
