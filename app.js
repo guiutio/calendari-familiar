@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.4';
+const APP_VERSION = '0.5.5';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -395,6 +395,8 @@ let selectedDate = localDate(new Date());
 let tab = 'calendar';
 let schoolNav = {};
 let sheet = null;
+let detailOrigin = 'calendar';
+let detailReturnDate = '';
 let rotationDraft = null;
 let rotationUnit = 'weeks';
 let toastTimer = null;
@@ -893,6 +895,7 @@ function settingsPage() {
   <div class="panel-header"><h2 class="section-title">Dades d’exemple</h2><span class="sample-tag">Elna i Blai</span></div><p class="settings-note">Restableix les dades fictícies de demostració. Es perdran els canvis actuals, així que exporta una còpia abans si et cal.</p>
   <div class="action-row"><button class="danger-btn" data-action="reset">Restableix les dades d’exemple</button></div></section>`;
 }
+function returnFromDetail(date) { return detailOrigin === 'day' ? { type: 'day', date: detailReturnDate || date } : null; }
 function sheetMarkup() {
     let contents = '';
     if (sheet?.type === 'filters') {
@@ -916,20 +919,20 @@ function sheetMarkup() {
         const { date, childId, schoolId, sessionId } = sheet;
         const activity = schoolActivities(date, activeChildren()).find(a => a.id === sessionId && a.schoolId === schoolId && a.childId === childId);
         const c = childById(sheet.childId);
-        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
     else if (sheet?.type === 'bandEdit') {
         const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band);
         const isNight = band === 'nit';
         const manual = !isNight && Object.hasOwn(state.bandOverrides, bandKey(date, childId, band));
-        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name ?? 'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name ?? 'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     <p class="settings-note">${isNight ? 'Aquesta nit segueix la rotació, excepte si la canvies.' : 'Assignació independent de la nit. Les escoles es calculen a partir de l’horari escolar.'} Actualment: ${escapeHtml(value.name)}.</p>
     ${state.guardians.map(g => `<button class="option ${value.type === 'guardian' && value.name === g.name ? 'selected' : ''}" data-action="${isNight ? 'assign-night' : 'assign-band'}" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span></button>`).join('')}
     ${!isNight ? `<button class="option" data-action="assign-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian=""><span class="option-left">Sense assignar</span></button>` : ''}
     ${isNight && overridden(date, childId) ? `<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>` : ''}
     ${!isNight && manual ? `<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>` : ''}
-    <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
+    <button class="soft-btn" data-action="return-detail" data-date="${date}">${detailOrigin === 'day' ? 'Torna al dia' : 'Torna al calendari'}</button>`;
     }
     else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
@@ -1281,6 +1284,10 @@ function clickAction(button) {
             sheet = null;
             render();
             break;
+        case 'return-detail':
+            sheet = returnFromDetail(button.dataset.date ?? detailReturnDate);
+            render();
+            break;
         case 'today': {
             selectedDate = localDate(new Date());
             const now = parseDate(selectedDate);
@@ -1320,6 +1327,8 @@ function clickAction(button) {
         case 'open-school-activity': {
             const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', schoolId = button.dataset.school ?? '', sessionId = button.dataset.session ?? '';
             if (schoolActivities(date, activeChildren()).some(a => a.id === sessionId && a.schoolId === schoolId && a.childId === childId)) {
+                detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
+                detailReturnDate = date;
                 sheet = { type: 'schoolActivity', date, childId, schoolId, sessionId };
                 render();
             }
@@ -1347,6 +1356,8 @@ function clickAction(button) {
             const date = button.dataset.date ?? '';
             if (!isValidDate(date))
                 break;
+            detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
+            detailReturnDate = date;
             sheet = { type: 'daySlotForm', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '' };
             render();
             break;
@@ -1355,6 +1366,8 @@ function clickAction(button) {
             const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', slotId = button.dataset.slot ?? '';
             if (!isValidDate(date) || !childById(childId) || !monthDayUI.find(state, date, childId, slotId))
                 break;
+            detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
+            detailReturnDate = date;
             sheet = { type: 'daySlotForm', date, childId, slotId };
             render();
             break;
@@ -1366,7 +1379,7 @@ function clickAction(button) {
             if (!confirm('Vols eliminar aquesta franja puntual?'))
                 break;
             monthDayUI.remove(state, date, childId, slotId);
-            sheet = { type: 'day', date };
+            sheet = returnFromDetail(date);
             update();
             notify('Franja eliminada');
             break;
@@ -1386,7 +1399,8 @@ function clickAction(button) {
         case 'edit-band': {
             const band = button.dataset.band ?? '', date = button.dataset.date ?? '', childId = button.dataset.child ?? '';
             if (isTimeBand(band) && isValidDate(date) && childById(childId)) {
-                selectedDate = date;
+                detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
+                detailReturnDate = button.dataset.viewDate ?? date;
                 sheet = { type: 'bandEdit', date, childId, band };
                 render();
             }
@@ -1406,7 +1420,7 @@ function clickAction(button) {
             if (!isValidDate(date) || !childById(childId) || !isTimeBand(band) || band === 'nit' || (gId && !guardian(gId)))
                 break;
             state.bandOverrides[bandKey(date, childId, band)] = gId;
-            sheet = { type: 'day', date };
+            sheet = returnFromDetail(date);
             update();
             notify('Franja actualitzada');
             break;
@@ -1416,7 +1430,7 @@ function clickAction(button) {
             if (!isTimeBand(band))
                 break;
             delete state.bandOverrides[bandKey(date, childId, band)];
-            sheet = { type: 'day', date };
+            sheet = returnFromDetail(date);
             update();
             notify('Assignació automàtica restaurada');
             break;
@@ -1439,13 +1453,13 @@ function clickAction(button) {
             const date = button.dataset.date, childId = button.dataset.child, gId = button.dataset.guardian;
             if (!childById(childId) || !guardian(gId))
                 break;
-            sheet = { type: 'day', date };
+            sheet = returnFromDetail(date);
             chooseGuardian(date, childId, gId);
             break;
         }
         case 'clear-night':
             delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];
-            sheet = { type: 'day', date: button.dataset.date };
+            sheet = returnFromDetail(button.dataset.date);
             update();
             notify('Patró habitual restaurat');
             break;
@@ -1582,7 +1596,7 @@ document.addEventListener('submit', event => {
             notify(error);
             return;
         }
-        sheet = { type: 'day', date };
+        sheet = returnFromDetail(date);
         update();
         notify('Franja puntual desada');
         return;

@@ -25,7 +25,7 @@
         const h=(s.to-s.from)*pxPerMinute;
         const name=escape(s.guardianName);
         const title=`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`;
-        return `<button type="button" class="day-night-block" data-action="edit-band" data-date="${escape(s.date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
+        return `<button type="button" class="day-night-block" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
       }).join('');
       const overrides=(customSlots[child.id]??[]).map(slot=>{
         const start=Math.max(0,slot.from),end=Math.min(DAY_MINUTES,slot.to);

@@ -42,7 +42,7 @@ test('la línia temporal conté 24 hores, la nit i l’escola en columnes per fi
  assert.match(htmlOutput,/day-night-block/);
  assert.match(htmlOutput,/day-school-block/);
  assert.match(htmlOutput,/Sant Marc/);
- assert.match(htmlOutput,/data-action="edit-band" data-date="2026-10-27" data-band="nit"/);
+ assert.match(htmlOutput,/data-action="edit-band" data-date="2026-10-27" data-view-date="2026-10-28" data-band="nit"/);
  assert.match(htmlOutput,/09:00–16:30/);
  assert.match(htmlOutput,/Elna/);assert.match(htmlOutput,/Blai/);
  assert.doesNotMatch(htmlOutput,/class="agenda"/);
@@ -54,8 +54,8 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
  assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.5\.4/);
- assert.match(sw,/day-timeline\.js\?v=0\.5\.4/);
+ assert.match(html,/day-timeline\.js\?v=0\.5\.5/);
+ assert.match(sw,/day-timeline\.js\?v=0\.5\.5/);
 });
 test('la rotació incorpora la nova hora per defecte, el desament i la importació',()=>{
  assert.match(ts,/const DEFAULT_CHANGE_TIME='19:00'/);

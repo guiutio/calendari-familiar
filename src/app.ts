@@ -88,7 +88,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.5.4';
+const APP_VERSION = '0.5.5';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -368,6 +368,8 @@ let selectedDate=localDate(new Date());
 let tab:Tab='calendar';
 let schoolNav:{schoolId?:string;yearId?:string;groupId?:string;scheduleChildId?:string;scheduleMode?:ScheduleMode}={};
 let sheet:Sheet=null;
+let detailOrigin:'day'|'calendar'='calendar';
+let detailReturnDate='';
 let rotationDraft:Rotation|null=null;
 let rotationUnit:'days'|'weeks'='weeks';
 let toastTimer:number|null=null;
@@ -783,6 +785,7 @@ function settingsPage(){
   <div class="panel-header"><h2 class="section-title">Dades d’exemple</h2><span class="sample-tag">Elna i Blai</span></div><p class="settings-note">Restableix les dades fictícies de demostració. Es perdran els canvis actuals, així que exporta una còpia abans si et cal.</p>
   <div class="action-row"><button class="danger-btn" data-action="reset">Restableix les dades d’exemple</button></div></section>`;
 }
+function returnFromDetail(date:string):Sheet{return detailOrigin==='day'?{type:'day',date:detailReturnDate||date}:null;}
 function sheetMarkup(){
   let contents='';
   if(sheet?.type==='filters'){
@@ -803,19 +806,19 @@ function sheetMarkup(){
     const {date,childId,schoolId,sessionId}=sheet;
     const activity=schoolActivities(date,activeChildren()).find(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId);
     const c=childById(sheet.childId);
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
   } else if(sheet?.type==='bandEdit'){
     const {date,childId,band}=sheet,c=childById(childId),value=responsibility(date,childId,band);
     const isNight=band==='nit';
     const manual=!isNight&&Object.hasOwn(state.bandOverrides,bandKey(date,childId,band));
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name??'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name??'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     <p class="settings-note">${isNight?'Aquesta nit segueix la rotació, excepte si la canvies.':'Assignació independent de la nit. Les escoles es calculen a partir de l’horari escolar.'} Actualment: ${escapeHtml(value.name)}.</p>
     ${state.guardians.map(g=>`<button class="option ${value.type==='guardian'&&value.name===g.name?'selected':''}" data-action="${isNight?'assign-night':'assign-band'}" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span></button>`).join('')}
     ${!isNight?`<button class="option" data-action="assign-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian=""><span class="option-left">Sense assignar</span></button>`:''}
     ${isNight&&overridden(date,childId)?`<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>`:''}
     ${!isNight&&manual?`<button class="soft-btn" data-action="clear-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}">Restaura l’assignació automàtica</button>`:''}
-    <button class="soft-btn" data-action="open-day" data-date="${date}">Torna al dia</button>`;
+    <button class="soft-btn" data-action="return-detail" data-date="${date}">${detailOrigin==='day'?'Torna al dia':'Torna al calendari'}</button>`;
   } else if(sheet && ['schoolForm','yearForm','groupForm','schoolDayForm','reducedWindowForm','ordinaryWindowForm','scheduleForm'].includes(sheet.type)){
     contents=schoolFormMarkup();
   } else if(sheet?.type==='rotationWeek'){
@@ -1005,6 +1008,7 @@ function clickAction(button:HTMLElement){
     case 'check-update':window.location.assign('./actualitza.html');break;
     case 'open-filters':sheet={type:'filters'};render();break;
     case 'close-sheet':sheet=null;render();break;
+    case 'return-detail':sheet=returnFromDetail(button.dataset.date??detailReturnDate);render();break;
     case 'today':{selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();render();break;}
     case 'timeline-zoom-step':{
       if(calendarView==='month')break;
@@ -1019,7 +1023,7 @@ function clickAction(button:HTMLElement){
     case 'next-month':goToMonth(1);break;
     case 'open-school-activity':{
       const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
-      if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
+      if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
       break;
     }
     case 'show-calendar-day':{
@@ -1028,21 +1032,21 @@ function clickAction(button:HTMLElement){
       selectedDate=date;calendarView='day';render();break;
     }
     case 'open-day':{const date=button.dataset.date??'';if(isValidDate(date)){selectedDate=date;sheet={type:'day',date};render();}break;}
-     case 'day-slot-add':{const date=button.dataset.date??'';if(!isValidDate(date))break;sheet={type:'daySlotForm',date,childId:activeChildren()[0]?.id??state.children[0]?.id??''};render();break;}
-     case 'day-slot-edit':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;sheet={type:'daySlotForm',date,childId,slotId};render();break;}
-     case 'day-slot-delete':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;if(!confirm('Vols eliminar aquesta franja puntual?'))break;monthDayUI.remove(state,date,childId,slotId);sheet={type:'day',date};update();notify('Franja eliminada');break;}
+     case 'day-slot-add':{const date=button.dataset.date??'';if(!isValidDate(date))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId:activeChildren()[0]?.id??state.children[0]?.id??''};render();break;}
+     case 'day-slot-edit':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId,slotId};render();break;}
+     case 'day-slot-delete':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;if(!confirm('Vols eliminar aquesta franja puntual?'))break;monthDayUI.remove(state,date,childId,slotId);sheet=returnFromDetail(date);update();notify('Franja eliminada');break;}
      case 'day-restore':{const date=button.dataset.date??'';if(!isValidDate(date)||!monthDayUI.hasChanges(state,date))break;if(!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))break;monthDayUI.restore(state,date);sheet={type:'day',date};update();notify('Dia restaurat segons la rotació');break;}
-    case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){selectedDate=date;sheet={type:'bandEdit',date,childId,band};render();}break;}
+    case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=button.dataset.viewDate??date;sheet={type:'bandEdit',date,childId,band};render();}break;}
     case 'toggle-band':{const b=button.dataset.band??'';if(!isTimeBand(b))break;const selected=state.preferences.visibleBands;state.preferences.visibleBands=selected.includes(b)?selected.filter(x=>x!==b):BANDS.filter(x=>selected.includes(x)||x===b);update();break;}
-    case 'assign-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'',gId=button.dataset.guardian??'';if(!isValidDate(date)||!childById(childId)||!isTimeBand(band)||band==='nit'||(gId&&!guardian(gId)))break;state.bandOverrides[bandKey(date,childId,band)]=gId;sheet={type:'day',date};update();notify('Franja actualitzada');break;}
-    case 'clear-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'';if(!isTimeBand(band))break;delete state.bandOverrides[bandKey(date,childId,band)];sheet={type:'day',date};update();notify('Assignació automàtica restaurada');break;}
+    case 'assign-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'',gId=button.dataset.guardian??'';if(!isValidDate(date)||!childById(childId)||!isTimeBand(band)||band==='nit'||(gId&&!guardian(gId)))break;state.bandOverrides[bandKey(date,childId,band)]=gId;sheet=returnFromDetail(date);update();notify('Franja actualitzada');break;}
+    case 'clear-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'';if(!isTimeBand(band))break;delete state.bandOverrides[bandKey(date,childId,band)];sheet=returnFromDetail(date);update();notify('Assignació automàtica restaurada');break;}
     case 'toggle-filter':{
       const kind=button.dataset.filterKind==='child'?'visibleChildren':button.dataset.filterKind==='school'?'visibleSchools':'visibleGuardians',id=button.dataset.id!;
       const selected=state.preferences[kind];state.preferences[kind]=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];update();break;
     }
     case 'filter-all':state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);state.preferences.visibleBands=[...BANDS];update();break;
-    case 'assign-night':{const date=button.dataset.date!,childId=button.dataset.child!,gId=button.dataset.guardian!;if(!childById(childId)||!guardian(gId))break;sheet={type:'day',date};chooseGuardian(date,childId,gId);break;}
-    case 'clear-night':delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];sheet={type:'day',date:button.dataset.date!};update();notify('Patró habitual restaurat');break;
+    case 'assign-night':{const date=button.dataset.date!,childId=button.dataset.child!,gId=button.dataset.guardian!;if(!childById(childId)||!guardian(gId))break;sheet=returnFromDetail(date);chooseGuardian(date,childId,gId);break;}
+    case 'clear-night':delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];sheet=returnFromDetail(button.dataset.date!);update();notify('Patró habitual restaurat');break;
     case 'rotation-cell':sheet={type:'rotationCell',childId:button.dataset.child!,index:Number(button.dataset.index)};render();break;
     case 'rotation-week-fill':sheet={type:'rotationWeek',childId:button.dataset.child!,week:Number(button.dataset.week)};render();break;
     case 'rotation-set-week':{
@@ -1106,7 +1110,7 @@ document.addEventListener('submit',event=>{
     if(values.has('endAtMidnight'))values.set('endTime','24:00');
     const error=monthDayUI.save(state,date,childId,slotId,values,newId);
     if(error){notify(error);return;}
-    sheet={type:'day',date};update();notify('Franja puntual desada');return;
+    sheet=returnFromDetail(date);update();notify('Franja puntual desada');return;
   }
   if(!form.dataset.schoolForm)return;
  event.preventDefault();

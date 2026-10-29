@@ -624,9 +624,9 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .month-day-timeline-inner{width:max-content;min-width:100%;--hour-height:24px;}
 .month-day-timeline .day-timeline-headers,.month-day-timeline .day-timeline-grid{grid-template-columns:52px repeat(var(--day-child-count),98px);}
 .month-day-timeline .day-time-column{--hour-height:24px;}
-.month-day-timeline .day-night-block{padding:5px 3px;cursor:default;}
+.month-day-timeline .day-night-block{padding:5px 3px;cursor:pointer;}
 .month-day-timeline .day-night-title{font-size:calc(11px * var(--font-scale, 1));}
-.month-day-timeline .month-day-school{padding:2px;cursor:default;border-left-width:3px;}
+.month-day-timeline .month-day-school{padding:2px;cursor:pointer;border-left-width:3px;}
 .month-day-timeline .day-school-kind{font-size:calc(9px * var(--font-scale, 1));}
 .day-slot-block{position:absolute;z-index:2;left:3px;width:calc(100% - 6px);padding:4px 3px;border:1px solid #61748a77;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;align-items:start;gap:2px;font-size:calc(11px * var(--font-scale, 1));font-weight:750;color:#1a324b;text-align:left;cursor:pointer;}
 .day-slot-block small{font-size:calc(9px * var(--font-scale, 1));font-weight:600;}
@@ -650,3 +650,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
  .sheet.month-day-sheet{padding-inline:12px;}
  .month-day-actions button{min-height:38px;}
 }
+
+/* v0.5.5 · Les tres cronologies tenen controls tàctils per a nits i escoles. */
+.month-day-timeline .day-night-block:focus-visible,.month-day-timeline .month-day-school:focus-visible{outline:3px solid #1e4e93;outline-offset:1px;z-index:5;}
