@@ -1103,6 +1103,7 @@ document.addEventListener('submit',event=>{
     event.preventDefault();
     const date=form.dataset.date??'',slotId=form.dataset.slot??'';
     const values=new FormData(form),childId=slotId?form.dataset.child??'':String(values.get('childId')??'');
+    if(values.has('endAtMidnight'))values.set('endTime','24:00');
     const error=monthDayUI.save(state,date,childId,slotId,values,newId);
     if(error){notify(error);return;}
     sheet={type:'day',date};update();notify('Franja puntual desada');return;
