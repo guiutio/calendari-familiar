@@ -79,8 +79,8 @@
       </span>`).join('')}
     </span>`;
   }
-  /* El detall mensual reutilitza els segments calculats per dayTimelineUI, sense canviar
-     el renderitzador ni la interacció de les vistes independents de dia i setmana. */
+  /* El detall mensual comparteix les mateixes accions per a pernoctes i activitats escolars
+     que les vistes independents de dia i setmana. */
   function detail(date,label,children,nights,activities,customSlots,state){
     const scale=0.4, height=DAY*scale, axis=52, width=98;
     const fmt=n=>n===DAY?'24:00':String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
@@ -93,7 +93,8 @@
     const columns=children.map(child=>{
       const base=(nights[child.id]??[]).filter(x=>x.visible).map(x=>
         block(x.from,x.to,'day-night-block',x.guardianColor,`Pernocta · ${x.guardianName} · ${fmt(x.from)}–${fmt(x.to)}`,
-          `<span class="day-night-title">${escape(x.guardianName)}</span>`)).join('');
+          `<span class="day-night-title">${escape(x.guardianName)}</span>`,
+          `data-action="edit-band" data-date="${escape(x.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" aria-label="${escape('Edita la pernocta de '+child.name+' · '+x.guardianName+' · '+fmt(x.from)+'–'+fmt(x.to))}"`)).join('');
       const changed=(customSlots[child.id]??[]).map(x=>
         block(x.from,x.to,'day-slot-block',x.color,`${x.startTime}–${x.endTime} · ${x.name}`,
           `<span>${escape(x.name)}</span><small>${escape(x.startTime)}–${escape(x.endTime)}</small>`,
@@ -108,7 +109,7 @@
         const lanes=Math.max(1,laneEnds.length);
         const top=Math.max(0,a.start),end=Math.min(DAY,a.end);
         if(end<=top)return '';
-        return `<span class="day-school-block month-day-school" style="top:${top*scale}px;height:${(end-top)*scale}px;left:calc(${lane} * 100% / ${lanes} + 2px);width:calc(100% / ${lanes} - 4px);--school-event-color:${escape(a.color)}" title="${escape(a.schoolName+' · '+a.startTime+'–'+a.endTime)}"><span class="day-school-kind">${escape(a.kind)}</span></span>`;
+        return `<button type="button" class="day-school-block month-day-school" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" style="top:${top*scale}px;height:${(end-top)*scale}px;left:calc(${lane} * 100% / ${lanes} + 2px);width:calc(100% / ${lanes} - 4px);--school-event-color:${escape(a.color)}" title="${escape(a.schoolName+' · '+a.startTime+'–'+a.endTime)}" aria-label="${escape('Consulta activitat escolar · '+a.schoolName+' · '+a.kind+' · '+a.startTime+'–'+a.endTime)}"><span class="day-school-kind">${escape(a.kind)}</span></button>`;
       }).join('');
       return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${base}${changed}${school}</div>`;
     }).join('');
@@ -137,7 +138,7 @@
       </div>
     </div>
     ${existing?`<div class="sheet-section-label">Assignacions puntuals · toca per editar</div><div class="month-day-slot-list">${existing}</div>`:''}
-    <p class="settings-note">Les franges puntuals només afecten aquesta data. Les activitats escolars se superposen i l'horari base no es modifica.</p>`;
+    <p class="settings-note">Toca una pernocta per canviar-ne el responsable i una activitat escolar per consultar-ne el detall. Les franges puntuals només afecten aquesta data; l'horari base no es modifica.</p>`;
   }
   function find(state,date,childId,id){
     if(id?.startsWith('legacy:')){
@@ -152,7 +153,7 @@
     const edit=!!item;
     return `<div class="sheet-heading"><div><h2 class="sheet-title">${edit?'Edita':'Afegeix'} una franja</h2>
       <p class="sheet-subtitle">${escape(date)} · Només per a aquest dia</p></div>
-      <button type="button" class="sheet-close" data-action="open-day" data-date="${escape(date)}" aria-label="Torna al dia">×</button></div>
+      <button type="button" class="sheet-close" data-action="return-detail" data-date="${escape(date)}" aria-label="Torna a la vista anterior">×</button></div>
       <form data-day-slot-form="true" data-date="${escape(date)}" data-child="${escape(childId)}" data-slot="${escape(id??'')}" class="month-slot-form">
       <div class="field"><label for="slot-child">Fill</label><select id="slot-child" name="childId" required ${edit?'disabled':''}>
         ${children.map(c=>`<option value="${escape(c.id)}" ${c.id===selected?'selected':''}>${escape(c.name)}</option>`).join('')}
@@ -165,7 +166,7 @@
       </select></div>
       <p class="settings-note">Aquesta franja puntual no modifica la rotació ni cap altre dia. Les activitats escolars continuen visibles.</p>
       <div class="action-row"><button type="submit" class="primary-btn">Desa la franja</button>
-      <button type="button" class="soft-btn" data-action="open-day" data-date="${escape(date)}">Cancel·la</button>
+      <button type="button" class="soft-btn" data-action="return-detail" data-date="${escape(date)}">Cancel·la</button>
       ${edit?`<button type="button" class="danger-btn" data-action="day-slot-delete" data-date="${escape(date)}" data-child="${escape(childId)}" data-slot="${escape(id)}">Elimina la franja</button>`:''}</div>
       </form>`;
   }
