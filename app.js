@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.3';
+const APP_VERSION = '0.5.4';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -573,7 +573,7 @@ function dayTimeline(date, children) {
     const nights = {};
     for (const c of children)
         nights[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom));
+    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians));
 }
 function weekTimeline(start, children) {
     if (!dayTimelineUI)
@@ -584,7 +584,7 @@ function weekTimeline(start, children) {
         const nightSegments = {};
         for (const c of children)
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments };
+        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians) };
     });
     return dayTimelineUI.renderWeek(start, days, children, validTimelineZoom(state.preferences.timelineZoom));
 }
