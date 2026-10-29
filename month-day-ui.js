@@ -64,6 +64,16 @@
     }
     return map;
   }
+  /* Setmanes ISO 8601: de dilluns a diumenge, amb la setmana 1 determinada pel primer dijous de l'any. */
+  function isoWeek(date){
+    const [year,month,day]=date.split('-').map(Number);
+    const thursday=new Date(Date.UTC(year,month-1,day));
+    thursday.setUTCDate(thursday.getUTCDate()+4-(thursday.getUTCDay()||7));
+    const weekYear=thursday.getUTCFullYear();
+    const firstThursday=new Date(Date.UTC(weekYear,0,4));
+    firstThursday.setUTCDate(firstThursday.getUTCDate()+4-(firstThursday.getUTCDay()||7));
+    return {week:1+Math.round((thursday.getTime()-firstThursday.getTime())/(7*86400000)),year:weekYear};
+  }
   function mini(children,nights,activities,customSlots){
     if(!children.length)return '<span class="month-mini-empty">—</span>';
     const rect=(from,to,color,klass,label)=>{
@@ -207,5 +217,5 @@
   function removeChild(daySlots,id){
     for(const key of Object.keys(daySlots||{}))if(key.endsWith('|'+id))delete daySlots[key];
   }
-  window.monthDayUI={clean,hasChanges,slots,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
+  window.monthDayUI={clean,hasChanges,slots,isoWeek,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
 })();
