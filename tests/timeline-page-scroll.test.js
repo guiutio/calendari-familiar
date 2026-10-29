@@ -33,6 +33,6 @@ test('marges tàctils per a ambdues vistes i moviment vertical natural de pàgin
  assert.match(rules,/\.day-timeline-headers,\.day-timeline-grid \{grid-template-columns:52px repeat\(var\(--day-child-count\),98px\);/);
  assert.match(rules,/\.week-timeline-head,\.week-timeline-grid \{grid-template-columns:52px repeat\(var\(--week-day-count\),var\(--week-day-width,196px\)\);/);
  assert.match(guard,/const timeline = target\.closest\('\.day-timeline-viewport'\)/);
- assert.match(guard,/const scroller = timeline \? target\.closest\('\.main-area'\)/);
+ assert.match(guard,/const scroller = timeline \? \(target\.closest\('\.sheet'\) \|\| target\.closest\('\.main-area'\)\)/);
  assert.match(app,/main\.scrollTop = Math\.max\(0, newOffset \+ minuteAtCenter \* newScale - main\.clientHeight \/ 2\)/);
 });
