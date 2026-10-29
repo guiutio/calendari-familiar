@@ -18,7 +18,7 @@
     });
   }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
-  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute) {
+  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,slots=[]) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
       const nights=segments.filter(s=>s.visible).map(s=>{
@@ -42,7 +42,13 @@
         const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
         return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${lane} * 100% / ${laneCount} + 3px);width:calc(100% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}"><span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span><span class="day-school-kind">${escape(a.kind)}</span>${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
-      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${school}</div>`;
+      const custom=slots.filter(a=>a.childId===child.id).map(a=>{
+        const from=Number(a.startTime.slice(0,2))*60+Number(a.startTime.slice(3,5));
+        const to=Number(a.endTime.slice(0,2))*60+Number(a.endTime.slice(3,5));
+        const label=escape('Canvi puntual · '+a.guardianName+' · '+a.startTime+'–'+a.endTime+'. Toca per modificar o eliminar.');
+        return `<button type="button" class="day-custom-block" data-action="edit-day-slot" data-date="${escape(date)}" data-slot="${escape(a.id)}" style="top:${from*pxPerMinute}px;height:${(to-from)*pxPerMinute}px;--slot-color:${escape(a.guardianColor)}" title="${label}" aria-label="${label}"><span>${escape(a.guardianName)}</span><small>${escape(a.startTime)}–${escape(a.endTime)}</small></button>`;
+      }).join('');
+      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${school}${custom}</div>`;
     }).join('');
     return columns;
   }
@@ -60,7 +66,7 @@
       <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
     </div>`).join('');
     const dayColumns=days.map(day=>`<div class="week-date-columns" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
-      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute)}</div>`).join('');
+      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.slots??[])}</div>`).join('');
     const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
       const parts=day.nightSegments[c.id]??[];
       return `<li>${escape(c.name)}: ${parts.filter(x=>x.visible).map(x=>`${fmt(x.from)}–${fmt(x.to)} ${escape(x.guardianName)}`).join('; ')||'Sense responsable visible'}${day.activities.filter(a=>a.childId===c.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
@@ -81,14 +87,14 @@
       <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50) {
+  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,slots=[]) {
     const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
     const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
     const height=DAY_MINUTES*pxPerMinute;
     const tickStep=safeZoom===25?120:60;
     const tickMarks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>`<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
-    const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute);
+    const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute,slots);
     const list=children.map(child=>{
       const nights=nightSegments[child.id]??[];
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
@@ -103,5 +109,21 @@
       <details class="day-timeline-summary"><summary>Consultar les assignacions i les activitats en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  window.dayTimelineUI={overnightSegments,render,renderWeek,PX_PER_MINUTE,FOCUS_MINUTE};
+  function renderMini(date,children,activities,nights,slots=[]) {
+  if(!children.length)return '<span class="mini-empty">—</span>';
+  const columns=children.map(child=>{
+    const night=(nights[child.id]??[]).filter(segment=>segment.visible).map(segment=>
+      `<span class="month-mini-night" style="top:${100*segment.from/1440}%;height:${100*(segment.to-segment.from)/1440}%;background:${escape(segment.guardianColor)}" title="${escape(child.name+': '+segment.guardianName)}"></span>`).join('');
+    const school=activities.filter(a=>a.childId===child.id).map(a=>
+      `<span class="month-mini-school" style="top:${100*a.start/1440}%;height:${100*(a.end-a.start)/1440}%;background:${escape(a.color)}" title="${escape(a.schoolName)}"></span>`).join('');
+    const custom=slots.filter(a=>a.childId===child.id).map(a=>{
+      const from=Number(a.startTime.slice(0,2))*60+Number(a.startTime.slice(3,5));
+      const to=Number(a.endTime.slice(0,2))*60+Number(a.endTime.slice(3,5));
+      return `<span class="month-mini-custom" style="top:${100*from/1440}%;height:${100*(to-from)/1440}%;background:${escape(a.guardianColor)}" title="${escape(a.guardianName)}"></span>`;
+    }).join('');
+    return `<span class="month-mini-column" title="${escape(child.name)}">${night}${school}${custom}</span>`;
+  }).join('');
+  return `<span class="month-mini" aria-hidden="true"><span class="month-mini-labels">${children.map(c=>`<span title="${escape(c.name)}">${escape(c.name.trim().slice(0,1).toUpperCase())}</span>`).join('')}</span><span class="month-mini-track">${columns}</span></span>`;
+}
+  window.dayTimelineUI={overnightSegments,render,renderWeek,renderMini,PX_PER_MINUTE,FOCUS_MINUTE};
 })();
