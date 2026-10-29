@@ -582,7 +582,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .week-timeline-viewport {width:calc(100% - 32px);max-width:calc(100% - 32px);}
 }
 
-/* v0.5.3 · Dia i Setmana: desplaçament vertical de la pàgina completa,
+/* v0.5.4 · Dia i Setmana: desplaçament vertical de la pàgina completa,
    marges tàctils i columnes de fills més estretes per veure més informació. */
 .day-timeline {margin:5px 8px 18px;padding:5px 8px 12px;min-width:0;}
 .day-timeline-viewport {
