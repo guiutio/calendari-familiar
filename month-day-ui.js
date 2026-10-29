@@ -5,7 +5,12 @@
   const minutes = time => time === '24:00' ? DAY : Number(time.slice(0,2))*60 + Number(time.slice(3,5));
   const validTime = time => typeof time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   const legacyRanges = {mati:['08:00','12:00'],dinar:['12:00','15:00'],tarda:['15:00','18:00'],sopar:['18:00','21:00']};
-  const validKey = key => /^\d{4}-\d{2}-\d{2}\|[^|]+$/.test(key);
+  const validDate = date => {
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
+    const d=new Date(date+'T12:00:00Z');
+    return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===date;
+  };
+  const validKey = key => /^\d{4}-\d{2}-\d{2}\|[^|]+$/.test(key) && validDate(key.split('|')[0]);
   const keyOf = (date,childId) => date + '|' + childId;
   function clean(raw,childIds,guardianIds) {
     if(raw == null)return {};
@@ -73,6 +78,66 @@
       </span>`).join('')}
     </span>`;
   }
+  /* El detall mensual reutilitza els segments calculats per dayTimelineUI, sense canviar
+     el renderitzador ni la interacció de les vistes independents de dia i setmana. */
+  function detail(date,label,children,nights,activities,customSlots,state){
+    const scale=0.4, height=DAY*scale, axis=52, width=98;
+    const fmt=n=>n===DAY?'24:00':String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+    const block=(from,to,cls,color,title,body,action='')=>{
+      const a=Math.max(0,from),b=Math.min(DAY,to);
+      if(b<=a)return '';
+      return `<${action?'button type="button"':'span'} class="${cls}" style="top:${a*scale}px;height:${(b-a)*scale}px;--night-color:${escape(color)};--school-event-color:${escape(color)};background-color:${escape(color)}" title="${escape(title)}" ${action}>${body}</${action?'button':'span'}>`;
+    };
+    const axisTicks=Array.from({length:13},(_,i)=>`<span class="day-time-tick" style="top:${i*120*scale}px">${fmt(i*120)}</span>`).join('');
+    const columns=children.map(child=>{
+      const base=(nights[child.id]??[]).filter(x=>x.visible).map(x=>
+        block(x.from,x.to,'day-night-block',x.guardianColor,`Pernocta · ${x.guardianName} · ${fmt(x.from)}–${fmt(x.to)}`,
+          `<span class="day-night-title">${escape(x.guardianName)}</span>`)).join('');
+      const changed=(customSlots[child.id]??[]).map(x=>
+        block(x.from,x.to,'day-slot-block',x.color,`${x.startTime}–${x.endTime} · ${x.name}`,
+          `<span>${escape(x.name)}</span><small>${escape(x.startTime)}–${escape(x.endTime)}</small>`,
+          `data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(x.id)}"`)).join('');
+      const items=activities.filter(x=>x.childId===child.id).sort((a,b)=>a.start-b.start||a.end-b.end);
+      const laneEnds=[];
+      const school=items.map(a=>{
+        let lane=laneEnds.findIndex(end=>end<=a.start);
+        if(lane<0){lane=laneEnds.length;laneEnds.push(a.end);}else laneEnds[lane]=a.end;
+        return {a,lane};
+      }).map(({a,lane})=>{
+        const lanes=Math.max(1,laneEnds.length);
+        const top=Math.max(0,a.start),end=Math.min(DAY,a.end);
+        if(end<=top)return '';
+        return `<span class="day-school-block month-day-school" style="top:${top*scale}px;height:${(end-top)*scale}px;left:calc(${lane} * 100% / ${lanes} + 2px);width:calc(100% / ${lanes} - 4px);--school-event-color:${escape(a.color)}" title="${escape(a.schoolName+' · '+a.startTime+'–'+a.endTime)}"><span class="day-school-kind">${escape(a.kind)}</span></span>`;
+      }).join('');
+      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${base}${changed}${school}</div>`;
+    }).join('');
+    const existing=children.flatMap(child=>{
+      const key=keyOf(date,child.id),list=[];
+      for(const slot of state.daySlots?.[key]??[])list.push(slot);
+      for(const [band,range] of Object.entries(legacyRanges)){
+        const old=key+'|'+band;
+        if(Object.hasOwn(state.bandOverrides??{},old))
+          list.push({id:'legacy:'+band,startTime:range[0],endTime:range[1],guardianId:state.bandOverrides[old]});
+      }
+      return list.sort((a,b)=>a.startTime.localeCompare(b.startTime)).map(x=>{
+        const g=state.guardians.find(g=>g.id===x.guardianId);
+        return `<button type="button" class="month-day-slot-row" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(x.id)}"><span class="month-day-slot-color" style="background:${escape(g?.color??'#cfd6df')}"></span><span><strong>${escape(child.name)}</strong> · ${escape(x.startTime)}–${escape(x.endTime)} · ${escape(g?.name??'Sense assignar')}</span><span aria-hidden="true">✎</span></button>`;
+      });
+    }).join('');
+    const changed=hasChanges(state,date);
+    return `<div class="month-day-actions">
+      <button type="button" class="primary-btn" data-action="day-slot-add" data-date="${escape(date)}">+ Afegeix una franja</button>
+      ${changed?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${escape(date)}">Restaurar segons la rotació</button>`:''}
+    </div>
+    <div class="month-day-timeline" role="region" aria-label="Cronologia editable de 24 hores de ${escape(label)}">
+      <div class="month-day-timeline-inner" style="min-width:${axis+width*children.length}px;--day-child-count:${children.length}">
+        <div class="day-timeline-headers"><span>Hora</span>${children.map(c=>`<span>${escape(c.name)}</span>`).join('')}</div>
+        <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${axisTicks}</div>${columns}</div>
+      </div>
+    </div>
+    ${existing?`<div class="sheet-section-label">Assignacions puntuals · toca per editar</div><div class="month-day-slot-list">${existing}</div>`:''}
+    <p class="settings-note">Les franges puntuals només afecten aquesta data. Les activitats escolars se superposen i l'horari base no es modifica.</p>`;
+  }
   function find(state,date,childId,id){
     if(id?.startsWith('legacy:')){
       const band=id.slice(7),range=legacyRanges[band],guardianId=state.bandOverrides?.[keyOf(date,childId)+'|'+band];
@@ -111,7 +176,7 @@
     if(!state.daySlots[key].length)delete state.daySlots[key];
   }
   function save(state,date,childId,id,values,newId){
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!state.children.some(c=>c.id===childId))return 'Dia o fill no vàlid';
+    if(!validDate(date)||!state.children.some(c=>c.id===childId))return 'Dia o fill no vàlid';
     const startTime=String(values.get('startTime')??''),endTime=String(values.get('endTime')??''),
       guardianId=String(values.get('guardianId')??'');
     if(!validTime(startTime)||!validTime(endTime)||minutes(startTime)>=minutes(endTime))
@@ -140,5 +205,5 @@
   function removeChild(daySlots,id){
     for(const key of Object.keys(daySlots||{}))if(key.endsWith('|'+id))delete daySlots[key];
   }
-  window.monthDayUI={clean,hasChanges,slots,mini,find,form,remove,save,restore,removeGuardian,removeChild};
+  window.monthDayUI={clean,hasChanges,slots,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
 })();
