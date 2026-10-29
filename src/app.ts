@@ -88,7 +88,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.5.3';
+const APP_VERSION = '0.5.4';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -484,8 +484,8 @@ function schoolTimeline(date:string,children:Child[],range?:[number,number]|null
 }
 type DayTimelineUI = {
  overnightSegments:(date:string,childId:string,changeTime:string,getNight:(d:string,id:string)=>string,previousDate:(d:string)=>string,lookupGuardian:(id:string)=>Guardian|undefined,visibleIds:string[])=>Array<{from:number;to:number;date:string;guardianId:string;guardianName:string;guardianColor:string;visible:boolean}>;
- render:(date:string,label:string,children:Child[],activities:SchoolCalendarItem[],nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>,changeTime:string,zoom?:number)=>string;
- renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>}>,children:Child[],zoom?:number)=>string;
+ render:(date:string,label:string,children:Child[],activities:SchoolCalendarItem[],nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>,changeTime:string,zoom?:number,customSlots?:Record<string,any[]>)=>string;
+ renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>;customSlots?:Record<string,any[]>}>,children:Child[],zoom?:number)=>string;
 };
 const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimelineUI;
 const monthDayUI=(window as Window & {monthDayUI:any}).monthDayUI;
@@ -500,7 +500,7 @@ function dayTimeline(date:string,children:Child[]):string{
  const changeTime=validChangeTime(state.rotation.changeTime);
  const nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
  for(const c of children)nights[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
- return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom));
+ return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians));
 }
 function weekTimeline(start:string,children:Child[]):string{
  if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
@@ -509,7 +509,7 @@ function weekTimeline(start:string,children:Child[]):string{
    const date=addDays(start,i);
    const nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
    for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
-   return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments};
+   return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians)};
  });
  return dayTimelineUI.renderWeek(start,days,children,validTimelineZoom(state.preferences.timelineZoom));
 }
