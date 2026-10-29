@@ -653,3 +653,25 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 
 /* v0.5.5 · Les tres cronologies tenen controls tàctils per a nits i escoles. */
 .month-day-timeline .day-night-block:focus-visible,.month-day-timeline .month-day-school:focus-visible{outline:3px solid #1e4e93;outline-offset:1px;z-index:5;}
+
+/* v0.5.6 · Navegació Mes → Dia/Setmana: columna dels números de setmana ISO. */
+.weekdays,.month-grid {grid-template-columns:38px repeat(7,minmax(0,1fr));}
+.weekdays {padding:0 0 9px;}
+.weekdays .month-week-heading {display:grid;place-items:center;font-size:calc(10px * var(--font-scale,1));font-weight:750;color:#647e9d;}
+.month-week-number {appearance:none;border:0;min-width:0;min-height:0;padding:6px 1px;display:flex;align-items:center;justify-content:center;background:#e9f0fa;color:#3b628c;font-size:calc(13px * var(--font-scale,1));font-weight:800;font-variant-numeric:tabular-nums;cursor:pointer;touch-action:manipulation;}
+.month-week-number:hover,.month-week-number:active {background:#d6e5fa;color:#214e86;}
+.month-week-number:focus-visible,.day-cell:focus-visible {outline:3px solid #2c74be;outline-offset:-3px;z-index:2;}
+.day-edit-actions {display:flex;flex-wrap:wrap;gap:8px;margin:9px 6px 12px;}
+.day-edit-actions .soft-btn {min-height:36px;}
+:root[data-theme="dark"] .month-week-number {background:#283d56;color:#d3e5fb;}
+:root[data-theme="dark"] .month-week-number:hover,:root[data-theme="dark"] .month-week-number:active {background:#375779;color:#fff;}
+:root[data-theme="dark"] .weekdays .month-week-heading {color:#a9bfd9;}
+@media(max-width:560px) {
+  .weekdays,.month-grid {grid-template-columns:30px repeat(7,minmax(0,1fr));}
+  .month-week-number {font-size:calc(11px * var(--font-scale,1));padding-inline:0;}
+  .weekdays .month-week-heading {font-size:calc(8px * var(--font-scale,1));}
+  .day-edit-actions {margin:8px 4px 10px;gap:5px;}
+}
+@media(max-width:360px) {
+  .weekdays,.month-grid {grid-template-columns:27px repeat(7,minmax(0,1fr));}
+}
