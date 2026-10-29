@@ -136,7 +136,7 @@ function seedState() {
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] }, changeTime: DEFAULT_CHANGE_TIME },
-        overrides: {}, bandOverrides: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }, schools: []
+        overrides: {}, bandOverrides: {}, daySlots: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }, schools: []
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -312,6 +312,7 @@ function cleanState(raw) {
             overrides[key] = value;
     }
     const schools = cleanSchools(obj.schools, children);
+    const daySlots = monthDayUI.clean(obj.daySlots, children.map(c => c.id), guardians.map(g => g.id));
     const visibleBands = Array.isArray(obj.preferences.visibleBands)
         ? BANDS.filter(b => obj.preferences.visibleBands.includes(b)) : [...BANDS];
     const bandOverrides = {};
@@ -326,7 +327,7 @@ function cleanState(raw) {
             bandOverrides[key] = who;
         }
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom) }, schools };
+    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, daySlots, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -557,6 +558,14 @@ function schoolTimeline(date, children, range, empty = false) {
     return schoolCalendarUI?.render(date, fullDate(date), children, schoolActivities(date, children), range, empty, schoolReducedDay(date, children)) ?? '';
 }
 const dayTimelineUI = window.dayTimelineUI;
+const monthDayUI = window.monthDayUI;
+function monthData(date, children) {
+    const nights = {};
+    const changeTime = validChangeTime(state.rotation.changeTime);
+    for (const c of children)
+        nights[c.id] = dayTimelineUI?.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians) ?? [];
+    return { nights, activities: schoolActivities(date, children), slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians) };
+}
 function dayTimeline(date, children) {
     if (!dayTimelineUI)
         return '<p class="settings-note">No es pot carregar la línia temporal diària.</p>';
@@ -645,12 +654,12 @@ function calendarPage() {
         const starting = localDate(new Date(viewYear, viewMonth, 1 - firstDay, 12));
         const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, i) => {
             const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== viewMonth;
-            const changed = children.some(c => overridden(date, c.id) || bands.some(b => b !== 'nit' && Object.hasOwn(state.bandOverrides, bandKey(date, c.id, b))));
+            const changed = monthDayUI.hasChanges(state, date);
             const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
-            const schoolCount = schoolActivities(date, children).length;
+            const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
             return `<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''}" data-action="open-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Toca per veure les franges i els fills.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}${schoolCount ? `<span class="school-month-count" title="${schoolCount} activitats escolars">${schoolCount}</span>` : ''}</span>
-        ${miniBands(date, children, bands)}
+        ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
       </button>`;
         });
@@ -663,7 +672,7 @@ function calendarPage() {
         content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
     }
     const visibleNames = bands.map(b => BAND_NAMES[b]).join(' · ');
-    return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView === 'day' || calendarView === 'week' ? 'Pernoctes i activitats per fill durant les 24 hores.' : 'Responsables per fill i moment del dia.'}</p></div>
+    return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView === 'day' || calendarView === 'week' ? 'Pernoctes i activitats per fill durant les 24 hores.' : 'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
     <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button></div></header>
     <section class="calendar-card" aria-label="Calendari familiar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="Anterior">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="Següent">${icon('chevronRight', 18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>
@@ -677,8 +686,8 @@ function calendarPage() {
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Files de dalt a baix: ${visibleNames || 'cap franja visible'}. Columnes: ${children.map(c => escapeHtml(c.name)).join(' · ') || 'cap fill visible'}.</div>
-    <div class="tip-card">${icon('info', 18)}<span>Les nits segueixen la rotació. La resta de franges són independents i, si no tenen un responsable o escola assignats, queden sense color. Toca una casella per veure'n el detall i editar-la.</span></div>`}`;
+    ${calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Les miniatures mostren 00:00–24:00 amb els fills en columnes. Toca un dia per editar franges puntuals sense canviar la rotació.</div>
+    <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes; les activitats escolars se superposen. Les franges puntuals s'editen obrint el dia.</span></div>`}`;
 }
 function rotationPage() {
     const r = rotationDraft ?? state.rotation;
@@ -898,7 +907,10 @@ function sheetMarkup() {
         const date = sheet.date, bdays = birthdays(date).filter(c => state.preferences.visibleChildren.includes(c.id));
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${bdays.length ? `<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c => `${c.name} fa ${birthdayAge(date, c)} anys`).join(' · '))}</div>` : ''}
-    ${fullAgenda(date)}${schoolInfoForDay(date)}${schoolTimeline(date, activeChildren(), undefined, true)}<p class="settings-note">Toca un responsable per editar aquella franja i aquell fill. La nit es basa en la rotació; les altres franges no s'hereten de la nit.</p>`;
+    ${schoolInfoForDay(date)}${monthDayUI.detail(date, fullDate(date), activeChildren(), monthData(date, activeChildren()).nights, monthData(date, activeChildren()).activities, monthData(date, activeChildren()).slots, state)}`;
+    }
+    else if (sheet?.type === 'daySlotForm') {
+        contents = monthDayUI.form(sheet.date, sheet.childId, sheet.slotId, state.children, state.guardians, state);
     }
     else if (sheet?.type === 'schoolActivity') {
         const { date, childId, schoolId, sessionId } = sheet;
@@ -935,7 +947,7 @@ function sheetMarkup() {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Tria un tutor</h2><p class="sheet-subtitle">${escapeHtml(c?.name ?? 'Fill')} · Dia ${index + 1} · ${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${state.guardians.map(g => `<button class="option ${g.id === current ? 'selected' : ''}" data-action="rotation-set-cell" data-child="${escapeHtml(childId)}" data-index="${index}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>${g.id === current ? icon('check', 17) : ''}</button>`).join('')}`;
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : ''}" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
@@ -1013,6 +1025,7 @@ function removeGuardian(id) {
         state.overrides[key] = alternate; });
     Object.keys(state.bandOverrides).forEach(key => { if (state.bandOverrides[key] === id)
         state.bandOverrides[key] = alternate; });
+    monthDayUI.removeGuardian(state.daySlots, id, alternate);
     state.preferences.visibleGuardians = state.preferences.visibleGuardians.filter(x => x !== id);
     rotationDraft = null;
     update();
@@ -1032,6 +1045,7 @@ function removeChild(id) {
         delete state.overrides[key]; });
     Object.keys(state.bandOverrides).forEach(key => { if (key.split('|')[1] === id)
         delete state.bandOverrides[key]; });
+    monthDayUI.removeChild(state.daySlots, id);
     state.preferences.visibleChildren = state.preferences.visibleChildren.filter(x => x !== id);
     rotationDraft = null;
     update();
@@ -1320,11 +1334,55 @@ function clickAction(button) {
             render();
             break;
         }
-        case 'open-day':
-            selectedDate = button.dataset.date;
-            sheet = { type: 'day', date: selectedDate };
+        case 'open-day': {
+            const date = button.dataset.date ?? '';
+            if (isValidDate(date)) {
+                selectedDate = date;
+                sheet = { type: 'day', date };
+                render();
+            }
+            break;
+        }
+        case 'day-slot-add': {
+            const date = button.dataset.date ?? '';
+            if (!isValidDate(date))
+                break;
+            sheet = { type: 'daySlotForm', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '' };
             render();
             break;
+        }
+        case 'day-slot-edit': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', slotId = button.dataset.slot ?? '';
+            if (!isValidDate(date) || !childById(childId) || !monthDayUI.find(state, date, childId, slotId))
+                break;
+            sheet = { type: 'daySlotForm', date, childId, slotId };
+            render();
+            break;
+        }
+        case 'day-slot-delete': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', slotId = button.dataset.slot ?? '';
+            if (!isValidDate(date) || !childById(childId) || !monthDayUI.find(state, date, childId, slotId))
+                break;
+            if (!confirm('Vols eliminar aquesta franja puntual?'))
+                break;
+            monthDayUI.remove(state, date, childId, slotId);
+            sheet = { type: 'day', date };
+            update();
+            notify('Franja eliminada');
+            break;
+        }
+        case 'day-restore': {
+            const date = button.dataset.date ?? '';
+            if (!isValidDate(date) || !monthDayUI.hasChanges(state, date))
+                break;
+            if (!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))
+                break;
+            monthDayUI.restore(state, date);
+            sheet = { type: 'day', date };
+            update();
+            notify('Dia restaurat segons la rotació');
+            break;
+        }
         case 'edit-band': {
             const band = button.dataset.band ?? '', date = button.dataset.date ?? '', childId = button.dataset.child ?? '';
             if (isTimeBand(band) && isValidDate(date) && childById(childId)) {
@@ -1511,7 +1569,23 @@ document.addEventListener('click', event => {
 });
 document.addEventListener('submit', event => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.dataset.schoolForm)
+    if (!(form instanceof HTMLFormElement))
+        return;
+    if (form.dataset.daySlotForm) {
+        event.preventDefault();
+        const date = form.dataset.date ?? '', slotId = form.dataset.slot ?? '';
+        const values = new FormData(form), childId = slotId ? form.dataset.child ?? '' : String(values.get('childId') ?? '');
+        const error = monthDayUI.save(state, date, childId, slotId, values, newId);
+        if (error) {
+            notify(error);
+            return;
+        }
+        sheet = { type: 'day', date };
+        update();
+        notify('Franja puntual desada');
+        return;
+    }
+    if (!form.dataset.schoolForm)
         return;
     event.preventDefault();
     const values = new FormData(form), get = (key) => String(values.get(key) ?? '').trim();
