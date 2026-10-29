@@ -37,6 +37,16 @@ test('no accepta dates inexistents, hores invàlides, solapaments ni responsable
  assert.throws(()=>ui.clean(bad([{id:'a',startTime:'09:00',endTime:'10:00',guardianId:'wrong'}]),['elna'],['pare']));
  assert.throws(()=>ui.clean(bad([{id:'a',startTime:'09:00',endTime:'10:00',guardianId:'pare'},{id:'b',startTime:'09:30',endTime:'11:00',guardianId:'mare'}]),['elna'],['pare','mare']));
 });
+test('accepta franges que arriben exactament a les 24:00, però no que hi comencen',()=>{
+ const s=state();
+ assert.equal(ui.save(s,date,'elna','',params('19:00','24:00'),newId),'');
+ assert.equal(s.daySlots[date+'|elna'][0].endTime,'24:00');
+ assert.match(ui.save(s,date,'blai','',params('24:00','24:00'),newId),/posterior/);
+ assert.deepEqual(Object.keys(ui.clean(JSON.parse(JSON.stringify(s.daySlots)),['elna','blai'],['pare','mare'])),[date+'|elna']);
+ const form=ui.form(date,'elna',s.daySlots[date+'|elna'][0].id,children,guardians,s);
+ assert.match(form,/name="endAtMidnight" value="yes" checked/);
+ assert.match(ts,/values\.has\('endAtMidnight'\)/);
+});
 test('edita només la data indicada, detecta solapaments i permet eliminar/restaurar',()=>{
  const s=state();
  assert.equal(ui.save(s,date,'elna','',params('09:15','11:30'),newId),'');
