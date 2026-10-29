@@ -471,7 +471,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 
 /* Resum mensual llegible fins i tot en amplades petites. */
 .school-month-count {font-size:calc(10px * var(--font-scale,1));line-height:1.2;letter-spacing:-.3px;}
-.school-month-count::before {content:'🏫';font-size:calc(9px * var(--font-scale,1));padding-right:1px;}
 @media(max-width:560px) {.school-month-count {font-size:calc(9px * var(--font-scale,1));}}
 
 /* v0.4.0 · Vista diària de 24 h, scroll intern 00:00–24:00 i franges de pernocta */
@@ -674,4 +673,27 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 }
 @media(max-width:360px) {
   .weekdays,.month-grid {grid-template-columns:27px repeat(7,minmax(0,1fr));}
+}
+
+/* v0.5.7 · Cap pictograma d'escola al mes i data més visible. */
+.month-grid .day-number {
+  width:30px;
+  height:30px;
+  font-size:calc(18px * var(--font-scale,1));
+  font-weight:800;
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:560px) {
+  .month-grid .day-number {
+    width:26px;
+    height:26px;
+    font-size:calc(16px * var(--font-scale,1));
+  }
+}
+@media(max-width:360px) {
+  .month-grid .day-number {
+    width:24px;
+    height:24px;
+    font-size:calc(15px * var(--font-scale,1));
+  }
 }
