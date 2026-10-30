@@ -50,7 +50,7 @@
       }).join('');
       const extras=rotatingSlots.filter(item=>item.childId===child.id&&item.visible).map(item=>{
         const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
-        return `<button type="button" class="day-extra-block" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
+        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
       }).join('');
       return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');

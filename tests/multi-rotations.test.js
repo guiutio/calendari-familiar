@@ -112,7 +112,7 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  const extra=core.slots(s,'2026-10-29',children,guardians,['pare','mare']);
  const night={elna:[],blai:[]};
  const day=ctx.window.dayTimelineUI.render('2026-10-29','Dijous',children,[],night,'19:00',50,{},extra);
- assert.match(day,/class="day-extra-block"/);assert.match(day,/data-action="edit-extra-slot" data-date="2026-10-29"/);
+ assert.match(day,/class="day-extra-block with-guardian"/);assert.match(day,/data-action="edit-extra-slot" data-date="2026-10-29"/);
  const week=ctx.window.dayTimelineUI.renderWeek('2026-10-26',[{date:'2026-10-29',label:'Dj',activities:[],nightSegments:night,rotatingSlots:extra}],children,50,'2026-10-29','2026-10-29');
  assert.match(week,/day-extra-block/);
  const mini=ctx.window.monthDayUI.mini(children,night,[],{},extra);
@@ -121,10 +121,10 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(ts,/data-action="night-date-time"/);
  assert.match(ts,/data-action="rotation-pattern-time"/);
  assert.match(ts,/rotationEditor\.render\(state,extraRotationOpen,extraRotationUnits\)/);
- assert.match(html,/rotation-patterns\.js\?v=0\.6\.0/);
- assert.match(html,/rotation-editor\.js\?v=0\.6\.0/);
- assert.match(sw,/rotation-patterns\.js\?v=0\.6\.0/);
- assert.match(sw,/rotation-editor\.js\?v=0\.6\.0/);
+ assert.match(html,/rotation-patterns\.js\?v=0\.6\.1/);
+ assert.match(html,/rotation-editor\.js\?v=0\.6\.1/);
+ assert.match(sw,/rotation-patterns\.js\?v=0\.6\.1/);
+ assert.match(sw,/rotation-editor\.js\?v=0\.6\.1/);
 });
 
 test('les rotacions complementàries poden excloure dissabtes, diumenges o dies individuals del patró',()=>{
@@ -163,4 +163,55 @@ test('les opcions de còpia són bidireccionals a cada rotació',()=>{
  editor.click(s,'extra-copy',{rotation:'recollida',child:'elna',from:'blai'},()=>'', '2026-10-26',()=>true);
  assert.equal(r.assignments.elna[0],'pare');
  assert.equal(r.assignments.blai[0],'pare');
+});
+
+test('una franja addicional amb tutor ocupa tota l’amplada; sense tutor deixa veure la responsabilitat',()=>{
+ const s=state(),pickup=rotation('pickup','Recollida escola',7,{elna:Array(7).fill('mare'),blai:Array(7).fill('')});
+ s.extraRotations=[pickup];
+ const date='2026-10-29';
+ const assertWidths=()=>{
+   const slots=core.slots(s,date,children,guardians,['mare','pare']);
+   assert.equal(slots.length,2);
+   assert.equal(slots.find(x=>x.childId==='elna').guardianId,'mare');
+   assert.equal(slots.find(x=>x.childId==='blai').guardianId,'');
+   const nights={elna:[],blai:[]};
+   const day=ctx.window.dayTimelineUI.render(date,'Dijous',children,[],nights,'19:00',50,{},slots);
+   const week=ctx.window.dayTimelineUI.renderWeek('2026-10-26',[
+     {date,label:'Dijous',activities:[],nightSegments:nights,rotatingSlots:slots}
+   ],children,50,date,date);
+   const miniature=ctx.window.monthDayUI.mini(children,nights,[],{},slots);
+   for(const output of [day,week]){
+     assert.match(output,/class="day-extra-block with-guardian" data-action="edit-extra-slot"[^>]+data-child="elna"/);
+     assert.match(output,/class="day-extra-block without-guardian" data-action="edit-extra-slot"[^>]+data-child="blai"/);
+     assert.equal((output.match(/data-action="edit-extra-slot"/g)||[]).length,2);
+   }
+   assert.match(miniature,/class="month-mini-extra with-guardian"/);
+   assert.match(miniature,/class="month-mini-extra without-guardian"/);
+   assert.equal((miniature.match(/class="month-mini-extra/g)||[]).length,2);
+ };
+ assertWidths();
+ // Una excepció per data pot deixar una franja sense tutor, sense canviar-ne les hores.
+ const params=new Map([['startTime','16:15'],['endTime','17:45'],['guardianId','']]);
+ assert.equal(editor.saveDate(s,date,'pickup','elna',params),'');
+ const changed=core.slots(s,date,children,guardians,['mare','pare']);
+ assert.equal(changed.find(x=>x.childId==='elna').guardianId,'');
+ const mini=ctx.window.monthDayUI.mini(children,{elna:[],blai:[]},[],{},changed);
+ assert.equal((mini.match(/class="month-mini-extra without-guardian"/g)||[]).length,2);
+ const day=ctx.window.dayTimelineUI.render(date,'Dijous',children,[],{elna:[],blai:[]},'19:00',50,{},changed);
+ assert.equal((day.match(/class="day-extra-block without-guardian"/g)||[]).length,2);
+ // Restaurar torna a mostrar el tutor de la rotació (i amplada completa).
+ core.clearDate(s,date);
+ assertWidths();
+});
+
+test('el posicionament de les barres mensuals i les amplades de Dia/Setmana es defineixen en CSS',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.day-extra-block \{[^\n]*left:23%;width:calc\(77% - 4px\)/);
+ assert.match(css,/\.day-extra-block\.with-guardian \{left:0;width:100%;\}/);
+ assert.match(css,/\.month-mini-extra \{display:block;position:absolute;z-index:4;left:48%;right:0/);
+ assert.match(css,/\.month-mini-extra\.with-guardian \{left:0;right:0;\}/);
+ assert.match(html,/month-day-ui\.js\?v=0\.6\.1/);
+ assert.match(html,/day-timeline\.js\?v=0\.6\.1/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.6\.1/);
+ assert.match(sw,/day-timeline\.js\?v=0\.6\.1/);
 });
