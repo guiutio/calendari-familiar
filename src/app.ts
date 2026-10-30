@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.6.2';
+const APP_VERSION = '0.6.3';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -643,13 +643,11 @@ function rotationPage(){
     <div class="field"><label for="rotation-length">Durada de la rotació</label><div class="duration-row"><input id="rotation-length" type="number" min="1" max="${rotationUnit==='weeks'?MAX_ROTATION_DAYS/7:MAX_ROTATION_DAYS}" step="1" inputmode="numeric" value="${rotationUnit==='weeks'?Math.ceil(r.length/7):r.length}" data-action="rotation-length" aria-label="Nombre de dies o setmanes" /><select id="rotation-unit" data-action="rotation-unit" aria-label="Unitat de la rotació"><option value="days" ${rotationUnit==='days'?'selected':''}>dies</option><option value="weeks" ${rotationUnit==='weeks'?'selected':''}>setmanes</option></select></div></div></div>
     <div class="field rotation-change-field"><label for="rotation-change-time">Hora de canvi de pernocta</label><input id="rotation-change-time" type="time" data-action="rotation-change-time" value="${validChangeTime(r.changeTime)}" /><p class="settings-note">Per defecte, 19:00. La nit assignada a una data va des d’aquesta hora fins a la mateixa hora de l’endemà.</p></div>
     <p class="duration-help">${r.length} ${r.length===1?'dia':'dies'} de rotació · ${Math.ceil(r.length/7)} ${Math.ceil(r.length/7)===1?'setmana':'setmanes'} ${r.length%7===0?'':'(l’última incompleta)'}. Les nits afegides hereten el patró actual fins que les canviïs.</p>
-    <div class="rotation-pattern-times"><h3 class="section-title">Hora de canvi per dia del patró</h3><p class="settings-note">Per defecte s'usa l'hora general; aquí pots canviar-la per a cada dia de la rotació.</p>
-    <div class="pattern-time-grid">${Array.from({length:r.length},(_,i)=>`<label class="field pattern-time-field">Dia ${i+1} · ${weekdays[(parseDate(addDays(r.startDate,i)).getDay()+6)%7]}<input type="time" data-action="rotation-pattern-time" data-index="${i}" value="${escapeHtml(nightPatternDraft[i]??r.changeTime)}"></label>`).join('')}</div></div>
-    <hr><div class="panel-header"><h2 class="section-title">Assignació per fill</h2><div class="action-row"><button class="secondary-btn" data-action="rotation-same">${icon('copy',14)} Tots igual</button><button class="secondary-btn" data-action="rotation-show-all">${rotationShowAll?'Vista compacta':'Mostra tots'}</button></div></div><p class="section-description">Toca cada casella per triar el tutor d’aquella nit. La lletra i el color corresponen al tutor.</p>
+    <hr><div class="panel-header"><h2 class="section-title">Assignació per fill</h2><div class="action-row"><button class="secondary-btn" data-action="rotation-same">${icon('copy',14)} Tots igual</button><button class="secondary-btn" data-action="rotation-show-all">${rotationShowAll?'Vista compacta':'Mostra tots'}</button></div></div><p class="section-description">Toca cada casella per triar el tutor i l’hora de canvi de responsabilitat d’aquella nit. La lletra i el color corresponen al tutor.</p>
     ${state.children.filter((c,i)=>rotationShowAll||i===0||state.children.some(first=>JSON.stringify(r.assignments[first.id])!==JSON.stringify(r.assignments[state.children[0]!.id]))).map((c,cIndex)=>`<div class="rotation-child"><div class="rotation-child-header"><strong>${escapeHtml(c.name)}</strong>${rotationShowAll?state.children.filter(other=>other.id!==c.id).map(other=>`<button class="soft-btn" data-action="rotation-copy" data-child="${escapeHtml(c.id)}" data-from="${escapeHtml(other.id)}">Copiar de ${escapeHtml(other.name)}</button>`).join(''):''}</div>
     ${Array.from({length:Math.ceil(r.length/7)},(_,week)=>`<div class="rotation-week"><div class="rotation-week-header"><div class="rotation-week-title">Setmana ${week+1}</div><button class="week-fill-btn" data-action="rotation-week-fill" data-child="${escapeHtml(c.id)}" data-week="${week}" aria-label="Assigna tota la setmana ${week+1} de ${escapeHtml(c.name)}">Assigna setmana</button></div><div class="rotation-days">${Array.from({length:Math.min(7,r.length-week*7)},(_,day)=>{
-      const i=week*7+day,g=guardian(r.assignments[c.id]?.[i]??'');
-      return `<button class="rotation-cell" data-action="rotation-cell" data-child="${escapeHtml(c.id)}" data-index="${i}" aria-label="${escapeHtml(c.name)}, dia ${i+1}, ${escapeHtml(g?.name??'sense tutor')}"><span class="small-day">${weekdays[(parseDate(addDays(r.startDate,i)).getDay()+6)%7]}</span><span class="guardian-initial" style="background:${g?.color??'#edf0f4'}">${escapeHtml(initial(g?.name??'?'))}</span></button>`;
+      const i=week*7+day,g=guardian(r.assignments[c.id]?.[i]??''),customTime=nightPatternDraft[i];
+      return `<button class="rotation-cell" data-action="rotation-cell" data-child="${escapeHtml(c.id)}" data-index="${i}" aria-label="${escapeHtml(c.name)}, dia ${i+1}, ${escapeHtml(g?.name??'sense tutor')}, canvi a les ${escapeHtml(customTime??r.changeTime)}"><span class="small-day">${weekdays[(parseDate(addDays(r.startDate,i)).getDay()+6)%7]}</span><span class="guardian-initial" style="background:${g?.color??'#edf0f4'}">${escapeHtml(initial(g?.name??'?'))}</span>${customTime?`<span class="rotation-cell-time">${escapeHtml(customTime)}</span>`:''}</button>`;
     }).join('')}</div></div>`).join('')}</div>`).join('')}
     <div class="action-row"><button class="primary-btn" data-action="rotation-save">Desa el patró</button>${rotationDraft?'<button class="soft-btn" data-action="rotation-cancel">Descarta canvis</button>':''}</div>
     <p class="settings-note">Les excepcions de dates concretes tenen prioritat sobre el patró. Si canvies el patró, les excepcions es mantenen.</p></section>
@@ -880,8 +878,15 @@ function sheetMarkup(){
   } else if(sheet?.type==='rotationCell'){
     const {childId,index}=sheet,c=childById(childId),r=rotationDraft??state.rotation;
     const current=r.assignments[childId]?.[index],date=addDays(r.startDate,index);
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Tria un tutor</h2><p class="sheet-subtitle">${escapeHtml(c?.name??'Fill')} · Dia ${index+1} · ${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
-    ${state.guardians.map(g=>`<button class="option ${g.id===current?'selected':''}" data-action="rotation-set-cell" data-child="${escapeHtml(childId)}" data-index="${index}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>${g.id===current?icon('check',17):''}</button>`).join('')}`;
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Tutor i hora de canvi</h2><p class="sheet-subtitle">${escapeHtml(c?.name??'Fill')} · Dia ${index+1} · ${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    <form data-rotation-cell-form="true" data-child="${escapeHtml(childId)}" data-index="${index}" class="rotation-day-form">
+      <div class="sheet-section-label">Tutor responsable</div>
+      ${state.guardians.map(g=>`<label class="option rotation-tutor-choice"><input class="rotation-guardian-radio" type="radio" name="guardianId" value="${escapeHtml(g.id)}" ${g.id===current?'checked':''}><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span><span class="rotation-choice-check">${icon('check',17)}</span></label>`).join('')}
+      <label class="option rotation-tutor-choice"><input class="rotation-guardian-radio" type="radio" name="guardianId" value="" ${!current?'checked':''}><span class="option-left">Sense assignar</span><span class="rotation-choice-check">${icon('check',17)}</span></label>
+      <div class="field rotation-day-time"><label for="rotation-day-change-time">Hora de canvi de responsabilitat</label><input id="rotation-day-change-time" name="changeTime" type="time" value="${escapeHtml(nightPatternDraft[index]??r.changeTime)}" required><p class="settings-note">Hora general: ${escapeHtml(r.changeTime)}. Si la deixes igual, aquest dia utilitzarà l’hora general.</p></div>
+      <div class="action-row"><button type="submit" class="primary-btn">Aplica al patró</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div>
+      <p class="settings-note">Per confirmar tots els canvis, prem «Desa el patró» a Rotacions.</p>
+    </form>`;
   }
   return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type==='day'?'month-day-sheet':''}" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type==='filters'?'Filtres':'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
@@ -1136,11 +1141,6 @@ function clickAction(button:HTMLElement){
       for(let i=week*7;i<end;i++)rotationDraft!.assignments[childId]![i]=gId;
       sheet=null;render();notify('Setmana assignada al tutor');break;
     }
-    case 'rotation-set-cell':{
-      if(!rotationDraft)rotationDraft=JSON.parse(JSON.stringify(state.rotation)) as Rotation;
-      rotationDraft!.assignments[button.dataset.child!]![Number(button.dataset.index)]=button.dataset.guardian!;
-      sheet=null;render();break;
-    }
     case 'rotation-show-all':rotationShowAll=!rotationShowAll;render();break;
     case 'rotation-same':{
       if(!rotationDraft)rotationDraft=JSON.parse(JSON.stringify(state.rotation)) as Rotation;
@@ -1193,6 +1193,19 @@ document.addEventListener('click',event=>{
 document.addEventListener('submit',event=>{
  const form=event.target;
  if(!(form instanceof HTMLFormElement))return;
+  if(form.dataset.rotationCellForm){
+    event.preventDefault();
+    const childId=form.dataset.child??'',index=Number(form.dataset.index),r=rotationDraft??state.rotation;
+    if(!childById(childId)||!Number.isInteger(index)||index<0||index>=r.length){notify('Dia de rotació incorrecte');return;}
+    const values=new FormData(form),guardianId=String(values.get('guardianId')??''),changeTime=String(values.get('changeTime')??'');
+    if(guardianId&&!guardian(guardianId)){notify('Selecciona un tutor vàlid');return;}
+    if(!rotationPatterns.validClock(changeTime)){notify('Indica una hora de canvi vàlida');return;}
+    if(!rotationDraft)rotationDraft=JSON.parse(JSON.stringify(state.rotation)) as Rotation;
+    rotationDraft!.assignments[childId]![index]=guardianId;
+    if(changeTime===rotationDraft!.changeTime)delete nightPatternDraft[index];
+    else nightPatternDraft[index]=changeTime;
+    sheet=null;render();notify('Dia actualitzat · prem «Desa el patró»');return;
+  }
   if(form.dataset.extraDateForm){
     event.preventDefault();
     const date=form.dataset.date??'',rotationId=form.dataset.rotation??'',childId=form.dataset.child??'';
@@ -1328,7 +1341,6 @@ document.addEventListener('change',event=>{
   }
   if(action==='font-size'){const chosen=FONT_SIZE_OPTIONS[Number(target.value)];if(chosen){state.preferences.fontSize=chosen;applyFontSize();saveState();}return;}
   if(action==='rotation-change-time'&&rotationDraft){rotationDraft.changeTime=validChangeTime(target.value);render();}
-  else if(action==='rotation-pattern-time'&&rotationDraft){const i=Number(target.dataset.index);if(i>=0&&i<rotationDraft.length){const time=validChangeTime(target.value);if(time===rotationDraft.changeTime)delete nightPatternDraft[i];else nightPatternDraft[i]=time;render();}}
   else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);sheet=returnFromDetail(target.dataset.date!);update();}
   else if(target.dataset.extraChange){const result=rotationEditor.change(state,target.dataset,target.value,extraRotationUnits);if(result?.error){notify(result.error);render();}else if(result?.save)update();else render();}
   else if(action==='rotation-start'&&rotationDraft&&isValidDate(target.value)){rotationDraft.startDate=target.value;render();}
