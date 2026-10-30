@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.6.3';
+const APP_VERSION = '0.6.4';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -967,6 +967,9 @@ function sheetMarkup() {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
+    else if (sheet?.type === 'extraCell') {
+        contents = rotationEditor.patternDayForm(state, sheet.rotationId, sheet.childId, sheet.index);
+    }
     else if (sheet?.type === 'extraDate') {
         contents = sheet.rotationId ? rotationEditor.dateForm(state, sheet.date, sheet.rotationId, sheet.childId) : rotationEditor.datePicker(state, sheet.date);
     }
@@ -1635,12 +1638,19 @@ function clickAction(button) {
             notify('Patró copiat');
             break;
         }
+        case 'extra-cell': {
+            const rotationId = button.dataset.rotation ?? '', childId = button.dataset.child ?? '', index = Number(button.dataset.index);
+            const rotation = state.extraRotations.find(r => r.id === rotationId);
+            if (!rotation || !rotation.childIds.includes(childId) || !Number.isInteger(index) || index < 0 || index >= rotation.length)
+                break;
+            sheet = { type: 'extraCell', rotationId, childId, index };
+            render();
+            break;
+        }
         case 'extra-add':
         case 'extra-toggle':
         case 'extra-delete':
         case 'extra-child':
-        case 'extra-day-toggle':
-        case 'extra-cell':
         case 'extra-week':
         case 'extra-all':
         case 'extra-copy': {
@@ -1745,6 +1755,18 @@ document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement))
         return;
+    if (form.dataset.extraPatternDayForm) {
+        event.preventDefault();
+        const error = rotationEditor.savePatternDay(state, form.dataset.rotation ?? '', form.dataset.child ?? '', Number(form.dataset.index), new FormData(form));
+        if (error) {
+            notify(error);
+            return;
+        }
+        sheet = null;
+        update();
+        notify('Dia del patró actualitzat');
+        return;
+    }
     if (form.dataset.rotationCellForm) {
         event.preventDefault();
         const childId = form.dataset.child ?? '', index = Number(form.dataset.index), r = rotationDraft ?? state.rotation;
