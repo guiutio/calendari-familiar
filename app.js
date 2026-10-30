@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.9';
+const APP_VERSION = '0.5.10';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -601,7 +601,7 @@ function weekTimeline(start, children) {
     });
     if (!children.length)
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="settings"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
-    return dayTimelineUI.renderWeek(start, days, children, validTimelineZoom(state.preferences.timelineZoom));
+    return dayTimelineUI.renderWeek(start, days, children, validTimelineZoom(state.preferences.timelineZoom), selectedDate, localDate(new Date()));
 }
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
@@ -674,7 +674,7 @@ function calendarPage() {
             const changed = monthDayUI.hasChanges(state, date);
             const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
             const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
-            return `${iso ? `<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date, 6)}">${iso.week}</button>` : ''}<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
+            return `${iso ? `<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date, 6)}">${iso.week}</button>` : ''}<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
         ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
@@ -986,7 +986,9 @@ function render() {
     const previousTimeline = $app.querySelector('.day-timeline-viewport');
     const timelineKey = tab === 'calendar' ? (calendarView === 'day' ? `day:${selectedDate}` : calendarView === 'week' ? `week:${weekStart(selectedDate)}` : '') : '';
     const keepTimeline = Boolean(timelineKey && previousTimeline?.dataset.timelineKey === timelineKey);
-    const timelineLeft = keepTimeline ? previousTimeline.scrollLeft : 0;
+    const focusDate = calendarView === 'week' ? selectedDate : '';
+    const keepHorizontalScroll = keepTimeline && (calendarView !== 'week' || previousTimeline?.dataset.focusDate === focusDate);
+    const timelineLeft = keepHorizontalScroll ? previousTimeline.scrollLeft : 0;
     const oldScale = Number(previousTimeline?.dataset.pxPerMinute ?? 0);
     const previousMain = $app.querySelector('.main-area');
     const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
@@ -1012,6 +1014,15 @@ function render() {
         // Dia i Setmana: l'alçada completa és part del scroll principal, no d'un scroll intern.
         timeline.scrollTop = 0;
         timeline.scrollLeft = timelineLeft;
+        if (calendarView === 'week' && !keepHorizontalScroll) {
+            // En entrar a Setmana o canviar el dia de referència, alinea'l després de l'eix d'hores.
+            // Si no canvia el focus, conserva el scroll manual de l'usuari.
+            const header = Array.from(timeline.querySelectorAll('.week-day-header')).find(el => el.dataset.date === focusDate);
+            if (header) {
+                const offset = header.getBoundingClientRect().left - timeline.getBoundingClientRect().left + timeline.scrollLeft - 52;
+                timeline.scrollLeft = Math.max(0, Math.min(timeline.scrollWidth - timeline.clientWidth, offset));
+            }
+        }
         if (main && Number.isFinite(minuteAtCenter) && newScale > 0 && newScale !== oldScale) {
             const newOffset = main.scrollTop + timeline.getBoundingClientRect().top - main.getBoundingClientRect().top;
             main.scrollTop = Math.max(0, newOffset + minuteAtCenter * newScale - main.clientHeight / 2);
@@ -1391,7 +1402,8 @@ function clickAction(button) {
             const date = button.dataset.date ?? '';
             if (!isValidDate(date))
                 break;
-            selectedDate = weekStart(date);
+            const start = weekStart(date), today = localDate(new Date());
+            selectedDate = today >= start && today <= addDays(start, 6) ? today : start;
             calendarView = 'week';
             sheet = null;
             render();
