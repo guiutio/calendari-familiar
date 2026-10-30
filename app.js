@@ -1015,8 +1015,9 @@ function render() {
         timeline.scrollTop = 0;
         timeline.scrollLeft = timelineLeft;
         if (calendarView === 'week' && !keepHorizontalScroll) {
-            // En entrar a Setmana o canviar el dia de referència, alinea'l després de l'eix d'hores.
-            // Si no canvia el focus, conserva el scroll manual de l'usuari.
+            // Quan s'entra a Setmana o canvia el dia de referència, situa'l al costat de l'eix d'hores.
+            // No forcem el scroll en tornar a pintar la mateixa setmana (zoom, filtres, edició):
+            // així es preserva el desplaçament horitzontal que l'usuari ja ha fet manualment.
             const header = Array.from(timeline.querySelectorAll('.week-day-header')).find(el => el.dataset.date === focusDate);
             if (header) {
                 const offset = header.getBoundingClientRect().left - timeline.getBoundingClientRect().left + timeline.scrollLeft - 52;
