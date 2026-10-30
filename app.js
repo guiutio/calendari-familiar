@@ -1642,6 +1642,7 @@ function clickAction(button) {
         case 'extra-toggle':
         case 'extra-delete':
         case 'extra-child':
+        case 'extra-day-toggle':
         case 'extra-cell':
         case 'extra-week':
         case 'extra-all':
