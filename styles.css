@@ -795,10 +795,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .extra-kids {display:flex;flex-wrap:wrap;gap:6px;}
 .extra-kids .option {width:auto;min-height:38px;}
 .extra-disabled {display:flex;gap:9px;align-items:center;margin:12px 0;font-size:calc(13px * var(--font-scale,1));}
-.rotation-pattern-times {margin-top:15px;}
-.pattern-time-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:7px;margin-top:10px;}
-.pattern-time-field {display:flex;flex-direction:column;gap:4px;font-size:calc(11px * var(--font-scale,1));}
-.pattern-time-field input {min-width:0;max-width:100%;box-sizing:border-box;}
 .day-extra-block {position:absolute;left:23%;width:calc(77% - 4px);z-index:4;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;align-items:start;text-align:left;gap:2px;padding:3px 5px;border:2px solid #fff;border-left:5px solid color-mix(in srgb,var(--extra-color) 80%,#152a45);border-radius:5px;background:color-mix(in srgb,var(--extra-color) 60%,white);color:#17314a;font-size:calc(10px * var(--font-scale,1));font-weight:800;cursor:pointer;}
 .day-extra-block small {font-size:calc(9px * var(--font-scale,1));font-weight:650;}
 .day-extra-block:focus-visible {outline:3px solid #1e4e93;outline-offset:1px;z-index:7;}
@@ -808,7 +804,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .month-mini-extra.with-guardian {left:0;right:0;}
 :root[data-theme="dark"] .day-extra-block {background:color-mix(in srgb,var(--extra-color) 58%,#19324f);color:#f4f8ff;border-color:#192d45;}
 :root[data-theme="dark"] .extra-editor input,:root[data-theme="dark"] .extra-editor select {color:#eaf3ff;}
-@media(max-width:560px){.pattern-time-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.day-extra-block {padding:1px 2px;font-size:calc(9px * var(--font-scale,1));}}
+@media(max-width:560px){.day-extra-block {padding:1px 2px;font-size:calc(9px * var(--font-scale,1));}}
 
 .extra-active-days{display:flex;flex-wrap:wrap;gap:5px;max-height:220px;overflow:auto;padding:6px 0;}
 .extra-day-toggle{min-height:34px;padding:5px 7px;border-radius:7px;border:1px solid #b2c7df;background:#e5f2ff;color:#1d477b;font-weight:700;font-size:calc(11px * var(--font-scale,1));cursor:pointer;}
@@ -816,3 +812,19 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .extra-day-toggle:focus-visible{outline:3px solid #2875c6;outline-offset:2px;}
 :root[data-theme="dark"] .extra-day-toggle{background:#304966;border-color:#749ec9;color:#eaf6ff;}
 :root[data-theme="dark"] .extra-day-toggle.inactive{background:#202e40;color:#a7b6c9;}
+
+/* v0.6.3 · Tutor i hora de canvi en una única edició de cada nit del patró. */
+.rotation-day-form {display:flex;flex-direction:column;gap:4px;}
+.rotation-tutor-choice {position:relative;cursor:pointer;}
+.rotation-guardian-radio {position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.rotation-tutor-choice .rotation-choice-check {visibility:hidden;display:flex;align-items:center;}
+.rotation-tutor-choice:has(.rotation-guardian-radio:checked) {background:#f3f7ff;border-color:#82a7d4;color:#244d7c;}
+.rotation-tutor-choice:has(.rotation-guardian-radio:checked) .rotation-choice-check {visibility:visible;}
+.rotation-tutor-choice:focus-within {outline:3px solid #618bcb;outline-offset:2px;}
+.rotation-day-time {margin:14px 0 8px;}
+.rotation-day-time input[type="time"] {min-height:48px;font-size:calc(17px * var(--font-scale,1));max-width:240px;}
+.rotation-day-time .settings-note {margin:3px 0 0;}
+.rotation-day-form .action-row {margin-top:10px;display:flex;flex-wrap:wrap;gap:9px;}
+.rotation-cell-time {font-size:calc(10px * var(--font-scale,1));line-height:1.1;font-weight:750;color:#416b9b;}
+:root[data-theme="dark"] .rotation-tutor-choice:has(.rotation-guardian-radio:checked) {background:#2c4260;border-color:#82a7d4;color:#ecf4ff;}
+:root[data-theme="dark"] .rotation-cell-time {color:#a7ceff;}
