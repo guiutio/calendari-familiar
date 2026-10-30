@@ -61,11 +61,11 @@
     const ticks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>
       `<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
     const childHeaders=children.map(c=>`<span class="week-child-label">${escape(c.name)}</span>`).join('');
-    const head=days.map(day=>`<div class="week-day-header ${day.date===todayDate?'today':''}" data-date="${escape(day.date)}">
+    const head=days.map(day=>`<div class="week-day-header${day.date===todayDate?' today':''}" data-date="${escape(day.date)}">
       <button type="button" class="week-date-button" data-action="show-calendar-day" data-date="${escape(day.date)}" ${day.date===todayDate?'aria-current="date"':''} title="Obre el dia ${escape(day.label)}">${escape(day.label)}</button>
       <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
     </div>`).join('');
-    const dayColumns=days.map(day=>`<div class="week-date-columns ${day.date===todayDate?'today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
+    const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
       ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots)}</div>`).join('');
     const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
       const parts=day.nightSegments[c.id]??[];
