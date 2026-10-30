@@ -806,3 +806,10 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .day-extra-block {background:color-mix(in srgb,var(--extra-color) 58%,#19324f);color:#f4f8ff;border-color:#192d45;}
 :root[data-theme="dark"] .extra-editor input,:root[data-theme="dark"] .extra-editor select {color:#eaf3ff;}
 @media(max-width:560px){.pattern-time-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.day-extra-block {padding:1px 2px;font-size:calc(9px * var(--font-scale,1));}}
+
+.extra-active-days{display:flex;flex-wrap:wrap;gap:5px;max-height:220px;overflow:auto;padding:6px 0;}
+.extra-day-toggle{min-height:34px;padding:5px 7px;border-radius:7px;border:1px solid #b2c7df;background:#e5f2ff;color:#1d477b;font-weight:700;font-size:calc(11px * var(--font-scale,1));cursor:pointer;}
+.extra-day-toggle.inactive{border-style:dashed;background:#f1f2f4;color:#798496;opacity:.84;}
+.extra-day-toggle:focus-visible{outline:3px solid #2875c6;outline-offset:2px;}
+:root[data-theme="dark"] .extra-day-toggle{background:#304966;border-color:#749ec9;color:#eaf6ff;}
+:root[data-theme="dark"] .extra-day-toggle.inactive{background:#202e40;color:#a7b6c9;}
