@@ -153,3 +153,14 @@ test('l’editor de canvi de pernocta afecta el dia visible, no la data de la ni
  assert.match(ts,/data-action="night-date-time" data-date="\$\{escapeHtml\(visibleDate\)\}"/);
  assert.match(ts,/nightChangeTime\(visibleDate\)/);
 });
+
+test('les opcions de còpia són bidireccionals a cada rotació',()=>{
+ const s=state(),r=rotation('recollida','Recollida',7,{elna:Array(7).fill('mare'),blai:Array(7).fill('pare')});
+ s.extraRotations=[r];
+ const rendered=editor.render(s,'recollida',{});
+ assert.match(rendered,/data-action="extra-copy" data-rotation="recollida" data-child="elna" data-from="blai"/);
+ assert.match(rendered,/data-action="extra-copy" data-rotation="recollida" data-child="blai" data-from="elna"/);
+ editor.click(s,'extra-copy',{rotation:'recollida',child:'elna',from:'blai'},()=>'', '2026-10-26',()=>true);
+ assert.equal(r.assignments.elna[0],'pare');
+ assert.equal(r.assignments.blai[0],'pare');
+});
