@@ -108,8 +108,8 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.5\.7/);
- assert.match(sw,/month-day-ui\.js\?v=0\.5\.7/);
+ assert.match(html,/month-day-ui\.js\?v=0\.5\.8/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.5\.8/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
@@ -163,8 +163,8 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
  assert.match(ts,/monthDayUI\.restore\(state,date\);sheet=null;update\(\)/);
  assert.match(app,/monthDayUI\.restore\(state, date\);\s*sheet = null;/);
- assert.match(html,/app\.js\?v=0\.5\.7/);
- assert.match(sw,/calendari-familiar-v0\.5\.7/);
+ assert.match(html,/app\.js\?v=0\.5\.8/);
+ assert.match(sw,/calendari-familiar-v0\.5\.8/);
 });
 
 test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',()=>{
@@ -173,7 +173,38 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
  assert.match(css,/\.month-grid \.day-number\s*\{\s*width:30px;\s*height:30px;\s*font-size:calc\(18px/);
  assert.match(css,/@media\(max-width:560px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:26px;\s*height:26px;\s*font-size:calc\(16px/);
  assert.match(css,/@media\(max-width:360px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:24px;\s*height:24px;\s*font-size:calc\(15px/);
- assert.match(ts,/schoolCount\?\`<span class="school-month-count"/);
- assert.match(html,/styles\.css\?v=0\.5\.7/);
- assert.match(sw,/calendari-familiar-v0\.5\.7/);
+ assert.doesNotMatch(ts,/school-month-count/);
+ assert.doesNotMatch(app,/school-month-count/);
+ assert.match(html,/styles\.css\?v=0\.5\.8/);
+ assert.match(sw,/calendari-familiar-v0\.5\.8/);
+});
+
+test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
+ const classes=(date,year,month,index,total,days)=>ui.outline(date,year,month,index,total,days).split(' ').filter(Boolean);
+ // Octubre 2026: comença dijous i acaba dissabte, sis files en total.
+ assert.deepEqual(classes('2026-09-30',2026,9,2,35,31),[]);
+ assert.deepEqual(classes('2026-10-01',2026,9,3,35,31),['month-current','month-edge-top','month-edge-left']);
+ assert.deepEqual(classes('2026-10-04',2026,9,6,35,31),['month-current','month-edge-top','month-edge-right']);
+ assert.deepEqual(classes('2026-10-05',2026,9,7,35,31),['month-current','month-edge-left']);
+ assert.deepEqual(classes('2026-10-26',2026,9,28,35,31),['month-current','month-edge-bottom','month-edge-left']);
+ assert.deepEqual(classes('2026-10-31',2026,9,33,35,31),['month-current','month-edge-bottom','month-edge-right']);
+ assert.deepEqual(classes('2026-11-01',2026,9,34,35,31),[]);
+ // Febrer 2021: el mes ocupa quatre setmanes completes.
+ assert.deepEqual(classes('2021-02-01',2021,1,0,28,28),['month-current','month-edge-top','month-edge-left']);
+ assert.deepEqual(classes('2021-02-28',2021,1,27,28,28),['month-current','month-edge-bottom','month-edge-right']);
+ // Febrer 2026: el primer dia és diumenge, amb tres vores.
+ assert.deepEqual(classes('2026-02-01',2026,1,6,35,28),['month-current','month-edge-top','month-edge-left','month-edge-right']);
+});
+test('el mes no mostra cap comptador escolar i destaca el límit amb una línia gruixuda',()=>{
+ assert.doesNotMatch(ts,/class="school-month-count"/);
+ assert.doesNotMatch(app,/class="school-month-count"/);
+ assert.match(ts,/monthDayUI\.outline\(date,viewYear,viewMonth,i/);
+ assert.match(app,/monthDayUI\.outline\(date, viewYear, viewMonth, i/);
+ assert.match(ts,/\$\{monthEdges\}" data-action="show-calendar-day"/);
+ assert.match(css,/\.month-grid\s*\{--month-outline:#205b99;\}/);
+ assert.match(css,/\.month-grid \.day-cell\.month-current\s*\{[\s\S]*?inset 0 4px/);
+ for(const edge of ['top','bottom','left','right'])assert.match(css,new RegExp('\\.month-grid \\.day-cell\\.month-edge-'+edge+' \\{--month-'+edge+':var\\(--month-outline\\);\\}'));
+ assert.match(css,/:root\[data-theme="dark"\] \.month-grid\s*\{--month-outline:#88baff;\}/);
+ assert.match(html,/styles\.css\?v=0\.5\.8/);
+ assert.match(sw,/calendari-familiar-v0\.5\.8/);
 });
