@@ -751,10 +751,10 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .week-date-columns.today .day-time-column {
   background:repeating-linear-gradient(
     to bottom,
-    #d0e4f8 0,
-    #d0e4f8 calc(var(--hour-height,48px) - 1px),
-    #80b0e0 calc(var(--hour-height,48px) - 1px),
-    #80b0e0 var(--hour-height,48px)
+    #285782 0,
+    #285782 calc(var(--hour-height,48px) - 1px),
+    #78a9d6 calc(var(--hour-height,48px) - 1px),
+    #78a9d6 var(--hour-height,48px)
   );
   border-left-color:#729dc9;
 }
@@ -769,10 +769,10 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .week-date-columns.today .day-time-column {
   background:repeating-linear-gradient(
     to bottom,
-    #406185 0,
-    #406185 calc(var(--hour-height,48px) - 1px),
-    #749bc1 calc(var(--hour-height,48px) - 1px),
-    #749bc1 var(--hour-height,48px)
+    #94c5ff 0,
+    #94c5ff calc(var(--hour-height,48px) - 1px),
+    #477aa8 calc(var(--hour-height,48px) - 1px),
+    #477aa8 var(--hour-height,48px)
   );
   border-left-color:#88baff;
 }
