@@ -28,7 +28,7 @@
          ${r.childIds.map((id,n)=>{
            const c=kids.find(k=>k.id===id),arr=r.assignments[id]??[];
            return `<div class="rotation-child"><div class="rotation-child-header"><strong>${escape(c?.name??id)}</strong>
-              ${n>0?`<button class="soft-btn" data-action="extra-copy" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-from="${escape(first)}">Copiar de ${escape(kids.find(x=>x.id===first)?.name??'primer fill')}</button>`:''}</div>
+              ${r.childIds.filter(fromId=>fromId!==id).map(fromId=>`<button class="soft-btn" data-action="extra-copy" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-from="${escape(fromId)}">Copiar de ${escape(kids.find(x=>x.id===fromId)?.name??fromId)}</button>`).join('')}</div>
              ${Array.from({length:Math.ceil(r.length/7)},(_,week)=>`<div class="rotation-week"><div class="rotation-week-header"><div class="rotation-week-title">Setmana ${week+1}</div><button class="week-fill-btn" data-action="extra-week" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-week="${week}" title="Aplica a tota la setmana el responsable del primer dia">Copia el primer dia a la setmana</button></div>
              <div class="rotation-days">${Array.from({length:Math.min(7,r.length-week*7)},(_,day)=>{
                const i=week*7+day,g=guardians.find(x=>x.id===arr[i]);
