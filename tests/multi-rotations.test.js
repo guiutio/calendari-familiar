@@ -119,7 +119,7 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(mini,/month-mini-extra/);
  assert.match(ts,/data-action="extra-date-choose"/);
  assert.match(ts,/data-action="night-date-time"/);
- assert.match(ts,/data-action="rotation-pattern-time"/);
+ assert.match(ts,/data-rotation-cell-form="true"/);
  assert.match(ts,/rotationEditor\.render\(state,extraRotationOpen,extraRotationUnits\)/);
  assert.match(html,/rotation-patterns\.js\?v=0\.6\.3/);
  assert.match(html,/rotation-editor\.js\?v=0\.6\.3/);
