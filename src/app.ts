@@ -511,8 +511,8 @@ function schoolTimeline(date:string,children:Child[],range?:[number,number]|null
 }
 type DayTimelineUI = {
  overnightSegments:(date:string,childId:string,changeTime:string,getNight:(d:string,id:string)=>string,previousDate:(d:string)=>string,lookupGuardian:(id:string)=>Guardian|undefined,visibleIds:string[])=>Array<{from:number;to:number;date:string;guardianId:string;guardianName:string;guardianColor:string;visible:boolean}>;
- render:(date:string,label:string,children:Child[],activities:SchoolCalendarItem[],nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>,changeTime:string,zoom?:number,customSlots?:Record<string,any[]>)=>string;
- renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>;customSlots?:Record<string,any[]>}>,children:Child[],zoom?:number,focusDate?:string,todayDate?:string)=>string;
+ render:(date:string,label:string,children:Child[],activities:SchoolCalendarItem[],nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>,changeTime:string,zoom?:number,customSlots?:Record<string,any[]>,rotatingSlots?:ExtraSlot[])=>string;
+ renderWeek:(startDate:string,days:Array<{date:string;label:string;activities:SchoolCalendarItem[];nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>;customSlots?:Record<string,any[]>;rotatingSlots?:ExtraSlot[]}>,children:Child[],zoom?:number,focusDate?:string,todayDate?:string)=>string;
 };
 const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimelineUI;
 const monthDayUI=(window as Window & {monthDayUI?:any}).monthDayUI;
@@ -611,7 +611,7 @@ function calendarPage(){
   } else if(calendarView==='week'){
     content=weekTimeline(weekStart(selectedDate),children);
   } else {
-    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>`:''}${monthDayUI.hasChanges(state,selectedDate)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>`:''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>`;
+    content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>`:''}${state.extraRotations.length?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${selectedDate}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,selectedDate)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>`:''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>`;
   }
   const visibleNames=bands.map(b=>BAND_NAMES[b]).join(' · ');
   return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'||calendarView==='week'?'Pernoctes i activitats per fill durant les 24 hores.':'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
@@ -854,12 +854,16 @@ function sheetMarkup(){
     const c=childById(sheet.childId);
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
+  } else if(sheet?.type==='extraDate'){
+     contents=sheet.rotationId?rotationEditor.dateForm(state,sheet.date,sheet.rotationId,sheet.childId):rotationEditor.datePicker(state,sheet.date);
   } else if(sheet?.type==='bandEdit'){
     const {date,childId,band}=sheet,c=childById(childId),value=responsibility(date,childId,band);
     const isNight=band==='nit';
     const manual=!isNight&&Object.hasOwn(state.bandOverrides,bandKey(date,childId,band));
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name??'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     <p class="settings-note">${isNight?'Aquesta nit segueix la rotació, excepte si la canvies.':'Assignació independent de la nit. Les escoles es calculen a partir de l’horari escolar.'} Actualment: ${escapeHtml(value.name)}.</p>
+    ${isNight?`<div class="field"><label for="night-date-time">Hora de canvi de responsabilitat d'aquest dia</label><input id="night-date-time" type="time" data-action="night-date-time" data-date="${escapeHtml(date)}" value="${nightChangeTime(date)}"></div>
+      ${Object.hasOwn(state.nightDateTimes,date)?`<button class="soft-btn" data-action="night-date-time-clear" data-date="${escapeHtml(date)}">Restaura l'hora de canvi de la rotació</button>`:''}`:''}
     ${state.guardians.map(g=>`<button class="option ${value.type==='guardian'&&value.name===g.name?'selected':''}" data-action="${isNight?'assign-night':'assign-band'}" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span></button>`).join('')}
     ${!isNight?`<button class="option" data-action="assign-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian=""><span class="option-left">Sense assignar</span></button>`:''}
     ${isNight&&overridden(date,childId)?`<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>`:''}
@@ -1119,6 +1123,10 @@ function clickAction(button:HTMLElement){
     case 'filter-all':state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);state.preferences.visibleBands=[...BANDS];update();break;
     case 'assign-night':{const date=button.dataset.date!,childId=button.dataset.child!,gId=button.dataset.guardian!;if(!childById(childId)||!guardian(gId))break;sheet=returnFromDetail(date);chooseGuardian(date,childId,gId);break;}
     case 'clear-night':delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];sheet=returnFromDetail(button.dataset.date!);update();notify('Patró habitual restaurat');break;
+    case 'night-date-time-clear':{const date=button.dataset.date??'';delete state.nightDateTimes[date];sheet=returnFromDetail(date);update();notify('Hora habitual restaurada');break;}
+    case 'extra-date-clear':{const {date,rotation:rotationId,child:childId}=button.dataset;delete state.extraExceptions[`${rotationId}|${date}|${childId}`];sheet=returnFromDetail(date??'');update();notify('Rotació restaurada');break;}
+    case 'extra-date-choose':{const date=button.dataset.date??'';if(!isValidDate(date))break;sheet={type:'extraDate',rotationId:'',childId:'',date};render();break;}
+    case 'edit-extra-slot':{const date=button.dataset.date??'',rotationId=button.dataset.rotation??'',childId=button.dataset.child??'';if(!isValidDate(date)||!state.extraRotations.some(r=>r.id===rotationId&&r.childIds.includes(childId)))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'extraDate',rotationId,childId,date};render();break;}
     case 'rotation-cell':sheet={type:'rotationCell',childId:button.dataset.child!,index:Number(button.dataset.index)};render();break;
     case 'rotation-week-fill':sheet={type:'rotationWeek',childId:button.dataset.child!,week:Number(button.dataset.week)};render();break;
     case 'rotation-set-week':{
@@ -1144,9 +1152,17 @@ function clickAction(button:HTMLElement){
       rotationDraft!.assignments[button.dataset.child!]=[...(rotationDraft!.assignments[button.dataset.from!]??[])];
       render();notify('Patró copiat');break;
     }
+    case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-cell':case 'extra-week':case 'extra-all':case 'extra-copy':{
+      const result=rotationEditor.click(state,button.dataset.action,button.dataset,newId,localDate(new Date()),confirm);
+      if(!result)break;
+      if(result.toggle){extraRotationOpen=extraRotationOpen===result.open?null:result.open;render();}
+      else {extraRotationOpen=result.open;if(result.save)update();else render();}
+      break;
+    }
     case 'rotation-save':{
       if(!rotationDraft)return;
       rotationDraft.changeTime=validChangeTime(rotationDraft.changeTime);
+      state.nightPatternTimes=Object.fromEntries(Object.entries(nightPatternDraft).filter(([i,t])=>Number(i)<rotationDraft!.length&&t!==rotationDraft!.changeTime));
       state.rotation=JSON.parse(JSON.stringify(rotationDraft)) as Rotation;rotationDraft=JSON.parse(JSON.stringify(state.rotation));update();notify('Patró de rotació desat');break;
     }
     case 'rotation-cancel':rotationDraft=JSON.parse(JSON.stringify(state.rotation));nightPatternDraft={...state.nightPatternTimes};render();notify('Canvis descartats');break;
@@ -1177,6 +1193,13 @@ document.addEventListener('click',event=>{
 document.addEventListener('submit',event=>{
  const form=event.target;
  if(!(form instanceof HTMLFormElement))return;
+  if(form.dataset.extraDateForm){
+    event.preventDefault();
+    const date=form.dataset.date??'',rotationId=form.dataset.rotation??'',childId=form.dataset.child??'';
+    const error=rotationEditor.saveDate(state,date,rotationId,childId,new FormData(form));
+    if(error){notify(error);return;}
+    sheet=returnFromDetail(date);update();notify('Excepció de rotació desada');return;
+  }
   if(form.dataset.daySlotForm){
     event.preventDefault();
     const date=form.dataset.date??'',slotId=form.dataset.slot??'';
@@ -1305,11 +1328,14 @@ document.addEventListener('change',event=>{
   }
   if(action==='font-size'){const chosen=FONT_SIZE_OPTIONS[Number(target.value)];if(chosen){state.preferences.fontSize=chosen;applyFontSize();saveState();}return;}
   if(action==='rotation-change-time'&&rotationDraft){rotationDraft.changeTime=validChangeTime(target.value);render();}
+  else if(action==='rotation-pattern-time'&&rotationDraft){const i=Number(target.dataset.index);if(i>=0&&i<rotationDraft.length){const time=validChangeTime(target.value);if(time===rotationDraft.changeTime)delete nightPatternDraft[i];else nightPatternDraft[i]=time;render();}}
+  else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);sheet=returnFromDetail(target.dataset.date!);update();}
+  else if(target.dataset.extraChange){const result=rotationEditor.change(state,target.dataset,target.value,extraRotationUnits);if(result?.error){notify(result.error);render();}else if(result?.save)update();else render();}
   else if(action==='rotation-start'&&rotationDraft&&isValidDate(target.value)){rotationDraft.startDate=target.value;render();}
   else if(action==='rotation-length'&&rotationDraft){
     const count=Number(target.value),factor=rotationUnit==='weeks'?7:1,length=count*factor;
     if(!Number.isSafeInteger(count)||count<1||length>MAX_ROTATION_DAYS){notify('Indica una durada vàlida entre 1 i '+(MAX_ROTATION_DAYS/factor));render();return;}
-    rotationDraft=resizedRotation(rotationDraft,length);render();
+    rotationDraft=resizedRotation(rotationDraft,length);nightPatternDraft=Object.fromEntries(Object.entries(nightPatternDraft).filter(([key])=>Number(key)<length));render();
   } else if(action==='rotation-unit'&&rotationDraft){
     rotationUnit=target.value==='weeks'?'weeks':'days';
     if(rotationUnit==='weeks'&&rotationDraft.length%7!==0){
