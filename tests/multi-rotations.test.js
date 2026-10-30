@@ -145,3 +145,11 @@ test('les rotacions complementàries poden excloure dissabtes, diumenges o dies 
  assert.equal(core.slots(s,'2026-10-30',children,guardians,['mare']).length,1);
  assert.throws(()=>core.cleanExtras([{...pickup,activeDays:[true]}],children,guardians));
 });
+
+test('l’editor de canvi de pernocta afecta el dia visible, no la data de la nit anterior',()=>{
+ assert.match(ts,/type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate\?:string/);
+ assert.match(ts,/sheet=\{type:'bandEdit',date,childId,band,viewDate:button\.dataset\.viewDate\?\?date\}/);
+ assert.match(ts,/visibleDate=sheet\.viewDate\?\?date/);
+ assert.match(ts,/data-action="night-date-time" data-date="\$\{escapeHtml\(visibleDate\)\}"/);
+ assert.match(ts,/nightChangeTime\(visibleDate\)/);
+});
