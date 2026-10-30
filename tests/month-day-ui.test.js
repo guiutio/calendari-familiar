@@ -181,7 +181,7 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
 
 test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
  const classes=(date,year,month,index,total,days)=>ui.outline(date,year,month,index,total,days).split(' ').filter(Boolean);
- // Octubre 2026: comença dijous i acaba dissabte, sis files en total.
+ // Octubre 2026: comença dijous i acaba dissabte, cinc files en total.
  assert.deepEqual(classes('2026-09-30',2026,9,2,35,31),[]);
  assert.deepEqual(classes('2026-10-01',2026,9,3,35,31),['month-current','month-edge-top','month-edge-left']);
  assert.deepEqual(classes('2026-10-04',2026,9,6,35,31),['month-current','month-edge-top','month-edge-right']);
