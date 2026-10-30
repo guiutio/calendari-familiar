@@ -686,7 +686,7 @@ function calendarPage() {
         content = weekTimeline(weekStart(selectedDate), children);
     }
     else {
-        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions"><button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
+        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>` : ''}${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
     }
     const visibleNames = bands.map(b => BAND_NAMES[b]).join(' · ');
     return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView === 'day' || calendarView === 'week' ? 'Pernoctes i activitats per fill durant les 24 hores.' : 'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
@@ -710,6 +710,9 @@ function rotationPage() {
     if (!state.children.length)
         return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
     <section class="card"><h2 class="section-title">Encara no hi ha fills</h2><p class="section-description">Pots crear el calendari des de zero. Afegeix un fill a Configuració per definir-ne les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
+    if (!state.guardians.length)
+        return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
+    <section class="card"><h2 class="section-title">Encara no hi ha tutors</h2><p class="section-description">Afegeix almenys un tutor a Configuració per poder assignar les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
     const r = rotationDraft ?? state.rotation;
     return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix el patró habitual de les nits.</p></div></header>
     <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia, la durada i l’hora de canvi de pernocta. El patró es repeteix indefinidament.</p>
@@ -1396,7 +1399,7 @@ function clickAction(button) {
         }
         case 'day-slot-add': {
             const date = button.dataset.date ?? '';
-            if (!isValidDate(date))
+            if (!isValidDate(date) || !state.children.length)
                 break;
             detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
             detailReturnDate = date;
