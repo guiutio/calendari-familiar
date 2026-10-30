@@ -161,8 +161,8 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-slot-add" data-date="\$\{selectedDate\}"/);
  assert.match(ts,/monthDayUI\.hasChanges\(state,selectedDate\)/);
  assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
- assert.match(ts,/monthDayUI\.restore\(state,date\);sheet=null;update\(\)/);
- assert.match(app,/monthDayUI\.restore\(state, date\);\s*sheet = null;/);
+ assert.match(ts,/monthDayUI\.restore\(state,date\);rotationPatterns\.clearDate\(state,date\);sheet=null;update\(\)/);
+ assert.match(app,/monthDayUI\.restore\(state, date\);\s*rotationPatterns\.clearDate\(state, date\);\s*sheet = null;/);
  assert.match(html,/app\.js\?v=0\.6\.0/);
  assert.match(sw,/calendari-familiar-v0\.6\.0/);
 });
