@@ -1,5 +1,5 @@
-const CACHE = 'calendari-familiar-v0.5.9';
-const ASSETS = ['./','./index.html','./actualitza.html','./scroll-guard.js?v=0.5.9','./school-schedule-core.js?v=0.5.9','./school-timeline.js?v=0.5.9','./day-timeline.js?v=0.5.9','./month-day-ui.js?v=0.5.9','./app.js?v=0.5.9','./styles.css?v=0.5.9','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
+const CACHE = 'calendari-familiar-v0.5.10';
+const ASSETS = ['./','./index.html','./actualitza.html','./scroll-guard.js?v=0.5.10','./school-schedule-core.js?v=0.5.10','./school-timeline.js?v=0.5.10','./day-timeline.js?v=0.5.10','./month-day-ui.js?v=0.5.10','./app.js?v=0.5.10','./styles.css?v=0.5.10','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
