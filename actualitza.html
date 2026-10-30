@@ -17,7 +17,7 @@
 </head>
 <body><main>
   <h1>Actualitza Calendari Familiar</h1>
-  <p>Actualitzarem els fitxers temporals de l'aplicació a la versió <strong>0.5.8</strong>, sense comptadors d'activitats a les caselles mensuals i amb el contorn blau gruixut que delimita clarament el mes actual.</p>
+  <p>Actualitzarem els fitxers temporals de l'aplicació a la versió <strong>0.5.9</strong>, amb l’opció d’esborrar totes les dades per començar de zero, i possibilitat de tenir zero fills i zero tutors.</p>
   <p><strong>Les teves dades familiars no s'esborraran:</strong> no es modifica IndexedDB ni LocalStorage, ni els calendaris, rotacions o escoles que hagis desat.</p>
   <button type="button" id="update">Actualitza ara</button>
   <p id="result" role="status" aria-live="polite"></p>
@@ -33,9 +33,9 @@
     result.textContent = 'Comprovant la versió publicada…';
     try {
       if (!navigator.onLine) throw new Error('No hi ha connexió a Internet. Torna-ho a provar quan tinguis connexió.');
-      const response = await fetch('./index.html?comprovacio=0.5.8-' + Date.now(), {cache:'no-store'});
-      if (!response.ok || !(await response.text()).includes('app.js?v=0.5.8')) {
-        throw new Error('GitHub Pages encara no serveix la versió 0.5.8. Torna-ho a provar més tard.');
+      const response = await fetch('./index.html?comprovacio=0.5.9-' + Date.now(), {cache:'no-store'});
+      if (!response.ok || !(await response.text()).includes('app.js?v=0.5.9')) {
+        throw new Error('GitHub Pages encara no serveix la versió 0.5.9. Torna-ho a provar més tard.');
       }
       result.textContent = 'Versió verificada. Renovant els fitxers temporals…';
       if ('serviceWorker' in navigator) {
@@ -51,7 +51,7 @@
         }
       }
       result.textContent = 'Actualització preparada. Obrint el calendari…';
-      location.replace('./index.html?actualitzat=0.5.8-' + Date.now());
+      location.replace('./index.html?actualitzat=0.5.9-' + Date.now());
     } catch (err) {
       result.textContent = err instanceof Error ? err.message : 'No s’ha pogut actualitzar. Torna-ho a provar.';
       button.disabled = false;
