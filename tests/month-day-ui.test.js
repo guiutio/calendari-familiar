@@ -147,11 +147,11 @@ test('el mes inclou el número de setmana a la primera columna i obre les vistes
  assert.match(ts,/class="month-week-number" data-action="show-calendar-week" data-date="\$\{date\}"/);
  assert.match(ts,/class="day-cell[^\n]+data-action="show-calendar-day" data-date="\$\{date\}"/);
  assert.match(ts,/class="month-week-heading"/);
- assert.match(ts,/case 'show-calendar-week':\{[\s\S]*?selectedDate=weekStart\(date\);calendarView='week';sheet=null;render\(\);break;/);
+  assert.match(ts,/case 'show-calendar-week':\{[\s\S]*?const start=weekStart\(date\),today=localDate\(new Date\(\)\);[\s\S]*?selectedDate=today>=start&&today<=addDays\(start,6\)\?today:start;calendarView='week';sheet=null;render\(\);break;/);
  assert.match(ts,/case 'show-calendar-day':\s*case 'open-day':\{/);
  assert.match(ts,/selectedDate=date;calendarView='day';sheet=null/);
  assert.match(app,/case 'show-calendar-week':/);
- assert.match(app,/selectedDate = weekStart\(date\);/);
+  assert.match(app,/selectedDate = today >= start && today <= addDays\(start, 6\) \? today : start;/);
  assert.match(css,/\.weekdays,\.month-grid \{grid-template-columns:38px repeat\(7,minmax\(0,1fr\)\);\}/);
  assert.match(css,/\.month-week-number:focus-visible/);
  assert.doesNotMatch(ts,/case 'open-day':\{[^\n]*sheet=\{type:'day'/);
