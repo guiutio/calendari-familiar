@@ -90,7 +90,7 @@ test('afegir i copiar rotacions no toca les altres ni la pernocta',()=>{
  assert.equal(a.assignments.elna[0],a.assignments.blai[0]);
  assert.equal(b.assignments.elna[0],'');
  assert.equal(s.rotation.assignments.elna[0],'pare');
- const units={};
+ const units={'rot-a':'days'};
  assert.deepEqual(plain(editor.change(s,{rotation:'rot-a',extraChange:'length'},'3',units)),{save:true});
  assert.equal(a.length,3);
  assert.equal(b.length,7);
