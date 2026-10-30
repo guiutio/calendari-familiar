@@ -87,7 +87,7 @@
     return {week:1+Math.round((thursday.getTime()-firstThursday.getTime())/(7*86400000)),year:weekYear};
   }
   function mini(children,nights,activities,customSlots){
-    if(!children.length)return '<span class="month-mini-empty">—</span>';
+    if(!children.length)return '';
     const rect=(from,to,color,klass,label)=>{
       const top=100*Math.max(0,from)/DAY, height=100*Math.max(0,Math.min(DAY,to)-Math.max(0,from))/DAY;
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
