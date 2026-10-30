@@ -434,7 +434,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 }
 
 /* v0.3.0 · Cronologia proporcional en minuts dels horaris escolars */
-.school-month-count {font-size:calc(8px * var(--font-scale,1));font-weight:750;color:#54759b;white-space:nowrap;margin-left:auto;}
 .school-timeline {margin:15px 0 8px;padding:12px;border:1px solid #dde6f0;border-radius:13px;background:#fafcff;min-width:0;}
 .school-timeline-heading {display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:10px;color:#50657e;font-size:calc(12px * var(--font-scale,1));}
 .school-timeline-heading strong {color:#274f7f;font-size:calc(13px * var(--font-scale,1));}
@@ -457,7 +456,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .school-timeline-details li {margin:4px 0;overflow-wrap:anywhere;}
 .school-activity-info {font-size:calc(14px * var(--font-scale,1));line-height:1.55;padding:8px 0;overflow-wrap:anywhere;}
 .school-activity-info p {margin:10px 0;}
-:root[data-theme="dark"] .school-month-count {color:#b6d3f5;}
 :root[data-theme="dark"] .school-timeline {background:#1d2c41;border-color:#344a64;}
 :root[data-theme="dark"] .school-timeline-heading,:root[data-theme="dark"] .school-timeline-corner,:root[data-theme="dark"] .school-timeline-child,:root[data-theme="dark"] .school-timeline-details {color:#c0d0e3;}
 :root[data-theme="dark"] .school-timeline-heading strong {color:#d5e8ff;}
@@ -467,11 +465,8 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .school-timeline-event {background:color-mix(in srgb,var(--activity-color) 44%,#1c2b3f);color:#f1f6fc;}
 :root[data-theme="dark"] .school-timeline-reduced {background:#51462f;color:#f2d69c;}
 :root[data-theme="dark"] .school-timeline-empty {color:#bccce0;}
-@media(max-width:560px) {.school-timeline {padding:8px;margin:12px 0;}.school-month-count {font-size:calc(7px * var(--font-scale,1));}}
 
 /* Resum mensual llegible fins i tot en amplades petites. */
-.school-month-count {font-size:calc(10px * var(--font-scale,1));line-height:1.2;letter-spacing:-.3px;}
-@media(max-width:560px) {.school-month-count {font-size:calc(9px * var(--font-scale,1));}}
 
 /* v0.4.0 · Vista diària de 24 h, scroll intern 00:00–24:00 i franges de pernocta */
 .day-timeline {margin:14px 0 6px;min-width:0;}
@@ -697,3 +692,18 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
     font-size:calc(15px * var(--font-scale,1));
   }
 }
+
+/* v0.5.8 · Contorn intens del mes actual, també en setmanes parcials. */
+.month-grid {--month-outline:#205b99;}
+.month-grid .day-cell.month-current {
+  box-shadow:
+    inset 0 4px 0 var(--month-top,transparent),
+    inset 0 -4px 0 var(--month-bottom,transparent),
+    inset 4px 0 0 var(--month-left,transparent),
+    inset -4px 0 0 var(--month-right,transparent);
+}
+.month-grid .day-cell.month-edge-top {--month-top:var(--month-outline);}
+.month-grid .day-cell.month-edge-bottom {--month-bottom:var(--month-outline);}
+.month-grid .day-cell.month-edge-left {--month-left:var(--month-outline);}
+.month-grid .day-cell.month-edge-right {--month-right:var(--month-outline);}
+:root[data-theme="dark"] .month-grid {--month-outline:#88baff;}
