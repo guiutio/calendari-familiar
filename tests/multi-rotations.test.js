@@ -21,7 +21,7 @@ const children=[{id:'elna',name:'Elna'},{id:'blai',name:'Blai'}];
 const guardians=[{id:'mare',name:'Mare',color:'#ffaacc'},{id:'pare',name:'Pare',color:'#88bbdd'}];
 const rotation=(id,name,length,assignments)=>({
  id,name,startDate:'2026-10-26',length,startTime:'16:15',endTime:'17:45',
- childIds:Object.keys(assignments),assignments
+ childIds:Object.keys(assignments),assignments,activeDays:Array(length).fill(true)
 });
 const state=()=>({version:1,children,guardians,
  rotation:{startDate:'2026-10-26',length:7,changeTime:'19:00',assignments:{elna:Array(7).fill('pare'),blai:Array(7).fill('mare')}},
@@ -125,4 +125,23 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(html,/rotation-editor\.js\?v=0\.6\.0/);
  assert.match(sw,/rotation-patterns\.js\?v=0\.6\.0/);
  assert.match(sw,/rotation-editor\.js\?v=0\.6\.0/);
+});
+
+test('les rotacions complementàries poden excloure dissabtes, diumenges o dies individuals del patró',()=>{
+ const s=state(),pickup=rotation('pickup','Recollida escola',7,{elna:Array(7).fill('mare')});
+ pickup.activeDays=[true,true,true,true,true,false,false];
+ s.extraRotations=[pickup];
+ assert.equal(core.slots(s,'2026-10-30',children,guardians,['mare']).length,1);
+ assert.equal(core.slots(s,'2026-10-31',children,guardians,['mare']).length,0);
+ assert.equal(core.slots(s,'2026-11-01',children,guardians,['mare']).length,0);
+ assert.equal(core.slots(s,'2026-11-02',children,guardians,['mare']).length,1);
+ const result=editor.click(s,'extra-day-toggle',{rotation:'pickup',index:'4'},()=>'', '2026-10-26',()=>true);
+ assert.equal(result.save,true);
+ assert.equal(core.slots(s,'2026-10-30',children,guardians,['mare']).length,0);
+ const normalized=core.cleanExtras(plain(s.extraRotations),children,guardians);
+ assert.deepEqual(plain(normalized[0].activeDays),plain(pickup.activeDays));
+ const dateChange=new Map([['startTime','16:15'],['endTime','17:45'],['guardianId','mare']]);
+ assert.equal(editor.saveDate(s,'2026-10-30','pickup','elna',dateChange),'');
+ assert.equal(core.slots(s,'2026-10-30',children,guardians,['mare']).length,1);
+ assert.throws(()=>core.cleanExtras([{...pickup,activeDays:[true]}],children,guardians));
 });
