@@ -121,10 +121,10 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(ts,/data-action="night-date-time"/);
  assert.match(ts,/data-action="rotation-pattern-time"/);
  assert.match(ts,/rotationEditor\.render\(state,extraRotationOpen,extraRotationUnits\)/);
- assert.match(html,/rotation-patterns\.js\?v=0\.6\.1/);
- assert.match(html,/rotation-editor\.js\?v=0\.6\.1/);
- assert.match(sw,/rotation-patterns\.js\?v=0\.6\.1/);
- assert.match(sw,/rotation-editor\.js\?v=0\.6\.1/);
+ assert.match(html,/rotation-patterns\.js\?v=0\.6\.2/);
+ assert.match(html,/rotation-editor\.js\?v=0\.6\.2/);
+ assert.match(sw,/rotation-patterns\.js\?v=0\.6\.2/);
+ assert.match(sw,/rotation-editor\.js\?v=0\.6\.2/);
 });
 
 test('les rotacions complementàries poden excloure dissabtes, diumenges o dies individuals del patró',()=>{
@@ -210,8 +210,88 @@ test('el posicionament de les barres mensuals i les amplades de Dia/Setmana es d
  assert.match(css,/\.day-extra-block\.with-guardian \{left:0;width:100%;\}/);
  assert.match(css,/\.month-mini-extra \{display:block;position:absolute;z-index:4;left:48%;right:0/);
  assert.match(css,/\.month-mini-extra\.with-guardian \{left:0;right:0;\}/);
- assert.match(html,/month-day-ui\.js\?v=0\.6\.1/);
- assert.match(html,/day-timeline\.js\?v=0\.6\.1/);
- assert.match(sw,/month-day-ui\.js\?v=0\.6\.1/);
- assert.match(sw,/day-timeline\.js\?v=0\.6\.1/);
+ assert.match(html,/month-day-ui\.js\?v=0\.6\.2/);
+ assert.match(html,/day-timeline\.js\?v=0\.6\.2/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.6\.2/);
+ assert.match(sw,/day-timeline\.js\?v=0\.6\.2/);
+});
+
+test('només es veuen les caselles dels dies actius de la rotació (exemple D3)',()=>{
+ const s=state(),r=rotation('pickup','Recollida escola',7,{
+   elna:['mare','pare','pare','mare','pare','mare','pare'],
+   blai:['pare','mare','mare','pare','mare','pare','mare']
+ });
+ r.activeDays=[false,false,true,false,false,false,false];
+ s.extraRotations=[r];
+ const rendered=editor.render(s,'pickup',{});
+ const cells=[...rendered.matchAll(/data-action="extra-cell"[^>]*data-child="([^"]+)" data-index="(\d+)"/g)]
+   .map(m=>[m[1],Number(m[2])]);
+ assert.deepEqual(cells,[['elna',2],['blai',2]]);
+ assert.match(rendered,/Setmana 1/);
+ assert.doesNotMatch(rendered,/Copia el primer dia actiu/);
+ assert.doesNotMatch(rendered,/Setmana 2/);
+ assert.match(rendered,/data-action="extra-day-toggle" data-rotation="pickup" data-index="0"/);
+ assert.match(rendered,/data-action="extra-day-toggle" data-rotation="pickup" data-index="2"/);
+ assert.match(rendered,/Només els dies activats tindran caselles/);
+});
+
+test('no es poden editar responsabilitats d’un dia inactiu, ni amb accions directes',()=>{
+ const s=state(),r=rotation('p','Trajecte',7,{elna:['pare','mare','pare','mare','pare','mare','pare']});
+ r.activeDays=[true,false,true,false,false,false,false];
+ s.extraRotations=[r];
+ const previous=plain(r.assignments.elna);
+ const result=editor.click(s,'extra-cell',{rotation:'p',child:'elna',index:'1'},()=>'', '2026-10-26',()=>true);
+ assert.equal(result,null);
+ assert.deepEqual(plain(r.assignments.elna),previous);
+ // Rehabilitar un dia recupera l'assignació que hi havia, sense perdre dades existents.
+ editor.click(s,'extra-day-toggle',{rotation:'p',index:'1'},()=>'', '2026-10-26',()=>true);
+ assert.match(editor.render(s,'p',{}),/data-action="extra-cell"[^>]*data-index="1"/);
+});
+
+test('copiar una setmana pren el primer dia actiu i no modifica cap dia inactiu',()=>{
+ const s=state(),r=rotation('p','Recollida',14,{
+   elna:['pare','pare','mare','pare','pare','mare','mare','mare','pare','pare','pare','pare','pare','mare']
+ });
+ r.activeDays=[false,false,true,false,true,false,false,false,false,false,false,false,false,false];
+ s.extraRotations=[r];
+ const before=plain(r.assignments.elna);
+ const rendered=editor.render(s,'p',{});
+ assert.match(rendered,/data-action="extra-week" data-rotation="p" data-child="elna" data-week="0"/);
+ assert.doesNotMatch(rendered,/data-action="extra-week" data-rotation="p" data-child="elna" data-week="1"/);
+ assert.doesNotMatch(rendered,/Setmana 2/);
+ editor.click(s,'extra-week',{rotation:'p',child:'elna',week:'0'},()=>'', '2026-10-26',()=>true);
+ assert.equal(r.assignments.elna[4],'mare'); // D5 hereta D3, primer dia actiu, no D1.
+ for(let i=0;i<r.length;i++)if(!r.activeDays[i])assert.equal(r.assignments.elna[i],before[i]);
+ assert.equal(editor.click(s,'extra-week',{rotation:'p',child:'elna',week:'1'},()=>'', '2026-10-26',()=>true),null);
+});
+
+test('Tots igual i Copiar de només copien dies seleccionats; la igualtat ignora els inactius',()=>{
+ const s=state(),r=rotation('p','Recollida',7,{
+   elna:['pare','mare','mare','mare','pare','mare','pare'],
+   blai:['mare','pare','pare','pare','mare','pare','mare']
+ });
+ r.activeDays=[false,false,true,false,false,false,false];s.extraRotations=[r];
+ const before=plain(r.assignments.blai);
+ editor.click(s,'extra-all',{rotation:'p'},()=>'', '2026-10-26',()=>true);
+ assert.equal(r.assignments.blai[2],r.assignments.elna[2]);
+ for(let i=0;i<r.length;i++)if(!r.activeDays[i])assert.equal(r.assignments.blai[i],before[i]);
+ assert.match(editor.render(s,'p',{}),/Tots els fills tenen el mateix patró/);
+ r.assignments.elna[2]='pare';
+ editor.click(s,'extra-copy',{rotation:'p',child:'blai',from:'elna'},()=>'', '2026-10-26',()=>true);
+ assert.equal(r.assignments.blai[2],'pare');
+ for(let i=0;i<r.length;i++)if(!r.activeDays[i])assert.equal(r.assignments.blai[i],before[i]);
+});
+
+test('quan tots els dies estan desactivats, no es mostren controls d’assignació',()=>{
+ const s=state(),r=rotation('p','Recollida',7,{elna:Array(7).fill('mare'),blai:Array(7).fill('pare')});
+ r.activeDays=Array(7).fill(false);s.extraRotations=[r];
+ const rendered=editor.render(s,'p',{});
+ assert.match(rendered,/Activa almenys un dia per poder assignar responsables/);
+ assert.doesNotMatch(rendered,/data-action="extra-cell"/);
+ assert.doesNotMatch(rendered,/data-action="extra-week"/);
+ assert.doesNotMatch(rendered,/data-action="extra-copy"/);
+ assert.doesNotMatch(rendered,/data-action="extra-all"/);
+ // Segueixen visibles els controls per activar dies i triar participants.
+ assert.match(rendered,/data-action="extra-day-toggle"/);
+ assert.match(rendered,/data-action="extra-child"/);
 });

@@ -4,12 +4,17 @@
  const miniDate=(date)=>{const d=new Date(date+'T12:00:00Z');return ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'][(d.getUTCDay()+6)%7];};
  const safeLength=(r)=>r.length%7===0?'weeks':'days';
  const title=(r)=>escape(r.name);
+ // L'assignació de responsables només existeix als dies actius del patró.
+ const activeIndices=(rotation,week)=>Array.from({length:rotation.length},(_,i)=>i)
+   .filter(i=>(week===undefined||Math.floor(i/7)===week)&&rotation.activeDays?.[i]!==false);
  const root=id=>document.querySelector('[data-extra-rotation="'+CSS.escape(id)+'"]');
  function render(state,expanded,units={}){
    const kids=state.children,guardians=state.guardians,rotations=state.extraRotations??[];
    const cards=rotations.map(r=>{
      const open=expanded===r.id,unit=units[r.id]??safeLength(r),scale=unit==='weeks'?7:1;
-     const first=r.childIds[0],allSame=r.childIds.length>1&&r.childIds.every(id=>JSON.stringify(r.assignments[id])===JSON.stringify(r.assignments[first]));
+     const first=r.childIds[0],active=activeIndices(r);
+     const weeks=Array.from({length:Math.ceil(r.length/7)},(_,week)=>({week,indices:activeIndices(r,week)})).filter(w=>w.indices.length);
+     const allSame=r.childIds.length>1&&r.childIds.every(id=>active.every(i=>(r.assignments[id]?.[i]??'')===(r.assignments[first]?.[i]??'')));
      return `<section class="card extra-rotation-card" data-extra-rotation="${escape(r.id)}">
        <div class="panel-header"><div><h2 class="section-title">${title(r)}</h2><p class="settings-note">${r.length} dies · ${escape(r.startTime)}–${escape(r.endTime)} · ${r.childIds.length} fills</p></div>
        <div class="action-row"><button class="secondary-btn" data-action="extra-toggle" data-rotation="${escape(r.id)}">${open?'Tanca':'Edita'}</button><button class="delete-icon" data-action="extra-delete" data-rotation="${escape(r.id)}" aria-label="Suprimeix ${title(r)}">×</button></div></div>
@@ -20,21 +25,21 @@
            <select data-extra-change="unit" data-rotation="${escape(r.id)}" aria-label="Unitat de la rotació"><option value="days" ${unit==='days'?'selected':''}>dies</option><option value="weeks" ${unit==='weeks'?'selected':''}>setmanes</option></select></div></div>
          <div class="form-row"><div class="field"><label>Inici de la franja<input type="time" data-extra-change="startTime" data-rotation="${escape(r.id)}" value="${escape(r.startTime)}"></label></div>
          <div class="field"><label>Final de la franja<input type="time" data-extra-change="endTime" data-rotation="${escape(r.id)}" value="${escape(r.endTime)}"></label></div></div>
-         <p class="settings-note">Selecciona els dies en què existeix aquesta franja i els fills participants. Les caselles de responsables són independents per a cada fill.</p>
+         <p class="settings-note">Selecciona els dies en què existeix aquesta franja i els fills participants. Només els dies activats tindran caselles per assignar-ne els responsables.</p>
          <div class="extra-active-days">${Array.from({length:r.length},(_,i)=>`<button type="button" class="extra-day-toggle ${r.activeDays?.[i]===false?'inactive':'active'}" aria-pressed="${r.activeDays?.[i]!==false}" data-action="extra-day-toggle" data-rotation="${escape(r.id)}" data-index="${i}" title="Dia ${i+1}: ${r.activeDays?.[i]===false?'sense franja':'amb franja'}">D${i+1} ${r.activeDays?.[i]===false?'—':'✓'}</button>`).join('')}</div>
          <div class="extra-kids">${kids.map(c=>`<button class="option ${r.childIds.includes(c.id)?'selected':''}" aria-pressed="${r.childIds.includes(c.id)}" data-action="extra-child" data-rotation="${escape(r.id)}" data-child="${escape(c.id)}">${escape(c.name)} ${r.childIds.includes(c.id)?'✓':''}</button>`).join('')}</div>
-         ${r.childIds.length>1?`<div class="action-row"><button class="secondary-btn" data-action="extra-all" data-rotation="${escape(r.id)}">Tots igual</button>
+         ${active.length&&r.childIds.length>1?`<div class="action-row"><button class="secondary-btn" data-action="extra-all" data-rotation="${escape(r.id)}">Tots igual</button>
          ${allSame?'<span class="settings-note">Tots els fills tenen el mateix patró.</span>':''}</div>`:''}
-         ${r.childIds.map((id,n)=>{
+         ${active.length?r.childIds.map((id,n)=>{
            const c=kids.find(k=>k.id===id),arr=r.assignments[id]??[];
            return `<div class="rotation-child"><div class="rotation-child-header"><strong>${escape(c?.name??id)}</strong>
               ${r.childIds.filter(fromId=>fromId!==id).map(fromId=>`<button class="soft-btn" data-action="extra-copy" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-from="${escape(fromId)}">Copiar de ${escape(kids.find(x=>x.id===fromId)?.name??fromId)}</button>`).join('')}</div>
-             ${Array.from({length:Math.ceil(r.length/7)},(_,week)=>`<div class="rotation-week"><div class="rotation-week-header"><div class="rotation-week-title">Setmana ${week+1}</div><button class="week-fill-btn" data-action="extra-week" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-week="${week}" title="Aplica a tota la setmana el responsable del primer dia">Copia el primer dia a la setmana</button></div>
-             <div class="rotation-days">${Array.from({length:Math.min(7,r.length-week*7)},(_,day)=>{
-               const i=week*7+day,g=guardians.find(x=>x.id===arr[i]);
+             ${weeks.map(({week,indices})=>`<div class="rotation-week"><div class="rotation-week-header"><div class="rotation-week-title">Setmana ${week+1}</div>${indices.length>1?`<button class="week-fill-btn" data-action="extra-week" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-week="${week}" title="Aplica el responsable del primer dia actiu només als dies actius de la setmana">Copia el primer dia actiu</button>`:''}</div>
+             <div class="rotation-days">${indices.map(i=>{
+               const g=guardians.find(x=>x.id===arr[i]);
                return `<button type="button" class="rotation-cell" data-action="extra-cell" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-index="${i}" title="${escape(g?.name??'Sense assignar')} · toca per canviar"><span class="small-day">${miniDate(addDays(r.startDate,i))}</span><span class="guardian-initial" style="background:${escape(g?.color??'#e1e6ee')}">${escape((g?.name??'—').slice(0,1))}</span></button>`;
              }).join('')}</div></div>`).join('')}</div>`;
-         }).join('')}
+         }).join(''):'<p class="settings-note">Activa almenys un dia per poder assignar responsables.</p>'}
        </div>`:''}
      </section>`;
    });
@@ -70,16 +75,19 @@
      }else{r.childIds.push(id);r.assignments[id]=Array.from({length:r.length},()=> '');}
    }else if(action==='extra-cell'){
      if(!r.childIds.includes(data.child))return null;
-     const index=Number(data.index);if(!Number.isInteger(index)||index<0||index>=r.length)return null;
+     const index=Number(data.index);if(!Number.isInteger(index)||index<0||index>=r.length||r.activeDays?.[index]===false)return null;
      r.assignments[data.child][index]=nextGuardian(r.assignments[data.child][index],state.guardians);
    }else if(action==='extra-week'){
-     const arr=r.assignments[data.child],index=Number(data.week)*7;if(!arr||index<0||index>=r.length)return null;
-     for(let i=index;i<Math.min(r.length,index+7);i++)arr[i]=arr[index];
+     const week=Number(data.week),arr=r.assignments[data.child];
+     if(!arr||!Number.isInteger(week)||week<0||week>=Math.ceil(r.length/7))return null;
+     const days=activeIndices(r,week);if(!days.length)return null;
+     const first=days[0];for(const i of days)arr[i]=arr[first];
    }else if(action==='extra-all'){
-     const first=r.childIds[0];if(!first)return null;for(const id of r.childIds)r.assignments[id]=[...r.assignments[first]];
+     const first=r.childIds[0];if(!first||!r.assignments[first])return null;
+     for(const id of r.childIds)for(const i of activeIndices(r))r.assignments[id][i]=r.assignments[first][i];
    }else if(action==='extra-copy'){
      if(!r.childIds.includes(data.child)||!r.childIds.includes(data.from))return null;
-     r.assignments[data.child]=[...r.assignments[data.from]];
+     for(const i of activeIndices(r))r.assignments[data.child][i]=r.assignments[data.from][i];
    }else return null;
    return {open:r.id,save:true};
  }
