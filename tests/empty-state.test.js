@@ -15,6 +15,7 @@ const extract=(from,to)=>{
 };
 const monthContext={window:{}};
 vm.runInNewContext(monthSource,monthContext);
+const rotationContext={window:{}};vm.runInNewContext(readFileSync(new URL('../rotation-patterns.js',import.meta.url),'utf8'),rotationContext);
 const functions=[
   extract('function emptyState()','const SCHOOL_PALETTE'),
   extract('function cleanState(raw)','/** Actualitza només'),
@@ -27,6 +28,7 @@ const makeContext=()=>{
   let saves=0,id=0,confirmed=true;
   const context=vm.createContext({
     monthDayUI:monthContext.window.monthDayUI,
+    rotationPatterns:rotationContext.window.rotationPatterns,
     DEFAULT_CHANGE_TIME:'19:00',MAX_ROTATION_DAYS:3640,
     BANDS:['mati','dinar','tarda','sopar','nit'],
     localDate:d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),
