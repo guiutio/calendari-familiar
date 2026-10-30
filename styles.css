@@ -707,3 +707,8 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .month-grid .day-cell.month-edge-left {--month-left:var(--month-outline);}
 .month-grid .day-cell.month-edge-right {--month-right:var(--month-outline);}
 :root[data-theme="dark"] .month-grid {--month-outline:#88baff;}
+
+/* v0.5.9 · Pantalles d'agenda sense fills, amb accés directe a configuració. */
+.calendar-empty-state {padding:25px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;color:#64758b;}
+.calendar-empty-state p {margin:0;font-size:calc(13px * var(--font-scale,1));line-height:1.55;}
+:root[data-theme="dark"] .calendar-empty-state {color:#d0dbee;}
