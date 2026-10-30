@@ -37,6 +37,7 @@ test('el mes inverteix el fons de tot el requadre i elimina el cercle de la data
  assert.match(css,/\.month-grid \.day-cell\.today\s*,[\s\S]*?background:#285782;/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(css,/:root\[data-theme="dark"\] \.month-grid \.day-cell\.today[\s\S]*?background:#94c5ff;/);
+ assert.match(css,/:root\[data-theme="dark"\] \.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(css,/\.month-grid \.day-cell\.today \.month-mini-child/);
  assert.match(css,/\.week-day-header\.today[\s\S]*?background:#285782;/);
  assert.match(css,/\.week-date-columns\.today \.day-time-column[\s\S]*?background:repeating-linear-gradient/);
