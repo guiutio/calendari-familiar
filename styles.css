@@ -712,3 +712,68 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .calendar-empty-state {padding:25px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;color:#64758b;}
 .calendar-empty-state p {margin:0;font-size:calc(13px * var(--font-scale,1));line-height:1.55;}
 :root[data-theme="dark"] .calendar-empty-state {color:#d0dbee;}
+
+/* v0.5.10 · El dia d'avui es distingeix per tota la superfície, no pel cercle del número. */
+.month-grid .day-cell.today,
+.month-grid .day-cell.today:hover,
+.month-grid .day-cell.today.other-month {
+  background:#285782;
+  color:#fff;
+  opacity:1;
+}
+.month-grid .day-cell.today .day-number {
+  background:transparent;
+  color:inherit;
+  border-radius:0;
+}
+.month-grid .day-cell.today .month-mini-child,
+.month-grid .day-cell.today .mini-birthday {color:#fff;}
+.month-grid .day-cell.today .change-dot {background:#fff;}
+.month-grid .day-cell.today .month-mini-column {background:#d9e8f6;}
+:root[data-theme="dark"] .month-grid .day-cell.today,
+:root[data-theme="dark"] .month-grid .day-cell.today:hover,
+:root[data-theme="dark"] .month-grid .day-cell.today.other-month {
+  background:#94c5ff;
+  color:#132d4b;
+}
+:root[data-theme="dark"] .month-grid .day-cell.today .month-mini-child,
+:root[data-theme="dark"] .month-grid .day-cell.today .mini-birthday {color:#132d4b;}
+:root[data-theme="dark"] .month-grid .day-cell.today .change-dot {background:#132d4b;}
+
+/* A la vista Setmana, avui és tota la columna de 24 hores, inclosa la capçalera. */
+.week-day-header.today,
+.week-day-header.today .week-child-headers,
+.week-day-header.today .week-date-button {
+  background:#285782;
+  color:#fff;
+}
+.week-day-header.today .week-child-label {color:#fff;}
+.week-date-columns.today .day-time-column {
+  background:repeating-linear-gradient(
+    to bottom,
+    #d0e4f8 0,
+    #d0e4f8 calc(var(--hour-height,48px) - 1px),
+    #80b0e0 calc(var(--hour-height,48px) - 1px),
+    #80b0e0 var(--hour-height,48px)
+  );
+  border-left-color:#729dc9;
+}
+.week-date-columns.today {box-shadow:inset 3px 0 0 #285782,inset -3px 0 0 #285782;}
+:root[data-theme="dark"] .week-day-header.today,
+:root[data-theme="dark"] .week-day-header.today .week-child-headers,
+:root[data-theme="dark"] .week-day-header.today .week-date-button {
+  background:#94c5ff;
+  color:#132d4b;
+}
+:root[data-theme="dark"] .week-day-header.today .week-child-label {color:#132d4b;}
+:root[data-theme="dark"] .week-date-columns.today .day-time-column {
+  background:repeating-linear-gradient(
+    to bottom,
+    #406185 0,
+    #406185 calc(var(--hour-height,48px) - 1px),
+    #749bc1 calc(var(--hour-height,48px) - 1px),
+    #749bc1 var(--hour-height,48px)
+  );
+  border-left-color:#88baff;
+}
+:root[data-theme="dark"] .week-date-columns.today {box-shadow:inset 3px 0 0 #94c5ff,inset -3px 0 0 #94c5ff;}
