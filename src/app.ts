@@ -83,12 +83,15 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
 
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
-type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[] };
+type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>};
+type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
+type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
+type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.5.10';
+const APP_VERSION = '0.6.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -153,7 +156,7 @@ function seedState():AppState {
     children:[{id:'elna',name:'Elna',birthDate:''},{id:'blai',name:'Blai',birthDate:''}],
     guardians:[{id:'pare',name:'Pare',color:'#8bb8e8'},{id:'mare',name:'Mare',color:'#efafc3'}],
     rotation:{startDate:DEMO_START_DATE,length:sequence.length,assignments:{elna:[...sequence],blai:[...sequence]},changeTime:DEFAULT_CHANGE_TIME},
-    overrides:{},bandOverrides:{},daySlots:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50},schools:[]
+    overrides:{},bandOverrides:{},daySlots:{},nightPatternTimes:{},nightDateTimes:{},extraRotations:[],extraExceptions:{}, preferences:{visibleChildren:['elna','blai'],visibleGuardians:['pare','mare'],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50},schools:[]
   };
 }
 /** Estat inicial completament buit, independent de les dades d'exemple. */
@@ -161,7 +164,7 @@ function emptyState():AppState {
   return {
     version:1,children:[],guardians:[],
     rotation:{startDate:localDate(new Date()),length:7,assignments:{},changeTime:DEFAULT_CHANGE_TIME},
-    overrides:{},bandOverrides:{},daySlots:{},schools:[],
+    overrides:{},bandOverrides:{},daySlots:{},schools:[],nightPatternTimes:{},nightDateTimes:{},extraRotations:[],extraExceptions:{},
     preferences:{visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50}
   };
 }
@@ -311,7 +314,12 @@ function cleanState(raw:unknown):AppState {
       bandOverrides[key]=who;
     }
   }
-  return {version:1,children,guardians,rotation:{startDate:obj.rotation.startDate,length,assignments,changeTime:validChangeTime(obj.rotation.changeTime)},overrides,bandOverrides,daySlots,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom)},schools};
+  const rotation={startDate:obj.rotation.startDate,length,assignments,changeTime:validChangeTime(obj.rotation.changeTime)};
+  const extraRotations=rotationPatterns.cleanExtras(obj.extraRotations,children,guardians,MAX_ROTATION_DAYS) as ExtraRotation[];
+  const nightPatternTimes=rotationPatterns.cleanNightTimes(obj.nightPatternTimes,rotation) as Record<string,string>;
+  const nightDateTimes=rotationPatterns.cleanDateTimes(obj.nightDateTimes) as Record<string,string>;
+  const extraExceptions=rotationPatterns.cleanExtraExceptions(obj.extraExceptions,extraRotations,children,guardians) as Record<string,ExtraException>;
+  return {version:1,children,guardians,rotation,nightPatternTimes,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom)},schools};
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data:AppState):{data:AppState;changed:boolean}{
@@ -380,6 +388,9 @@ let sheet:Sheet=null;
 let detailOrigin:'day'|'calendar'='calendar';
 let detailReturnDate='';
 let rotationDraft:Rotation|null=null;
+let extraRotationOpen:string|null=null;
+let extraRotationUnit:'days'|'weeks'='weeks';
+let rotationShowAll=false;
 let rotationUnit:'days'|'weeks'='weeks';
 let toastTimer:number|null=null;
 let writeQueue:Promise<void>=Promise.resolve();
@@ -425,6 +436,9 @@ function update(){applyTheme();applyFontSize();saveState();render();}
 function guardian(id:string):Guardian|undefined {return state.guardians.find(g=>g.id===id);}
 function childById(id:string):Child|undefined{return state.children.find(c=>c.id===id);}
 function defaultGuardian(){return state.guardians[0]?.id??'';}
+function nightChangeTime(date:string):string {
+  return rotationPatterns.nightTime(date,state.rotation,state.nightPatternTimes,state.nightDateTimes);
+}
 function rotationAssignment(date:string,childId:string,rotation=state.rotation):string {
   const arr=rotation.assignments[childId];if(!arr?.length)return defaultGuardian();
   const index=((diffDays(date,rotation.startDate)%rotation.length)+rotation.length)%rotation.length;
@@ -500,19 +514,23 @@ type DayTimelineUI = {
 };
 const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimelineUI;
 const monthDayUI=(window as Window & {monthDayUI?:any}).monthDayUI;
+const rotationPatterns=(window as Window & {rotationPatterns?:any}).rotationPatterns;
+function extraSlots(date:string,children:Child[]):ExtraSlot[] {
+  return rotationPatterns.slots(state,date,children,state.guardians,state.preferences.visibleGuardians) as ExtraSlot[];
+}
 function monthData(date:string,children:Child[]){
   const nights:Record<string,any[]>={};
-  const changeTime=validChangeTime(state.rotation.changeTime);
+  const changeTime=nightChangeTime(date);
   for(const c of children)nights[c.id]=dayTimelineUI?.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians)??[];
-  return {nights,activities:schoolActivities(date,children),slots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians)};
+  return {nights,activities:schoolActivities(date,children),slots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extra:extraSlots(date,children)};
 }
 function dayTimeline(date:string,children:Child[]):string{
  if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal diària.</p>';
- const changeTime=validChangeTime(state.rotation.changeTime);
+ const changeTime=nightChangeTime(date);
  const nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
  for(const c of children)nights[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
  if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="settings"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
- return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians));
+ return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extraSlots(date,children));
 }
 function weekTimeline(start:string,children:Child[]):string{
  if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
@@ -520,8 +538,8 @@ function weekTimeline(start:string,children:Child[]):string{
  const days=Array.from({length:7},(_,i)=>{
    const date=addDays(start,i);
    const nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
-   for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
-   return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians)};
+   for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,nightChangeTime(date),assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
+   return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),rotatingSlots:extraSlots(date,children)};
  });
  if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="settings"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
  return dayTimelineUI.renderWeek(start,days,children,validTimelineZoom(state.preferences.timelineZoom),selectedDate,localDate(new Date()));
@@ -582,7 +600,7 @@ function calendarPage(){
       const snapshot=monthData(date,children),schoolCount=snapshot.activities.length;
       return `${iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:''}<button type="button" class="day-cell ${other?'other-month':''} ${date===today?'today':''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date===today?'aria-current="date"':''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}</span>
-        ${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots)}
+        ${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra)}
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
     });
