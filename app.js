@@ -973,13 +973,13 @@ function sheetMarkup() {
         contents = sheet.rotationId ? rotationEditor.dateForm(state, sheet.date, sheet.rotationId, sheet.childId) : rotationEditor.datePicker(state, sheet.date);
     }
     else if (sheet?.type === 'bandEdit') {
-        const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band);
+        const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band), visibleDate = sheet.viewDate ?? date;
         const isNight = band === 'nit';
         const manual = !isNight && Object.hasOwn(state.bandOverrides, bandKey(date, childId, band));
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name ?? 'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     <p class="settings-note">${isNight ? 'Aquesta nit segueix la rotació, excepte si la canvies.' : 'Assignació independent de la nit. Les escoles es calculen a partir de l’horari escolar.'} Actualment: ${escapeHtml(value.name)}.</p>
-    ${isNight ? `<div class="field"><label for="night-date-time">Hora de canvi de responsabilitat d'aquest dia</label><input id="night-date-time" type="time" data-action="night-date-time" data-date="${escapeHtml(date)}" value="${nightChangeTime(date)}"></div>
-      ${Object.hasOwn(state.nightDateTimes, date) ? `<button class="soft-btn" data-action="night-date-time-clear" data-date="${escapeHtml(date)}">Restaura l'hora de canvi de la rotació</button>` : ''}` : ''}
+    ${isNight ? `<div class="field"><label for="night-date-time">Hora de canvi de responsabilitat del ${escapeHtml(fullDate(visibleDate))}</label><input id="night-date-time" type="time" data-action="night-date-time" data-date="${escapeHtml(visibleDate)}" value="${nightChangeTime(visibleDate)}"></div>
+      ${Object.hasOwn(state.nightDateTimes, visibleDate) ? `<button class="soft-btn" data-action="night-date-time-clear" data-date="${escapeHtml(visibleDate)}">Restaura l'hora de canvi de la rotació</button>` : ''}` : ''}
     ${state.guardians.map(g => `<button class="option ${value.type === 'guardian' && value.name === g.name ? 'selected' : ''}" data-action="${isNight ? 'assign-night' : 'assign-band'}" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span></button>`).join('')}
     ${!isNight ? `<button class="option" data-action="assign-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian=""><span class="option-left">Sense assignar</span></button>` : ''}
     ${isNight && overridden(date, childId) ? `<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>` : ''}
@@ -1489,7 +1489,7 @@ function clickAction(button) {
             if (isTimeBand(band) && isValidDate(date) && childById(childId)) {
                 detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
                 detailReturnDate = button.dataset.viewDate ?? date;
-                sheet = { type: 'bandEdit', date, childId, band };
+                sheet = { type: 'bandEdit', date, childId, band, viewDate: button.dataset.viewDate ?? date };
                 render();
             }
             break;
