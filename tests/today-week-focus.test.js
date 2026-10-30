@@ -22,8 +22,8 @@ test('a Setmana es ressalta tota la columna d’avui i la capçalera, no els alt
  assert.match(output,/class="week-day-header today" data-date="2026-10-29"/);
  assert.match(output,/class="week-date-columns today" data-date="2026-10-29"/);
  assert.match(output,/data-action="show-calendar-day" data-date="2026-10-29" aria-current="date"/);
- assert.match(output,/class="week-day-header " data-date="2026-10-28"/);
- assert.match(output,/class="week-date-columns " data-date="2026-10-28"/);
+ assert.match(output,/class="week-day-header" data-date="2026-10-28"/);
+ assert.match(output,/class="week-date-columns" data-date="2026-10-28"/);
  assert.equal((output.match(/class="week-date-columns today"/g)||[]).length,1);
  assert.equal((output.match(/class="week-day-header today"/g)||[]).length,1);
  const otherFocus=ui.renderWeek('2026-10-26',days,children,50,'2026-10-27','2026-10-29');
