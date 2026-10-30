@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.10';
+const APP_VERSION = '0.6.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -136,7 +136,7 @@ function seedState() {
         children: [{ id: 'elna', name: 'Elna', birthDate: '' }, { id: 'blai', name: 'Blai', birthDate: '' }],
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] }, changeTime: DEFAULT_CHANGE_TIME },
-        overrides: {}, bandOverrides: {}, daySlots: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }, schools: []
+        overrides: {}, bandOverrides: {}, daySlots: {}, nightPatternTimes: {}, nightDateTimes: {}, extraRotations: [], extraExceptions: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }, schools: []
     };
 }
 /** Estat inicial completament buit, independent de les dades d'exemple. */
@@ -144,7 +144,7 @@ function emptyState() {
     return {
         version: 1, children: [], guardians: [],
         rotation: { startDate: localDate(new Date()), length: 7, assignments: {}, changeTime: DEFAULT_CHANGE_TIME },
-        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [],
+        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], nightPatternTimes: {}, nightDateTimes: {}, extraRotations: [], extraExceptions: {},
         preferences: { visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }
     };
 }
@@ -336,7 +336,12 @@ function cleanState(raw) {
             bandOverrides[key] = who;
         }
     }
-    return { version: 1, children, guardians, rotation: { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) }, overrides, bandOverrides, daySlots, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom) }, schools };
+    const rotation = { startDate: obj.rotation.startDate, length, assignments, changeTime: validChangeTime(obj.rotation.changeTime) };
+    const extraRotations = rotationPatterns.cleanExtras(obj.extraRotations, children, guardians, MAX_ROTATION_DAYS);
+    const nightPatternTimes = rotationPatterns.cleanNightTimes(obj.nightPatternTimes, rotation);
+    const nightDateTimes = rotationPatterns.cleanDateTimes(obj.nightDateTimes);
+    const extraExceptions = rotationPatterns.cleanExtraExceptions(obj.extraExceptions, extraRotations, children, guardians);
+    return { version: 1, children, guardians, rotation, nightPatternTimes, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom) }, schools };
 }
 /** Actualitza només el patró de mostra v0.1 íntegre i sense editar; mai modifica dades personalitzades. */
 function upgradeOriginalDemo(data) {
@@ -407,6 +412,11 @@ let sheet = null;
 let detailOrigin = 'calendar';
 let detailReturnDate = '';
 let rotationDraft = null;
+let extraRotationOpen = null;
+let extraRotationUnit = 'weeks';
+let rotationShowAll = false;
+let nightPatternDraft = {};
+let extraRotationUnits = {};
 let rotationUnit = 'weeks';
 let toastTimer = null;
 let writeQueue = Promise.resolve();
@@ -498,6 +508,9 @@ function update() { applyTheme(); applyFontSize(); saveState(); render(); }
 function guardian(id) { return state.guardians.find(g => g.id === id); }
 function childById(id) { return state.children.find(c => c.id === id); }
 function defaultGuardian() { return state.guardians[0]?.id ?? ''; }
+function nightChangeTime(date) {
+    return rotationPatterns.nightTime(date, state.rotation, state.nightPatternTimes, state.nightDateTimes);
+}
 function rotationAssignment(date, childId, rotation = state.rotation) {
     const arr = rotation.assignments[childId];
     if (!arr?.length)
@@ -570,23 +583,28 @@ function schoolTimeline(date, children, range, empty = false) {
 }
 const dayTimelineUI = window.dayTimelineUI;
 const monthDayUI = window.monthDayUI;
+const rotationPatterns = window.rotationPatterns;
+const rotationEditor = window.rotationEditor;
+function extraSlots(date, children) {
+    return rotationPatterns.slots(state, date, children, state.guardians, state.preferences.visibleGuardians);
+}
 function monthData(date, children) {
     const nights = {};
-    const changeTime = validChangeTime(state.rotation.changeTime);
+    const changeTime = nightChangeTime(date);
     for (const c of children)
         nights[c.id] = dayTimelineUI?.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians) ?? [];
-    return { nights, activities: schoolActivities(date, children), slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians) };
+    return { nights, activities: schoolActivities(date, children), slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extra: extraSlots(date, children) };
 }
 function dayTimeline(date, children) {
     if (!dayTimelineUI)
         return '<p class="settings-note">No es pot carregar la línia temporal diària.</p>';
-    const changeTime = validChangeTime(state.rotation.changeTime);
+    const changeTime = nightChangeTime(date);
     const nights = {};
     for (const c of children)
         nights[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
     if (!children.length)
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="settings"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
-    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians));
+    return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extraSlots(date, children));
 }
 function weekTimeline(start, children) {
     if (!dayTimelineUI)
@@ -596,8 +614,8 @@ function weekTimeline(start, children) {
         const date = addDays(start, i);
         const nightSegments = {};
         for (const c of children)
-            nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians) };
+            nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, nightChangeTime(date), assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
+        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
     });
     if (!children.length)
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="settings"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
@@ -676,7 +694,7 @@ function calendarPage() {
             const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
             return `${iso ? `<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date, 6)}">${iso.week}</button>` : ''}<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
-        ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots)}
+        ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
       </button>`;
         });
@@ -686,7 +704,7 @@ function calendarPage() {
         content = weekTimeline(weekStart(selectedDate), children);
     }
     else {
-        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>` : ''}${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
+        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>` : ''}${state.extraRotations.length ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${selectedDate}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
     }
     const visibleNames = bands.map(b => BAND_NAMES[b]).join(' · ');
     return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView === 'day' || calendarView === 'week' ? 'Pernoctes i activitats per fill durant les 24 hores.' : 'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
@@ -714,20 +732,23 @@ function rotationPage() {
         return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
     <section class="card"><h2 class="section-title">Encara no hi ha tutors</h2><p class="section-description">Afegeix almenys un tutor a Configuració per poder assignar les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
     const r = rotationDraft ?? state.rotation;
-    return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix el patró habitual de les nits.</p></div></header>
+    return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix la pernocta i altres franges amb patrons independents.</p></div></header>
     <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia, la durada i l’hora de canvi de pernocta. El patró es repeteix indefinidament.</p>
     <div class="form-row"><div class="field"><label for="rotation-start">Data d’inici</label><input id="rotation-start" type="date" value="${r.startDate}" data-action="rotation-start" /></div>
     <div class="field"><label for="rotation-length">Durada de la rotació</label><div class="duration-row"><input id="rotation-length" type="number" min="1" max="${rotationUnit === 'weeks' ? MAX_ROTATION_DAYS / 7 : MAX_ROTATION_DAYS}" step="1" inputmode="numeric" value="${rotationUnit === 'weeks' ? Math.ceil(r.length / 7) : r.length}" data-action="rotation-length" aria-label="Nombre de dies o setmanes" /><select id="rotation-unit" data-action="rotation-unit" aria-label="Unitat de la rotació"><option value="days" ${rotationUnit === 'days' ? 'selected' : ''}>dies</option><option value="weeks" ${rotationUnit === 'weeks' ? 'selected' : ''}>setmanes</option></select></div></div></div>
     <div class="field rotation-change-field"><label for="rotation-change-time">Hora de canvi de pernocta</label><input id="rotation-change-time" type="time" data-action="rotation-change-time" value="${validChangeTime(r.changeTime)}" /><p class="settings-note">Per defecte, 19:00. La nit assignada a una data va des d’aquesta hora fins a la mateixa hora de l’endemà.</p></div>
     <p class="duration-help">${r.length} ${r.length === 1 ? 'dia' : 'dies'} de rotació · ${Math.ceil(r.length / 7)} ${Math.ceil(r.length / 7) === 1 ? 'setmana' : 'setmanes'} ${r.length % 7 === 0 ? '' : '(l’última incompleta)'}. Les nits afegides hereten el patró actual fins que les canviïs.</p>
-    <hr><div class="panel-header"><h2 class="section-title">Assignació per fill</h2><button class="secondary-btn" data-action="rotation-same">${icon('copy', 14)} Tots igual</button></div><p class="section-description">Toca cada casella per triar el tutor d’aquella nit. La lletra i el color corresponen al tutor.</p>
-    ${state.children.map((c, cIndex) => `<div class="rotation-child"><div class="rotation-child-header"><strong>${escapeHtml(c.name)}</strong>${cIndex > 0 ? `<button class="soft-btn" data-action="rotation-copy" data-child="${escapeHtml(c.id)}" data-from="${escapeHtml(state.children[0].id)}">Copiar de ${escapeHtml(state.children[0].name)}</button>` : ''}</div>
+    <div class="rotation-pattern-times"><h3 class="section-title">Hora de canvi per dia del patró</h3><p class="settings-note">Per defecte s'usa l'hora general; aquí pots canviar-la per a cada dia de la rotació.</p>
+    <div class="pattern-time-grid">${Array.from({ length: r.length }, (_, i) => `<label class="field pattern-time-field">Dia ${i + 1} · ${weekdays[(parseDate(addDays(r.startDate, i)).getDay() + 6) % 7]}<input type="time" data-action="rotation-pattern-time" data-index="${i}" value="${escapeHtml(nightPatternDraft[i] ?? r.changeTime)}"></label>`).join('')}</div></div>
+    <hr><div class="panel-header"><h2 class="section-title">Assignació per fill</h2><div class="action-row"><button class="secondary-btn" data-action="rotation-same">${icon('copy', 14)} Tots igual</button><button class="secondary-btn" data-action="rotation-show-all">${rotationShowAll ? 'Vista compacta' : 'Mostra tots'}</button></div></div><p class="section-description">Toca cada casella per triar el tutor d’aquella nit. La lletra i el color corresponen al tutor.</p>
+    ${state.children.filter((c, i) => rotationShowAll || i === 0 || state.children.some(first => JSON.stringify(r.assignments[first.id]) !== JSON.stringify(r.assignments[state.children[0].id]))).map((c, cIndex) => `<div class="rotation-child"><div class="rotation-child-header"><strong>${escapeHtml(c.name)}</strong>${rotationShowAll ? state.children.filter(other => other.id !== c.id).map(other => `<button class="soft-btn" data-action="rotation-copy" data-child="${escapeHtml(c.id)}" data-from="${escapeHtml(other.id)}">Copiar de ${escapeHtml(other.name)}</button>`).join('') : ''}</div>
     ${Array.from({ length: Math.ceil(r.length / 7) }, (_, week) => `<div class="rotation-week"><div class="rotation-week-header"><div class="rotation-week-title">Setmana ${week + 1}</div><button class="week-fill-btn" data-action="rotation-week-fill" data-child="${escapeHtml(c.id)}" data-week="${week}" aria-label="Assigna tota la setmana ${week + 1} de ${escapeHtml(c.name)}">Assigna setmana</button></div><div class="rotation-days">${Array.from({ length: Math.min(7, r.length - week * 7) }, (_, day) => {
         const i = week * 7 + day, g = guardian(r.assignments[c.id]?.[i] ?? '');
         return `<button class="rotation-cell" data-action="rotation-cell" data-child="${escapeHtml(c.id)}" data-index="${i}" aria-label="${escapeHtml(c.name)}, dia ${i + 1}, ${escapeHtml(g?.name ?? 'sense tutor')}"><span class="small-day">${weekdays[(parseDate(addDays(r.startDate, i)).getDay() + 6) % 7]}</span><span class="guardian-initial" style="background:${g?.color ?? '#edf0f4'}">${escapeHtml(initial(g?.name ?? '?'))}</span></button>`;
     }).join('')}</div></div>`).join('')}</div>`).join('')}
     <div class="action-row"><button class="primary-btn" data-action="rotation-save">Desa el patró</button>${rotationDraft ? '<button class="soft-btn" data-action="rotation-cancel">Descarta canvis</button>' : ''}</div>
-    <p class="settings-note">Les excepcions de dies concrets tenen prioritat sobre el patró. Si canvies el patró, les excepcions continuaran guardades.</p></section>`;
+    <p class="settings-note">Les excepcions de dates concretes tenen prioritat sobre el patró. Si canvies el patró, les excepcions es mantenen.</p></section>
+    ${rotationEditor.render(state, extraRotationOpen, extraRotationUnits)}`;
 }
 function schoolById(id) { return state.schools.find(s => s.id === id); }
 function yearById(school, id) { return school?.years.find(y => y.id === id); }
@@ -948,12 +969,17 @@ function sheetMarkup() {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
+    else if (sheet?.type === 'extraDate') {
+        contents = sheet.rotationId ? rotationEditor.dateForm(state, sheet.date, sheet.rotationId, sheet.childId) : rotationEditor.datePicker(state, sheet.date);
+    }
     else if (sheet?.type === 'bandEdit') {
-        const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band);
+        const { date, childId, band } = sheet, c = childById(childId), value = responsibility(date, childId, band), visibleDate = sheet.viewDate ?? date;
         const isNight = band === 'nit';
         const manual = !isNight && Object.hasOwn(state.bandOverrides, bandKey(date, childId, band));
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${BAND_NAMES[band]} · ${escapeHtml(c?.name ?? 'Fill')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     <p class="settings-note">${isNight ? 'Aquesta nit segueix la rotació, excepte si la canvies.' : 'Assignació independent de la nit. Les escoles es calculen a partir de l’horari escolar.'} Actualment: ${escapeHtml(value.name)}.</p>
+    ${isNight ? `<div class="field"><label for="night-date-time">Hora de canvi de responsabilitat del ${escapeHtml(fullDate(visibleDate))}</label><input id="night-date-time" type="time" data-action="night-date-time" data-date="${escapeHtml(visibleDate)}" value="${nightChangeTime(visibleDate)}"></div>
+      ${Object.hasOwn(state.nightDateTimes, visibleDate) ? `<button class="soft-btn" data-action="night-date-time-clear" data-date="${escapeHtml(visibleDate)}">Restaura l'hora de canvi de la rotació</button>` : ''}` : ''}
     ${state.guardians.map(g => `<button class="option ${value.type === 'guardian' && value.name === g.name ? 'selected' : ''}" data-action="${isNight ? 'assign-night' : 'assign-band'}" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian="${escapeHtml(g.id)}"><span class="option-left"><span class="color-dot" style="background:${g.color}"></span>${escapeHtml(g.name)}</span></button>`).join('')}
     ${!isNight ? `<button class="option" data-action="assign-band" data-date="${date}" data-child="${escapeHtml(childId)}" data-band="${band}" data-guardian=""><span class="option-left">Sense assignar</span></button>` : ''}
     ${isNight && overridden(date, childId) ? `<button class="soft-btn" data-action="clear-night" data-date="${date}" data-child="${escapeHtml(childId)}">Torna a la rotació</button>` : ''}
@@ -1042,6 +1068,7 @@ function notify(message) {
 function goToMonth(delta) { const d = new Date(viewYear, viewMonth + delta, 1, 12); viewYear = d.getFullYear(); viewMonth = d.getMonth(); render(); }
 function changeTab(value) { tab = value; sheet = null; if (tab === 'rotation') {
     rotationDraft = JSON.parse(JSON.stringify(state.rotation));
+    nightPatternDraft = { ...state.nightPatternTimes };
     rotationUnit = state.rotation.length % 7 === 0 ? 'weeks' : 'days';
 } render(); window.scrollTo({ top: 0, behavior: 'instant' }); }
 function chooseGuardian(date, childId, guardianId) {
@@ -1067,6 +1094,7 @@ function removeGuardian(id) {
     Object.keys(state.bandOverrides).forEach(key => { if (state.bandOverrides[key] === id)
         state.bandOverrides[key] = alternate; });
     monthDayUI.removeGuardian(state.daySlots, id, alternate);
+    rotationPatterns.removeGuardian(state, id);
     state.preferences.visibleGuardians = state.preferences.visibleGuardians.filter(x => x !== id);
     rotationDraft = null;
     update();
@@ -1085,6 +1113,7 @@ function removeChild(id) {
     Object.keys(state.bandOverrides).forEach(key => { if (key.split('|')[1] === id)
         delete state.bandOverrides[key]; });
     monthDayUI.removeChild(state.daySlots, id);
+    rotationPatterns.removeChild(state, id);
     state.preferences.visibleChildren = state.preferences.visibleChildren.filter(x => x !== id);
     rotationDraft = null;
     update();
@@ -1449,6 +1478,7 @@ function clickAction(button) {
             if (!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))
                 break;
             monthDayUI.restore(state, date);
+            rotationPatterns.clearDate(state, date);
             sheet = null;
             update();
             notify('Dia restaurat segons la rotació');
@@ -1459,7 +1489,7 @@ function clickAction(button) {
             if (isTimeBand(band) && isValidDate(date) && childById(childId)) {
                 detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
                 detailReturnDate = button.dataset.viewDate ?? date;
-                sheet = { type: 'bandEdit', date, childId, band };
+                sheet = { type: 'bandEdit', date, childId, band, viewDate: button.dataset.viewDate ?? date };
                 render();
             }
             break;
@@ -1521,6 +1551,40 @@ function clickAction(button) {
             update();
             notify('Patró habitual restaurat');
             break;
+        case 'night-date-time-clear': {
+            const date = button.dataset.date ?? '';
+            delete state.nightDateTimes[date];
+            sheet = returnFromDetail(date);
+            update();
+            notify('Hora habitual restaurada');
+            break;
+        }
+        case 'extra-date-clear': {
+            const { date, rotation: rotationId, child: childId } = button.dataset;
+            delete state.extraExceptions[`${rotationId}|${date}|${childId}`];
+            sheet = returnFromDetail(date ?? '');
+            update();
+            notify('Rotació restaurada');
+            break;
+        }
+        case 'extra-date-choose': {
+            const date = button.dataset.date ?? '';
+            if (!isValidDate(date))
+                break;
+            sheet = { type: 'extraDate', rotationId: '', childId: '', date };
+            render();
+            break;
+        }
+        case 'edit-extra-slot': {
+            const date = button.dataset.date ?? '', rotationId = button.dataset.rotation ?? '', childId = button.dataset.child ?? '';
+            if (!isValidDate(date) || !state.extraRotations.some(r => r.id === rotationId && r.childIds.includes(childId)))
+                break;
+            detailOrigin = button.closest('.month-day-sheet') ? 'day' : 'calendar';
+            detailReturnDate = date;
+            sheet = { type: 'extraDate', rotationId, childId, date };
+            render();
+            break;
+        }
         case 'rotation-cell':
             sheet = { type: 'rotationCell', childId: button.dataset.child, index: Number(button.dataset.index) };
             render();
@@ -1549,6 +1613,10 @@ function clickAction(button) {
             render();
             break;
         }
+        case 'rotation-show-all':
+            rotationShowAll = !rotationShowAll;
+            render();
+            break;
         case 'rotation-same': {
             if (!rotationDraft)
                 rotationDraft = JSON.parse(JSON.stringify(state.rotation));
@@ -1557,6 +1625,7 @@ function clickAction(button) {
                 for (const child of state.children)
                     rotationDraft.assignments[child.id] = [...(rotationDraft.assignments[first] ?? [])];
             }
+            rotationShowAll = false;
             render();
             notify('Patró copiat a tots els fills');
             break;
@@ -1569,10 +1638,36 @@ function clickAction(button) {
             notify('Patró copiat');
             break;
         }
+        case 'extra-add':
+        case 'extra-toggle':
+        case 'extra-delete':
+        case 'extra-child':
+        case 'extra-day-toggle':
+        case 'extra-cell':
+        case 'extra-week':
+        case 'extra-all':
+        case 'extra-copy': {
+            const result = rotationEditor.click(state, button.dataset.action, button.dataset, newId, localDate(new Date()), confirm);
+            if (!result)
+                break;
+            if (result.toggle) {
+                extraRotationOpen = extraRotationOpen === result.open ? null : result.open;
+                render();
+            }
+            else {
+                extraRotationOpen = result.open;
+                if (result.save)
+                    update();
+                else
+                    render();
+            }
+            break;
+        }
         case 'rotation-save': {
             if (!rotationDraft)
                 return;
             rotationDraft.changeTime = validChangeTime(rotationDraft.changeTime);
+            state.nightPatternTimes = Object.fromEntries(Object.entries(nightPatternDraft).filter(([i, t]) => Number(i) < rotationDraft.length && t !== rotationDraft.changeTime));
             state.rotation = JSON.parse(JSON.stringify(rotationDraft));
             rotationDraft = JSON.parse(JSON.stringify(state.rotation));
             update();
@@ -1581,6 +1676,7 @@ function clickAction(button) {
         }
         case 'rotation-cancel':
             rotationDraft = JSON.parse(JSON.stringify(state.rotation));
+            nightPatternDraft = { ...state.nightPatternTimes };
             render();
             notify('Canvis descartats');
             break;
@@ -1591,6 +1687,12 @@ function clickAction(button) {
             state.children.push({ id, name, birthDate: '' });
             state.rotation.assignments[id] = [...(state.rotation.assignments[prev?.id ?? ''] ?? Array.from({ length: state.rotation.length }, () => defaultGuardian()))];
             state.preferences.visibleChildren.push(id);
+            for (const extra of state.extraRotations) {
+                if (extra.childIds.length === state.children.length - 1) {
+                    extra.childIds.push(id);
+                    extra.assignments[id] = [...(extra.assignments[prev?.id ?? ''] ?? Array.from({ length: extra.length }, () => ''))];
+                }
+            }
             rotationDraft = null;
             update();
             notify('Fill afegit · pots editar-ne el nom');
@@ -1646,6 +1748,19 @@ document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement))
         return;
+    if (form.dataset.extraDateForm) {
+        event.preventDefault();
+        const date = form.dataset.date ?? '', rotationId = form.dataset.rotation ?? '', childId = form.dataset.child ?? '';
+        const error = rotationEditor.saveDate(state, date, rotationId, childId, new FormData(form));
+        if (error) {
+            notify(error);
+            return;
+        }
+        sheet = returnFromDetail(date);
+        update();
+        notify('Excepció de rotació desada');
+        return;
+    }
     if (form.dataset.daySlotForm) {
         event.preventDefault();
         const date = form.dataset.date ?? '', slotId = form.dataset.slot ?? '';
@@ -1911,6 +2026,33 @@ document.addEventListener('change', event => {
         rotationDraft.changeTime = validChangeTime(target.value);
         render();
     }
+    else if (action === 'rotation-pattern-time' && rotationDraft) {
+        const i = Number(target.dataset.index);
+        if (i >= 0 && i < rotationDraft.length) {
+            const time = validChangeTime(target.value);
+            if (time === rotationDraft.changeTime)
+                delete nightPatternDraft[i];
+            else
+                nightPatternDraft[i] = time;
+            render();
+        }
+    }
+    else if (action === 'night-date-time' && isValidDate(target.dataset.date ?? '')) {
+        state.nightDateTimes[target.dataset.date] = validChangeTime(target.value);
+        sheet = returnFromDetail(target.dataset.date);
+        update();
+    }
+    else if (target.dataset.extraChange) {
+        const result = rotationEditor.change(state, target.dataset, target.value, extraRotationUnits);
+        if (result?.error) {
+            notify(result.error);
+            render();
+        }
+        else if (result?.save)
+            update();
+        else
+            render();
+    }
     else if (action === 'rotation-start' && rotationDraft && isValidDate(target.value)) {
         rotationDraft.startDate = target.value;
         render();
@@ -1923,6 +2065,7 @@ document.addEventListener('change', event => {
             return;
         }
         rotationDraft = resizedRotation(rotationDraft, length);
+        nightPatternDraft = Object.fromEntries(Object.entries(nightPatternDraft).filter(([key]) => Number(key) < length));
         render();
     }
     else if (action === 'rotation-unit' && rotationDraft) {

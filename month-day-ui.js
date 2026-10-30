@@ -39,7 +39,7 @@
     return result;
   }
   function hasChanges(state,date){
-    return Object.keys(state.overrides||{}).some(k=>k.startsWith(date+'|')) ||
+    return Object.hasOwn(state.nightDateTimes||{},date)||Object.keys(state.extraExceptions||{}).some(k=>k.split('|')[1]===date)||Object.keys(state.overrides||{}).some(k=>k.startsWith(date+'|')) ||
       Object.keys(state.bandOverrides||{}).some(k=>k.startsWith(date+'|')) ||
       Object.keys(state.daySlots||{}).some(k=>k.startsWith(date+'|')&&(state.daySlots[k]||[]).length);
   }
@@ -86,7 +86,7 @@
     firstThursday.setUTCDate(firstThursday.getUTCDate()+4-(firstThursday.getUTCDay()||7));
     return {week:1+Math.round((thursday.getTime()-firstThursday.getTime())/(7*86400000)),year:weekYear};
   }
-  function mini(children,nights,activities,customSlots){
+  function mini(children,nights,activities,customSlots,rotatingSlots=[]){
     if(!children.length)return '';
     const rect=(from,to,color,klass,label)=>{
       const top=100*Math.max(0,from)/DAY, height=100*Math.max(0,Math.min(DAY,to)-Math.max(0,from))/DAY;
@@ -98,6 +98,7 @@
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
         ${(customSlots[c.id]??[]).map(s=>rect(s.from,s.to,s.color,'month-mini-custom',s.startTime+'–'+s.endTime+' '+s.name)).join('')}
         ${activities.filter(a=>a.childId===c.id).map(a=>rect(a.start,a.end,a.color,'month-mini-school',a.schoolName)).join('')}
+        ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra',a.rotationName+' · '+a.guardianName)).join('')}
       </span>`).join('')}
     </span>`;
   }

@@ -108,9 +108,9 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.5\.10/);
- assert.match(sw,/month-day-ui\.js\?v=0\.5\.10/);
- assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots\)/);
+ assert.match(html,/month-day-ui\.js\?v=0\.6\.0/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.6\.0/);
+ assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
 });
@@ -161,10 +161,10 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-slot-add" data-date="\$\{selectedDate\}"/);
  assert.match(ts,/monthDayUI\.hasChanges\(state,selectedDate\)/);
  assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
- assert.match(ts,/monthDayUI\.restore\(state,date\);sheet=null;update\(\)/);
- assert.match(app,/monthDayUI\.restore\(state, date\);\s*sheet = null;/);
- assert.match(html,/app\.js\?v=0\.5\.10/);
- assert.match(sw,/calendari-familiar-v0\.5\.10/);
+ assert.match(ts,/monthDayUI\.restore\(state,date\);rotationPatterns\.clearDate\(state,date\);sheet=null;update\(\)/);
+ assert.match(app,/monthDayUI\.restore\(state, date\);\s*rotationPatterns\.clearDate\(state, date\);\s*sheet = null;/);
+ assert.match(html,/app\.js\?v=0\.6\.0/);
+ assert.match(sw,/calendari-familiar-v0\.6\.0/);
 });
 
 test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',()=>{
@@ -175,8 +175,8 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
  assert.match(css,/@media\(max-width:360px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:24px;\s*height:24px;\s*font-size:calc\(15px/);
  assert.doesNotMatch(ts,/school-month-count/);
  assert.doesNotMatch(app,/school-month-count/);
- assert.match(html,/styles\.css\?v=0\.5\.10/);
- assert.match(sw,/calendari-familiar-v0\.5\.10/);
+ assert.match(html,/styles\.css\?v=0\.6\.0/);
+ assert.match(sw,/calendari-familiar-v0\.6\.0/);
 });
 
 test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
@@ -205,6 +205,6 @@ test('el mes no mostra cap comptador escolar i destaca el límit amb una línia 
  assert.match(css,/\.month-grid \.day-cell\.month-current\s*\{[\s\S]*?inset 0 4px/);
  for(const edge of ['top','bottom','left','right'])assert.match(css,new RegExp('\\.month-grid \\.day-cell\\.month-edge-'+edge+' \\{--month-'+edge+':var\\(--month-outline\\);\\}'));
  assert.match(css,/:root\[data-theme="dark"\] \.month-grid\s*\{--month-outline:#88baff;\}/);
- assert.match(html,/styles\.css\?v=0\.5\.10/);
- assert.match(sw,/calendari-familiar-v0\.5\.10/);
+ assert.match(html,/styles\.css\?v=0\.6\.0/);
+ assert.match(sw,/calendari-familiar-v0\.6\.0/);
 });

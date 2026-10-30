@@ -18,7 +18,7 @@
     });
   }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
-  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={}) {
+  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={},rotatingSlots=[]) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
       const nights=segments.filter(s=>s.visible).map(s=>{
@@ -48,7 +48,11 @@
         const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
         return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${lane} * 100% / ${laneCount} + 3px);width:calc(100% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}"><span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span><span class="day-school-kind">${escape(a.kind)}</span>${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
-      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${overrides}${school}</div>`;
+      const extras=rotatingSlots.filter(item=>item.childId===child.id&&item.visible).map(item=>{
+        const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
+        return `<button type="button" class="day-extra-block" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
+      }).join('');
+      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');
     return columns;
   }
@@ -66,7 +70,7 @@
       <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
     </div>`).join('');
     const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
-      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots)}</div>`).join('');
+      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots)}</div>`).join('');
     const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
       const parts=day.nightSegments[c.id]??[];
       return `<li>${escape(c.name)}: ${parts.filter(x=>x.visible).map(x=>`${fmt(x.from)}–${fmt(x.to)} ${escape(x.guardianName)}`).join('; ')||'Sense responsable visible'}${day.activities.filter(a=>a.childId===c.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
@@ -87,14 +91,14 @@
       <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,customSlots={}) {
+  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,customSlots={},rotatingSlots=[]) {
     const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
     const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
     const height=DAY_MINUTES*pxPerMinute;
     const tickStep=safeZoom===25?120:60;
     const tickMarks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>`<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
-    const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots);
+    const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots,rotatingSlots);
     const list=children.map(child=>{
       const nights=nightSegments[child.id]??[];
       return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;

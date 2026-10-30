@@ -15,6 +15,7 @@ const extract=(from,to)=>{
 };
 const monthContext={window:{}};
 vm.runInNewContext(monthSource,monthContext);
+const rotationContext={window:{}};vm.runInNewContext(readFileSync(new URL('../rotation-patterns.js',import.meta.url),'utf8'),rotationContext);
 const functions=[
   extract('function emptyState()','const SCHOOL_PALETTE'),
   extract('function cleanState(raw)','/** Actualitza només'),
@@ -27,6 +28,7 @@ const makeContext=()=>{
   let saves=0,id=0,confirmed=true;
   const context=vm.createContext({
     monthDayUI:monthContext.window.monthDayUI,
+    rotationPatterns:rotationContext.window.rotationPatterns,
     DEFAULT_CHANGE_TIME:'19:00',MAX_ROTATION_DAYS:3640,
     BANDS:['mati','dinar','tarda','sopar','nit'],
     localDate:d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),
@@ -149,8 +151,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="settings">Ves a Configuració/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.5\.10/);
-  assert.match(sw,/calendari-familiar-v0\.5\.10/);
+  assert.match(html,/app\.js\?v=0\.6\.0/);
+  assert.match(sw,/calendari-familiar-v0\.6\.0/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
