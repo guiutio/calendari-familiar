@@ -656,13 +656,7 @@ function calendarPage() {
         const starting = localDate(new Date(viewYear, viewMonth, 1 - firstDay, 12));
         const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, i) => {
             const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== viewMonth;
-            const monthEdges = other ? '' : [
-                'month-current',
-                i < 7 ? 'month-edge-top' : '',
-                i >= Math.ceil((firstDay + daysInMonth) / 7) * 7 - 7 ? 'month-edge-bottom' : '',
-                (i % 7 === 0 || d.getDate() === 1) ? 'month-edge-left' : '',
-                (i % 7 === 6 || d.getDate() === daysInMonth) ? 'month-edge-right' : ''
-            ].filter(Boolean).join(' ');
+            const monthEdges = monthDayUI.outline(date, viewYear, viewMonth, i, Math.ceil((firstDay + daysInMonth) / 7) * 7, daysInMonth);
             const iso = i % 7 === 0 ? monthDayUI.isoWeek(date) : null;
             const changed = monthDayUI.hasChanges(state, date);
             const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
