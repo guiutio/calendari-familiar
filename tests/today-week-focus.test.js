@@ -41,8 +41,8 @@ test('el mes inverteix el fons de tot el requadre i elimina el cercle de la data
  assert.match(css,/\.month-grid \.day-cell\.today \.month-mini-child/);
  assert.match(css,/\.week-day-header\.today[\s\S]*?background:#285782;/);
  assert.match(css,/\.week-date-columns\.today \.day-time-column[\s\S]*?background:repeating-linear-gradient/);
- assert.match(html,/styles\.css\?v=0\.6\.3/);
- assert.match(sw,/calendari-familiar-v0\.6\.3/);
+ assert.match(html,/styles\.css\?v=0\.6\.4/);
+ assert.match(sw,/calendari-familiar-v0\.6\.4/);
 });
 
 const between=(a,b)=>{
