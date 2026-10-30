@@ -152,3 +152,10 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(html,/app\.js\?v=0\.5\.9/);
   assert.match(sw,/calendari-familiar-v0\.5\.9/);
 });
+
+test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
+  assert.equal(monthContext.window.monthDayUI.mini([],{},[],{}),'');
+  assert.match(ts,/El calendari encara no té fills\./);
+  assert.match(ts,/data-action="tab" data-tab="settings">Afegeix un fill/);
+  assert.match(js,/El calendari encara no té fills\./);
+});
