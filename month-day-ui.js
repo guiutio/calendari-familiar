@@ -65,6 +65,18 @@
     return map;
   }
   /* Setmanes ISO 8601: de dilluns a diumenge, amb la setmana 1 determinada pel primer dijous de l'any. */
+  /* Les arestes delimiten el perímetre real del mes, incloses les setmanes parcials. */
+  function outline(date,year,month,index,totalCells,daysInMonth){
+    const [y,m,day]=date.split('-').map(Number);
+    if(y!==year||m!==month+1)return '';
+    return [
+      'month-current',
+      index<7?'month-edge-top':'',
+      index>=totalCells-7?'month-edge-bottom':'',
+      (index%7===0||day===1)?'month-edge-left':'',
+      (index%7===6||day===daysInMonth)?'month-edge-right':''
+    ].filter(Boolean).join(' ');
+  }
   function isoWeek(date){
     const [year,month,day]=date.split('-').map(Number);
     const thursday=new Date(Date.UTC(year,month-1,day));
@@ -217,5 +229,5 @@
   function removeChild(daySlots,id){
     for(const key of Object.keys(daySlots||{}))if(key.endsWith('|'+id))delete daySlots[key];
   }
-  window.monthDayUI={clean,hasChanges,slots,isoWeek,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
+  window.monthDayUI={clean,hasChanges,slots,isoWeek,outline,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
 })();

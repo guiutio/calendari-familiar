@@ -42,8 +42,8 @@ test('evita HTML maliciós procedent de descripcions',()=>{
  assert.match(out,/&lt;script&gt;/);
 });
 test('els recursos s’inclouen a la PWA i el JS d’inici',()=>{
- assert.match(html,/school-timeline\.js\?v=0\.5\.7/);
- assert.match(sw,/school-timeline\.js\?v=0\.5\.7/);
+ assert.match(html,/school-timeline\.js\?v=0\.5\.8/);
+ assert.match(sw,/school-timeline\.js\?v=0\.5\.8/);
  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
  assert.match(app,/schoolCalendarUI\?\.render/);
  assert.match(app,/dayTimelineUI\.renderWeek/);
