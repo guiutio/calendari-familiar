@@ -224,7 +224,7 @@ test('les setmanes mostren tots els dies, sense els D1...D7 de la part superior'
  });
  r.activeDays=[false,false,true,false,false,false,false];s.extraRotations=[r];
  const html=editor.render(s,'pickup',{});
- const cells=[...html.matchAll(/data-action="extra-cell"[^>]*data-child="([^"]+)" data-index="(\\d+)"/g)].map(m=>[m[1],Number(m[2])]);
+ const cells=[...html.matchAll(/data-action="extra-cell"[^>]*data-child="([^"]+)" data-index="([0-9]+)"/g)].map(m=>[m[1],Number(m[2])]);
  assert.equal(cells.length,14);
  for(const id of ['elna','blai'])assert.deepEqual(cells.filter(c=>c[0]===id).map(c=>c[1]),[0,1,2,3,4,5,6]);
  assert.doesNotMatch(html,/class="extra-active-days"/);
