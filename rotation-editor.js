@@ -20,7 +20,8 @@
            <select data-extra-change="unit" data-rotation="${escape(r.id)}" aria-label="Unitat de la rotació"><option value="days" ${unit==='days'?'selected':''}>dies</option><option value="weeks" ${unit==='weeks'?'selected':''}>setmanes</option></select></div></div>
          <div class="form-row"><div class="field"><label>Inici de la franja<input type="time" data-extra-change="startTime" data-rotation="${escape(r.id)}" value="${escape(r.startTime)}"></label></div>
          <div class="field"><label>Final de la franja<input type="time" data-extra-change="endTime" data-rotation="${escape(r.id)}" value="${escape(r.endTime)}"></label></div></div>
-         <p class="settings-note">Selecciona els fills que segueixen aquesta rotació. Cada casella canvia el responsable només dins d'aquest patró.</p>
+         <p class="settings-note">Selecciona els dies en què existeix aquesta franja i els fills participants. Les caselles de responsables són independents per a cada fill.</p>
+         <div class="extra-active-days">${Array.from({length:r.length},(_,i)=>`<button type="button" class="extra-day-toggle ${r.activeDays?.[i]===false?'inactive':'active'}" aria-pressed="${r.activeDays?.[i]!==false}" data-action="extra-day-toggle" data-rotation="${escape(r.id)}" data-index="${i}" title="Dia ${i+1}: ${r.activeDays?.[i]===false?'sense franja':'amb franja'}">D${i+1} ${r.activeDays?.[i]===false?'—':'✓'}</button>`).join('')}</div>
          <div class="extra-kids">${kids.map(c=>`<button class="option ${r.childIds.includes(c.id)?'selected':''}" aria-pressed="${r.childIds.includes(c.id)}" data-action="extra-child" data-rotation="${escape(r.id)}" data-child="${escape(c.id)}">${escape(c.name)} ${r.childIds.includes(c.id)?'✓':''}</button>`).join('')}</div>
          ${r.childIds.length>1?`<div class="action-row"><button class="secondary-btn" data-action="extra-all" data-rotation="${escape(r.id)}">Tots igual</button>
          ${allSame?'<span class="settings-note">Tots els fills tenen el mateix patró.</span>':''}</div>`:''}
@@ -45,7 +46,7 @@
  function nextGuardian(current,guardians){const choices=['',...guardians.map(g=>g.id)];return choices[(choices.indexOf(current)+1)%choices.length]??'';}
  function create(state,id,today){
    const first=state.children[0]?.id;
-   const item={id,name:'Nova rotació',startDate:today,length:7,startTime:'16:30',endTime:'17:30',childIds:first?[first]:[],assignments:first?{[first]:Array(7).fill('')}:{ }};
+   const item={id,name:'Nova rotació',startDate:today,length:7,startTime:'16:30',endTime:'17:30',childIds:first?[first]:[],assignments:first?{[first]:Array(7).fill('')}:{ },activeDays:Array(7).fill(true)};
    state.extraRotations.push(item);return item;
  }
  function click(state,action,data,newId,today,confirmFn){
@@ -58,7 +59,11 @@
      for(const key of Object.keys(state.extraExceptions))if(key.startsWith(r.id+'|'))delete state.extraExceptions[key];
      return {open:null,save:true};
    }
-   if(action==='extra-child'){
+   if(action==='extra-day-toggle'){
+     const index=Number(data.index);if(!Number.isInteger(index)||index<0||index>=r.length)return null;
+     if(!r.activeDays)r.activeDays=Array(r.length).fill(true);
+     r.activeDays[index]=!r.activeDays[index];
+   }else if(action==='extra-child'){
      const id=data.child;if(!state.children.some(c=>c.id===id))return null;
      if(r.childIds.includes(id)){r.childIds=r.childIds.filter(c=>c!==id);delete r.assignments[id];
        for(const key of Object.keys(state.extraExceptions))if(key.startsWith(r.id+'|')&&key.endsWith('|'+id))delete state.extraExceptions[key];
@@ -82,7 +87,13 @@
    const r=state.extraRotations.find(x=>x.id===data.rotation);if(!r)return null;
    const field=data.extraChange;
    if(field==='unit'){
-     units[r.id]=value==='weeks'?'weeks':'days';return {save:false};
+     units[r.id]=value==='weeks'?'weeks':'days';
+     if(units[r.id]==='weeks'&&r.length%7!==0){
+       const next=window.rotationPatterns.resized(r,Math.ceil(r.length/7)*7,state.children);
+       r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;
+       return {save:true};
+     }
+     return {save:false};
    }
    if(field==='name'){if(!value.trim())return {error:'El nom no pot ser buit'};r.name=value.trim().slice(0,80);}
    else if(field==='startDate'){if(!window.rotationPatterns.validDate(value))return {error:'Data incorrecta'};r.startDate=value;}
@@ -90,7 +101,7 @@
      const scale=(units[r.id]??safeLength(r))==='weeks'?7:1,n=Number(value)*scale;
      if(!Number.isInteger(n)||n<1||n>3640)return {error:'Durada incorrecta'};
      const next=window.rotationPatterns.resized(r,n,state.children);
-     r.length=next.length;r.assignments=next.assignments;
+     r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;
    }else if(field==='startTime'||field==='endTime'){
      if(!window.rotationPatterns.validClock(value))return {error:'Hora incorrecta'};
      const from=field==='startTime'?value:r.startTime,to=field==='endTime'?value:r.endTime;
@@ -129,7 +140,7 @@
    if(guardianId&&!state.guardians.some(g=>g.id===guardianId))return 'Responsable invàlid';
    const original=p.slotFor({...state,extraExceptions:{}},r,date,childId);
    const key=rotationId+'|'+date+'|'+childId;
-   if(!disabled&&startTime===original.startTime&&endTime===original.endTime&&guardianId===original.guardianId)delete state.extraExceptions[key];
+   if(disabled===original.disabled&&startTime===original.startTime&&endTime===original.endTime&&guardianId===original.guardianId)delete state.extraExceptions[key];
    else state.extraExceptions[key]={startTime,endTime,guardianId,disabled};
    return '';
  }
