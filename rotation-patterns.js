@@ -15,7 +15,7 @@
       if(!item||typeof item.id!=='string'||!item.id||item.id.length>100||ids.has(item.id)||typeof item.name!=='string'||!item.name.trim()||item.name.length>80||
          !validDate(item.startDate)||!Number.isInteger(item.length)||item.length<1||item.length>maxDays||
          !validClock(item.startTime)||!validClock(item.endTime)||minutes(item.startTime)>=minutes(item.endTime)||
-         !Array.isArray(item.childIds))throw Error('Hi ha una rotació addicional incorrecta');
+         !Array.isArray(item.childIds)||(item.activeDays!==undefined&&(!Array.isArray(item.activeDays)||item.activeDays.length!==item.length||item.activeDays.some(a=>typeof a!=='boolean'))))throw Error('Hi ha una rotació addicional incorrecta');
       ids.add(item.id);
       const selected=[...new Set(item.childIds.filter(id=>childIds.has(id)))];
       const assignments={};
@@ -25,7 +25,7 @@
           throw Error('Assignació incorrecta en una rotació addicional');
         assignments[id]=[...arr];
       }
-      return {id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments};
+      return {id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
     });
   }
   function cleanNightTimes(raw,rotation){
@@ -70,7 +70,7 @@
   function slotFor(state,rotation,date,childId){
     if(!rotation.childIds.includes(childId))return null;
     const i=dayIndex(date,rotation.startDate,rotation.length),key=rotation.id+'|'+date+'|'+childId,override=state.extraExceptions?.[key];
-    const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:false};
+    const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:!(rotation.activeDays?.[i]??true)};
     return {...fallback,...override,rotationId:rotation.id,rotationName:rotation.name,childId,date,key,overridden:Boolean(override)};
   }
   function slots(state,date,children,guardians,visibleGuardianIds){
@@ -91,7 +91,7 @@
       const old=rotation.assignments[id]??[];
       assignments[id]=Array.from({length},(_,i)=>old.length?old[i%old.length]??'':'');
     }
-    return {...rotation,length,assignments};
+    return {...rotation,length,assignments,activeDays:Array.from({length},(_,i)=>rotation.activeDays?.[i%(rotation.activeDays?.length||1)]??true)};
   }
   function removeChild(state,id){
     for(const r of state.extraRotations??[]){r.childIds=r.childIds.filter(c=>c!==id);delete r.assignments[id];}
