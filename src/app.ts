@@ -83,7 +83,7 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
 
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
-type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>};
+type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[]};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
@@ -1152,7 +1152,7 @@ function clickAction(button:HTMLElement){
       rotationDraft!.assignments[button.dataset.child!]=[...(rotationDraft!.assignments[button.dataset.from!]??[])];
       render();notify('Patró copiat');break;
     }
-    case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-cell':case 'extra-week':case 'extra-all':case 'extra-copy':{
+    case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-day-toggle':case 'extra-cell':case 'extra-week':case 'extra-all':case 'extra-copy':{
       const result=rotationEditor.click(state,button.dataset.action,button.dataset,newId,localDate(new Date()),confirm);
       if(!result)break;
       if(result.toggle){extraRotationOpen=extraRotationOpen===result.open?null:result.open;render();}
