@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.5.8';
+const APP_VERSION = '0.5.9';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -137,6 +137,15 @@ function seedState() {
         guardians: [{ id: 'pare', name: 'Pare', color: '#8bb8e8' }, { id: 'mare', name: 'Mare', color: '#efafc3' }],
         rotation: { startDate: DEMO_START_DATE, length: sequence.length, assignments: { elna: [...sequence], blai: [...sequence] }, changeTime: DEFAULT_CHANGE_TIME },
         overrides: {}, bandOverrides: {}, daySlots: {}, preferences: { visibleChildren: ['elna', 'blai'], visibleGuardians: ['pare', 'mare'], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }, schools: []
+    };
+}
+/** Estat inicial completament buit, independent de les dades d'exemple. */
+function emptyState() {
+    return {
+        version: 1, children: [], guardians: [],
+        rotation: { startDate: localDate(new Date()), length: 7, assignments: {}, changeTime: DEFAULT_CHANGE_TIME },
+        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [],
+        preferences: { visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50 }
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -292,7 +301,7 @@ function cleanState(raw) {
         throw Error('Format de còpia no compatible');
     const children = obj.children.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string' && typeof c.birthDate === 'string').map(c => ({ ...c, name: c.name.slice(0, 70), birthDate: isValidDate(c.birthDate) ? c.birthDate : '' }));
     const guardians = obj.guardians.filter(g => g && typeof g.id === 'string' && typeof g.name === 'string' && typeof g.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(g.color)).map(g => ({ ...g, name: g.name.slice(0, 70) }));
-    if (!children.length || !guardians.length || children.length > 30 || guardians.length > 30 || new Set(children.map(x => x.id)).size !== children.length || new Set(guardians.map(x => x.id)).size !== guardians.length)
+    if (children.length > 30 || guardians.length > 30 || new Set(children.map(x => x.id)).size !== children.length || new Set(guardians.map(x => x.id)).size !== guardians.length)
         throw Error('La còpia conté fills o tutors incorrectes');
     const validGuardians = new Set(guardians.map(x => x.id));
     const length = obj.rotation.length;
@@ -301,7 +310,7 @@ function cleanState(raw) {
     const assignments = {};
     for (const child of children) {
         const seq = obj.rotation.assignments?.[child.id];
-        if (!Array.isArray(seq) || seq.length !== length || seq.some(x => !validGuardians.has(x)))
+        if (!Array.isArray(seq) || seq.length !== length || seq.some(x => x !== '' && !validGuardians.has(x)))
             throw Error('El patró de nits està incomplet');
         assignments[child.id] = [...seq];
     }
@@ -575,6 +584,8 @@ function dayTimeline(date, children) {
     const nights = {};
     for (const c of children)
         nights[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
+    if (!children.length)
+        return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="settings"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
     return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, validTimelineZoom(state.preferences.timelineZoom), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians));
 }
 function weekTimeline(start, children) {
@@ -588,6 +599,8 @@ function weekTimeline(start, children) {
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, changeTime, assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
         return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians) };
     });
+    if (!children.length)
+        return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="settings"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
     return dayTimelineUI.renderWeek(start, days, children, validTimelineZoom(state.preferences.timelineZoom));
 }
 function miniBands(date, children, bands) {
@@ -694,6 +707,9 @@ function calendarPage() {
     <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage() {
+    if (!state.children.length)
+        return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
+    <section class="card"><h2 class="section-title">Encara no hi ha fills</h2><p class="section-description">Pots crear el calendari des de zero. Afegeix un fill a Configuració per definir-ne les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
     const r = rotationDraft ?? state.rotation;
     return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix el patró habitual de les nits.</p></div></header>
     <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia, la durada i l’hora de canvi de pernocta. El patró es repeteix indefinidament.</p>
@@ -887,15 +903,20 @@ function settingsPage() {
   <p class="section-description">Augmenta la lletra de totes les vistes per llegir més còmodament.</p>
   <input id="font-size-slider" type="range" class="font-size-range" min="0" max="2" step="1" value="${FONT_SIZE_OPTIONS.indexOf(validFontSize(state.preferences.fontSize))}" data-action="font-size" aria-label="Mida de lletra" aria-valuetext="${FONT_SIZE_LABELS[validFontSize(state.preferences.fontSize)]}" />
   <div class="font-size-labels"><span>Normal</span><span>Gran</span><span>Molt gran</span></div></section>
-  <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari.</p>
-  ${state.children.map(c => `<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" ${state.children.length === 1 ? 'disabled' : ''}>${icon('trash', 16)}</button></div>`).join('')}</section>
+  <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
+  ${!state.children.length ? '<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>' : ''}
+  ${state.children.map(c => `<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash', 16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus', 14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
-  ${state.guardians.map(g => `<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" ${state.guardians.length === 1 ? 'disabled' : ''}>${icon('trash', 16)}</button></div>`).join('')}</section>
+  ${!state.guardians.length ? '<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>' : ''}
+  ${state.guardians.map(g => `<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash', 16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Actualitzacions</h2><span class="sample-tag">v${APP_VERSION}</span></div><p class="section-description">Si l’iPhone mostra una versió anterior, pots actualitzar els fitxers de l’app sense esborrar les dades del calendari.</p><div class="action-row"><button type="button" class="secondary-btn" data-action="check-update">Comprova actualitzacions</button></div></section>
   <section class="card"><h2 class="section-title">Les teves dades</h2><p class="section-description">Les dades es queden en aquest navegador. Exporta una còpia si canvies de dispositiu o abans de netejar-ne les dades.</p>
   <div class="status-good">${icon('shield', 17)} ${escapeHtml(storageDescription)}</div><div class="action-row"><button class="primary-btn" data-action="export">${icon('download', 15)} Exporta JSON</button><button class="secondary-btn" data-action="import">${icon('upload', 15)} Importa JSON</button><input class="sr-only" id="import-file" type="file" accept=".json,application/json" /></div><hr>
   <div class="panel-header"><h2 class="section-title">Dades d’exemple</h2><span class="sample-tag">Elna i Blai</span></div><p class="settings-note">Restableix les dades fictícies de demostració. Es perdran els canvis actuals, així que exporta una còpia abans si et cal.</p>
-  <div class="action-row"><button class="danger-btn" data-action="reset">Restableix les dades d’exemple</button></div></section>`;
+  <div class="action-row"><button class="secondary-btn" data-action="reset">Carrega les dades d’exemple</button></div><hr>
+  <div class="panel-header"><h2 class="section-title">Comença de zero</h2></div>
+  <p class="settings-note">Esborra tots els fills, tutors, escoles, horaris, rotacions i canvis puntuals desats. Aquesta acció no es pot desfer. Exporta abans una còpia JSON si vols conservar les dades.</p>
+  <div class="action-row"><button type="button" class="danger-btn" data-action="clear-all">${icon('trash', 15)} Esborra totes les dades</button></div></section>`;
 }
 function returnFromDetail(date) { return detailOrigin === 'day' ? { type: 'day', date: detailReturnDate || date } : null; }
 function sheetMarkup() {
@@ -1017,10 +1038,10 @@ function chooseGuardian(date, childId, guardianId) {
     notify('Nit actualitzada');
 }
 function removeGuardian(id) {
-    if (state.guardians.length < 2)
-        return;
     const g = guardian(id);
-    if (!g || !confirm(`Vols suprimir «${g.name}»? Les seves nits passaran al primer tutor disponible.`))
+    if (!g || !confirm(state.guardians.length === 1
+        ? `Vols suprimir «${g.name}»? Et quedaràs sense tutors, i les nits passaran a «Sense assignar».`
+        : `Vols suprimir «${g.name}»? Les seves nits passaran al primer tutor disponible.`))
         return;
     state.guardians = state.guardians.filter(x => x.id !== id);
     const alternate = defaultGuardian();
@@ -1036,8 +1057,6 @@ function removeGuardian(id) {
     update();
 }
 function removeChild(id) {
-    if (state.children.length < 2)
-        return;
     const c = childById(id);
     if (!c || !confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))
         return;
@@ -1089,8 +1108,23 @@ async function importData(file) {
         notify(err instanceof Error ? err.message : 'No es pot importar aquest fitxer');
     }
 }
-async function resetData() { if (!confirm('Vols restablir les dades de mostra? S’esborraran els canvis actuals.'))
-    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize, timelineZoom = state.preferences.timelineZoom; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; state.preferences.timelineZoom = timelineZoom; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades de mostra restablertes'); }
+async function resetData() { if (!confirm('Vols carregar les dades d’exemple? Se substituiran totes les dades actuals.'))
+    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize, timelineZoom = state.preferences.timelineZoom; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; state.preferences.timelineZoom = timelineZoom; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades d’exemple carregades'); }
+function clearAllData() {
+    if (!confirm('ATENCIÓ: vols esborrar tots els fills, tutors, escoles, horaris, rotacions i assignacions? No es pot desfer. Exporta una còpia JSON abans si vols conservar-los.'))
+        return;
+    state = emptyState();
+    rotationDraft = null;
+    sheet = null;
+    schoolNav = {};
+    tab = 'settings';
+    calendarView = 'month';
+    selectedDate = localDate(new Date());
+    viewYear = parseDate(selectedDate).getFullYear();
+    viewMonth = parseDate(selectedDate).getMonth();
+    update();
+    notify('Totes les dades esborrades. Ja pots començar de zero.');
+}
 function clickAction(button) {
     const action = button.dataset.action;
     switch (action) {
@@ -1569,6 +1603,9 @@ function clickAction(button) {
             break;
         case 'reset':
             void resetData();
+            break;
+        case 'clear-all':
+            clearAllData();
             break;
     }
 }
