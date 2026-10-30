@@ -6,6 +6,15 @@
   const validClock=time=>Number.isFinite(minutes(time));
   const validDate=date=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date+'T12:00:00Z'))&&new Date(date+'T12:00:00Z').toISOString().slice(0,10)===date;
   const dayIndex=(date,start,length)=>{const a=Date.parse(date+'T12:00:00Z'),b=Date.parse(start+'T12:00:00Z');return (((Math.round((a-b)/86400000)%length)+length)%length);};
+  /** Les rotacions històriques utilitzen activeDays; els nous patrons permeten triar per fill. */
+  function activeFor(rotation,childId,index){
+    return rotation.childActiveDays?.[childId]?.[index]??rotation.activeDays?.[index]??true;
+  }
+  function ensureChildDays(rotation,childId){
+    if(!rotation.childActiveDays)rotation.childActiveDays={};
+    if(!rotation.childActiveDays[childId])rotation.childActiveDays[childId]=Array.from({length:rotation.length},(_,i)=>rotation.activeDays?.[i]??true);
+    return rotation.childActiveDays[childId];
+  }
   function cleanExtras(raw,children,guardians,maxDays=3640){
     if(raw==null)return [];
     if(!Array.isArray(raw)||raw.length>100)throw Error('Nombre de rotacions addicionals no vàlid');
@@ -16,6 +25,7 @@
          !validDate(item.startDate)||!Number.isInteger(item.length)||item.length<1||item.length>maxDays||
          !validClock(item.startTime)||!validClock(item.endTime)||minutes(item.startTime)>=minutes(item.endTime)||
          !Array.isArray(item.childIds)||(item.activeDays!==undefined&&(!Array.isArray(item.activeDays)||item.activeDays.length!==item.length||item.activeDays.some(a=>typeof a!=='boolean'))))throw Error('Hi ha una rotació addicional incorrecta');
+      if(item.childActiveDays!==undefined&&(!item.childActiveDays||typeof item.childActiveDays!=='object'||Array.isArray(item.childActiveDays)))throw Error('Dies actius per fill incorrectes');
       ids.add(item.id);
       const selected=[...new Set(item.childIds.filter(id=>childIds.has(id)))];
       const assignments={};
@@ -25,7 +35,18 @@
           throw Error('Assignació incorrecta en una rotació addicional');
         assignments[id]=[...arr];
       }
-      return {id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
+      const childActiveDays={};
+      if(item.childActiveDays!==undefined){
+        for(const id of selected){
+          if(!Object.hasOwn(item.childActiveDays,id))continue;
+          const days=item.childActiveDays[id];
+          if(!Array.isArray(days)||days.length!==item.length||days.some(v=>typeof v!=='boolean'))throw Error('Dies actius per fill incorrectes');
+          childActiveDays[id]=[...days];
+        }
+      }
+      const result={id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
+      if(item.childActiveDays!==undefined)result.childActiveDays=childActiveDays;
+      return result;
     });
   }
   function cleanNightTimes(raw,rotation){
@@ -70,7 +91,7 @@
   function slotFor(state,rotation,date,childId){
     if(!rotation.childIds.includes(childId))return null;
     const i=dayIndex(date,rotation.startDate,rotation.length),key=rotation.id+'|'+date+'|'+childId,override=state.extraExceptions?.[key];
-    const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:!(rotation.activeDays?.[i]??true)};
+    const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:!activeFor(rotation,childId,i)};
     return {...fallback,...override,rotationId:rotation.id,rotationName:rotation.name,childId,date,key,overridden:Boolean(override)};
   }
   function slots(state,date,children,guardians,visibleGuardianIds){
@@ -91,10 +112,18 @@
       const old=rotation.assignments[id]??[];
       assignments[id]=Array.from({length},(_,i)=>old.length?old[i%old.length]??'':'');
     }
-    return {...rotation,length,assignments,activeDays:Array.from({length},(_,i)=>rotation.activeDays?.[i%(rotation.activeDays?.length||1)]??true)};
+    const result={...rotation,length,assignments,activeDays:Array.from({length},(_,i)=>rotation.activeDays?.[i%(rotation.activeDays?.length||1)]??true)};
+    if(rotation.childActiveDays){
+      result.childActiveDays={};
+      for(const id of Object.keys(assignments)){
+        const old=rotation.childActiveDays[id];
+        if(old)result.childActiveDays[id]=Array.from({length},(_,i)=>old[i%old.length]??true);
+      }
+    }
+    return result;
   }
   function removeChild(state,id){
-    for(const r of state.extraRotations??[]){r.childIds=r.childIds.filter(c=>c!==id);delete r.assignments[id];}
+    for(const r of state.extraRotations??[]){r.childIds=r.childIds.filter(c=>c!==id);delete r.assignments[id];if(r.childActiveDays)delete r.childActiveDays[id];}
     for(const key of Object.keys(state.extraExceptions??{}))if(key.split('|')[2]===id)delete state.extraExceptions[key];
   }
   function removeGuardian(state,id){
@@ -105,5 +134,5 @@
     delete state.nightDateTimes?.[date];
     for(const key of Object.keys(state.extraExceptions??{}))if(key.split('|')[1]===date)delete state.extraExceptions[key];
   }
-  window.rotationPatterns={minutes,fmt,validClock,validDate,dayIndex,cleanExtras,cleanNightTimes,cleanDateTimes,cleanExtraExceptions,nightTime,slotFor,slots,resized,removeChild,removeGuardian,clearDate};
+  window.rotationPatterns={minutes,fmt,validClock,validDate,dayIndex,activeFor,ensureChildDays,cleanExtras,cleanNightTimes,cleanDateTimes,cleanExtraExceptions,nightTime,slotFor,slots,resized,removeChild,removeGuardian,clearDate};
 })();

@@ -828,3 +828,19 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .rotation-cell-time {font-size:calc(10px * var(--font-scale,1));line-height:1.1;font-weight:750;color:#416b9b;}
 :root[data-theme="dark"] .rotation-tutor-choice:has(.rotation-guardian-radio:checked) {background:#2c4260;border-color:#82a7d4;color:#ecf4ff;}
 :root[data-theme="dark"] .rotation-cell-time {color:#a7ceff;}
+
+/* v0.6.4 · Assignació setmanal en un sol toc: s'aplica i tutor, per fill. */
+.extra-pattern-cell {cursor:pointer;min-width:0;}
+.extra-pattern-cell.extra-inactive {background:#f5f6f8;border-style:dashed;border-color:#cbd3dc;opacity:.78;}
+.extra-pattern-cell.extra-inactive .guardian-initial {background:#e4e9ef;color:#8b96a5;}
+.extra-pattern-cell.extra-applies .guardian-initial {outline:1px solid #9cbad8;}
+.extra-pattern-cell:focus-visible {outline:3px solid #366da9;outline-offset:2px;z-index:2;}
+.extra-pattern-day-form {display:flex;flex-direction:column;gap:5px;}
+.extra-pattern-applicability {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.extra-pattern-applicability .option {margin:6px 0;}
+.extra-pattern-guardian-choices {margin:12px 0 6px;}
+.extra-pattern-day-form:has(input[name="applies"][value="no"]:checked) .extra-pattern-guardian-choices {display:none;}
+.extra-pattern-day-form .rotation-choice-check {font-weight:800;}
+.extra-pattern-day-form .action-row {margin-top:10px;display:flex;flex-wrap:wrap;gap:9px;}
+:root[data-theme="dark"] .extra-pattern-cell.extra-inactive {background:#1a293c;border-color:#50627a;opacity:.8;}
+:root[data-theme="dark"] .extra-pattern-cell.extra-inactive .guardian-initial {background:#304158;color:#c2cedc;}

@@ -83,7 +83,7 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
 
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
-type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[]};
+type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.6.3';
+const APP_VERSION = '0.6.4';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -852,6 +852,8 @@ function sheetMarkup(){
     const c=childById(sheet.childId);
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
+  } else if(sheet?.type==='extraCell'){
+     contents=rotationEditor.patternDayForm(state,sheet.rotationId,sheet.childId,sheet.index);
   } else if(sheet?.type==='extraDate'){
      contents=sheet.rotationId?rotationEditor.dateForm(state,sheet.date,sheet.rotationId,sheet.childId):rotationEditor.datePicker(state,sheet.date);
   } else if(sheet?.type==='bandEdit'){
@@ -1152,7 +1154,13 @@ function clickAction(button:HTMLElement){
       rotationDraft!.assignments[button.dataset.child!]=[...(rotationDraft!.assignments[button.dataset.from!]??[])];
       render();notify('Patró copiat');break;
     }
-    case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-day-toggle':case 'extra-cell':case 'extra-week':case 'extra-all':case 'extra-copy':{
+    case 'extra-cell':{
+      const rotationId=button.dataset.rotation??'',childId=button.dataset.child??'',index=Number(button.dataset.index);
+      const rotation=state.extraRotations.find(r=>r.id===rotationId);
+      if(!rotation||!rotation.childIds.includes(childId)||!Number.isInteger(index)||index<0||index>=rotation.length)break;
+      sheet={type:'extraCell',rotationId,childId,index};render();break;
+    }
+    case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-week':case 'extra-all':case 'extra-copy':{
       const result=rotationEditor.click(state,button.dataset.action,button.dataset,newId,localDate(new Date()),confirm);
       if(!result)break;
       if(result.toggle){extraRotationOpen=extraRotationOpen===result.open?null:result.open;render();}
@@ -1193,6 +1201,12 @@ document.addEventListener('click',event=>{
 document.addEventListener('submit',event=>{
  const form=event.target;
  if(!(form instanceof HTMLFormElement))return;
+  if(form.dataset.extraPatternDayForm){
+    event.preventDefault();
+    const error=rotationEditor.savePatternDay(state,form.dataset.rotation??'',form.dataset.child??'',Number(form.dataset.index),new FormData(form));
+    if(error){notify(error);return;}
+    sheet=null;update();notify('Dia del patró actualitzat');return;
+  }
   if(form.dataset.rotationCellForm){
     event.preventDefault();
     const childId=form.dataset.child??'',index=Number(form.dataset.index),r=rotationDraft??state.rotation;
