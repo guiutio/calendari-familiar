@@ -98,7 +98,7 @@
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
         ${(customSlots[c.id]??[]).map(s=>rect(s.from,s.to,s.color,'month-mini-custom',s.startTime+'–'+s.endTime+' '+s.name)).join('')}
         ${activities.filter(a=>a.childId===c.id).map(a=>rect(a.start,a.end,a.color,'month-mini-school',a.schoolName)).join('')}
-        ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra',a.rotationName+' · '+a.guardianName)).join('')}
+        ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra '+(a.guardianId?'with-guardian':'without-guardian'),a.rotationName+' · '+a.guardianName)).join('')}
       </span>`).join('')}
     </span>`;
   }
