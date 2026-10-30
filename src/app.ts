@@ -586,7 +586,7 @@ function calendarPage(){
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
     });
-    content=`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
+    content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>`:''}<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
   } else if(calendarView==='week'){
     content=weekTimeline(weekStart(selectedDate),children);
   } else {
