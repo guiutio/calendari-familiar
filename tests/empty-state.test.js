@@ -151,8 +151,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="settings">Ves a Configuració/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.6\.2/);
-  assert.match(sw,/calendari-familiar-v0\.6\.2/);
+  assert.match(html,/app\.js\?v=0\.6\.3/);
+  assert.match(sw,/calendari-familiar-v0\.6\.3/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
