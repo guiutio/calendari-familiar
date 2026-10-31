@@ -693,19 +693,37 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   }
 }
 
-/* v0.5.8 · Contorn intens del mes actual, també en setmanes parcials. */
-.month-grid {--month-outline:#205b99;}
+/* v0.6.6 · Perímetre real del mes, de 4 px uniformes i per damunt de
+   les cel·les i de les línies fines de la graella. No usem box-shadow:
+   les ombres internes quedaven tapades i dibuixaven vores discontínues. */
+.month-grid {--month-outline:#205b99;--month-outline-width:4px;}
 .month-grid .day-cell.month-current {
-  box-shadow:
-    inset 0 4px 0 var(--month-top,transparent),
-    inset 0 -4px 0 var(--month-bottom,transparent),
-    inset 4px 0 0 var(--month-left,transparent),
-    inset -4px 0 0 var(--month-right,transparent);
+  position:relative;
+  z-index:1;
 }
-.month-grid .day-cell.month-edge-top {--month-top:var(--month-outline);}
-.month-grid .day-cell.month-edge-bottom {--month-bottom:var(--month-outline);}
-.month-grid .day-cell.month-edge-left {--month-left:var(--month-outline);}
-.month-grid .day-cell.month-edge-right {--month-right:var(--month-outline);}
+.month-grid .day-cell.month-current.month-edge-top,
+.month-grid .day-cell.month-current.month-edge-bottom,
+.month-grid .day-cell.month-current.month-edge-left,
+.month-grid .day-cell.month-current.month-edge-right {z-index:2;}
+.month-grid .day-cell.month-current::after {
+  content:"";
+  position:absolute;
+  inset:-1px;
+  z-index:8;
+  pointer-events:none;
+  box-sizing:border-box;
+  border-style:solid;
+  border-color:var(--month-outline);
+  border-width:
+    var(--month-top-w,0px)
+    var(--month-right-w,0px)
+    var(--month-bottom-w,0px)
+    var(--month-left-w,0px);
+}
+.month-grid .day-cell.month-edge-top {--month-top-w:var(--month-outline-width);}
+.month-grid .day-cell.month-edge-bottom {--month-bottom-w:var(--month-outline-width);}
+.month-grid .day-cell.month-edge-left {--month-left-w:var(--month-outline-width);}
+.month-grid .day-cell.month-edge-right {--month-right-w:var(--month-outline-width);}
 :root[data-theme="dark"] .month-grid {--month-outline:#88baff;}
 
 /* v0.5.9 · Pantalles d'agenda sense fills, amb accés directe a configuració. */
