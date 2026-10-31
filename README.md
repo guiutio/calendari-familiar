@@ -320,3 +320,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - L’app comença buida, sense fills, tutors, escoles ni assignacions predefinides.
 - S’elimina el botó de carregar dades d’exemple i les migracions automàtiques d’aquelles mostres. Les dades familiars ja desades es conserven.
+
+
+## v0.8.0: pestanya Persones
+
+- Nova pestanya «Persones», amb icona de grup de persones, a la barra inferior i al menú lateral.
+- La gestió de fills, dates de naixement, tutors i colors passa d’Ajustos a Persones. Els accessos per començar a afegir fills o tutors també porten a aquesta pestanya.
+- Ajustos conserva aparença, mida de lletra, actualitzacions, còpies de seguretat i gestió de dades.

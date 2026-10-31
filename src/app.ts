@@ -87,11 +87,11 @@ type ExtraRotation = {id:string;name:string;startDate:string;length:number;start
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
-type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
+type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.7.9';
+const APP_VERSION = '0.8.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -118,6 +118,7 @@ const icons: Record<string,string> = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
   pencil:'<path d="m15 5 4 4M4 20l4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"/>',
+  people:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   person:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
   home:'<path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-8h6v8"/>',
   copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
@@ -468,7 +469,7 @@ function dayTimeline(date:string,children:Child[]):string{
  const changeTime=nightChangeTime(date);
  const nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
  for(const c of children)nights[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
- if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="settings"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
+ if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="people"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
  return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extraSlots(date,children));
 }
 function weekTimeline(start:string,children:Child[]):string{
@@ -480,7 +481,7 @@ function weekTimeline(start:string,children:Child[]):string{
    for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,nightChangeTime(date),assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
    return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),rotatingSlots:extraSlots(date,children)};
  });
- if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="settings"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
+ if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="people"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
  return dayTimelineUI.renderWeek(start,days,children,validTimelineZoom(state.preferences.timelineZoom),selectedDate,localDate(new Date()));
 }
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
@@ -523,10 +524,10 @@ function calendarNavigation(){
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('schools','Escoles','school','side')}${navButton('settings','Configuració','settings','side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${navButton('calendar','Calendari','calendar','side')}${navButton('rotation','Rotacions','repeat','side')}${navButton('schools','Escoles','school','side')}${navButton('people','Persones','people','side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
   </aside>${tab==='calendar'?calendarNavigation():''}<main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
+  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('people','Persones','people','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function monthPanel(index:number,children:Child[],today:string):string {
     const year=Math.floor(index/12),month=index-year*12;
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
@@ -664,7 +665,7 @@ function calendarPage(){
   if(calendarView==='month'){
     const index=viewYear*12+viewMonth;
     if(!monthRange||index<=monthRange.first||index>=monthRange.last)monthRange={first:index-3,last:index+3};
-    content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>`:''}<div class="month-sequence">${Array.from({length:monthRange.last-monthRange.first+1},(_,i)=>monthPanel(monthRange!.first+i,children,today)).join('')}</div>`;
+    content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="people">Afegeix un fill</button></div>`:''}<div class="month-sequence">${Array.from({length:monthRange.last-monthRange.first+1},(_,i)=>monthPanel(monthRange!.first+i,children,today)).join('')}</div>`;
   } else if(calendarView==='week'){
     content=weekTimeline(weekStart(selectedDate),children);
   } else {
@@ -688,9 +689,9 @@ function calendarPage(){
 }
 function rotationPage(){
   if(!state.children.length)return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
-    <section class="card"><h2 class="section-title">Encara no hi ha fills</h2><p class="section-description">Pots crear el calendari des de zero. Afegeix un fill a Configuració per definir-ne les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
+    <section class="card"><h2 class="section-title">Encara no hi ha fills</h2><p class="section-description">Pots crear el calendari des de zero. Afegeix un fill a Persones per definir-ne les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="people">Ves a Persones</button></section>`;
   if(!state.guardians.length)return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1></div></header>
-    <section class="card"><h2 class="section-title">Encara no hi ha tutors</h2><p class="section-description">Afegeix almenys un tutor a Configuració per poder assignar les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="settings">Ves a Configuració</button></section>`;
+    <section class="card"><h2 class="section-title">Encara no hi ha tutors</h2><p class="section-description">Afegeix almenys un tutor a Persones per poder assignar les pernoctes.</p><button class="primary-btn" data-action="tab" data-tab="people">Ves a Persones</button></section>`;
   const r=rotationDraft??state.rotation;
   return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Defineix la pernocta i altres franges amb patrons independents.</p></div></header>
     <section class="card"><div class="panel-header"><h2 class="section-title">Configuració del patró</h2><span class="sample-tag">Repetició automàtica</span></div><p class="section-description">Tria el primer dia, la durada i l’hora de canvi de pernocta. El patró es repeteix indefinidament.</p>
@@ -860,6 +861,15 @@ function schoolInfoForDay(date:string):string {
  }
  return lines.length?`<div class="sheet-section-label">Informació escolar</div>${lines.join('')}`:'';
 }
+function peoplePage(){
+  return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Gestiona els fills, tutors i responsables.</p></div></header>
+  <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus',14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
+  ${!state.children.length?'<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>':''}
+  ${state.children.map(c=>`<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>
+  <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
+  ${!state.guardians.length?'<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>':''}
+  ${state.guardians.map(g=>`<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>`;
+}
 function settingsPage(){
   const storageDescription=storageMode==='indexeddb'?'IndexedDB · desat automàtic':storageMode==='localStorage'?'LocalStorage · mode alternatiu':'Sense persistència garantida';
   return `<header class="page-heading"><div><div class="eyebrow">PREFERÈNCIES</div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
@@ -869,12 +879,6 @@ function settingsPage(){
   <p class="section-description">Augmenta la lletra de totes les vistes per llegir més còmodament.</p>
   <input id="font-size-slider" type="range" class="font-size-range" min="0" max="2" step="1" value="${FONT_SIZE_OPTIONS.indexOf(validFontSize(state.preferences.fontSize))}" data-action="font-size" aria-label="Mida de lletra" aria-valuetext="${FONT_SIZE_LABELS[validFontSize(state.preferences.fontSize)]}" />
   <div class="font-size-labels"><span>Normal</span><span>Gran</span><span>Molt gran</span></div></section>
-  <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus',14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
-  ${!state.children.length?'<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>':''}
-  ${state.children.map(c=>`<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>
-  <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
-  ${!state.guardians.length?'<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>':''}
-  ${state.guardians.map(g=>`<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Actualitzacions</h2><span class="sample-tag">v${APP_VERSION}</span></div><p class="section-description">Si l’iPhone mostra una versió anterior, pots actualitzar els fitxers de l’app sense esborrar les dades del calendari.</p><div class="action-row"><button type="button" class="secondary-btn" data-action="check-update">Comprova actualitzacions</button></div></section>
   <section class="card"><h2 class="section-title">Les teves dades</h2><p class="section-description">Les dades es queden en aquest navegador. Exporta una còpia si canvies de dispositiu o abans de netejar-ne les dades.</p>
   <div class="status-good">${icon('shield',17)} ${escapeHtml(storageDescription)}</div><div class="action-row"><button class="primary-btn" data-action="export">${icon('download',15)} Exporta JSON</button><button class="secondary-btn" data-action="import">${icon('upload',15)} Importa JSON</button><input class="sr-only" id="import-file" type="file" accept=".json,application/json" /></div><hr>
@@ -967,7 +971,7 @@ function render(){
     ? Math.max(0,Math.min(1440,(previousMain.scrollTop+previousMain.clientHeight/2-oldTimelineOffset)/oldScale)):NaN;
   const previousSheet=$app.querySelector<HTMLElement>('.sheet');
   const sheetScroll=previousSheet?.dataset.sheetKey===JSON.stringify(sheet)?previousSheet.scrollTop:0;
-  $app.innerHTML=layout(tab==='calendar'?calendarPage():tab==='rotation'?rotationPage():tab==='schools'?schoolsPage():settingsPage());
+  $app.innerHTML=layout(tab==='calendar'?calendarPage():tab==='rotation'?rotationPage():tab==='schools'?schoolsPage():tab==='people'?peoplePage():settingsPage());
   const main=$app.querySelector<HTMLElement>('.main-area');
   if(main){main.dataset.scrollKey=scrollKey;main.scrollTop=mainScroll;}
   const currentSheet=$app.querySelector<HTMLElement>('.sheet');
