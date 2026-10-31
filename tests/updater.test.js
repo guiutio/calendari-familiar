@@ -45,3 +45,8 @@ test('el botó de configuració demana una pantalla d’actualització nova',()=
  assert.match(app,/window.location.assign\('\.\/actualitza.html\?comprovacio=' \+ Date.now\(\)\)/);
  assert.doesNotMatch(script,/indexedDB|localStorage|0\.6\.6/);
 });
+
+test('l’entrada de recuperació utilitza el mateix actualitzador verificat',()=>{
+ const recovery=readFileSync(new URL('../actualitza-nova.html',import.meta.url),'utf8');
+ assert.equal(recovery,html);
+});
