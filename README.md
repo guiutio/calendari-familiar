@@ -282,3 +282,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Barra superior fixa amb Mes, Setmana i Dia, el període visible, Avui i fletxes per avançar o retrocedir segons la vista.
 - En desplaçar els mesos, la barra mostra el mes visible. Canviar de vista conserva la data de referència; Avui torna a la data actual.
 - Es conserven miniatures, contorns, filtres, números de setmana i edició de pernoctes i activitats.
+
+
+## v0.7.1: actualització a la versió publicada
+
+- La pantalla d’actualització detecta la versió que serveix index.html i comprova que app.js coincideixi abans de renovar els fitxers temporals. Ja no exigeix una versió antiga fixada al codi.
+- El botó d’actualització obre la comprovació amb una URL nova per evitar una pàgina antiga a la memòria cau. Les dades familiars es conserven.
