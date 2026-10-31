@@ -302,3 +302,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Les setmanes compartides entre mesos apareixen una sola vegada, en una graella contínua sense separadors ni títols intermedis.
 - La capçalera dels dies de la setmana queda una sola vegada a la barra fixa; el títol superior indica el mes visible.
 - Es conserven els contorns reals de cada mes i la navegació enfoca la setmana que conté el primer dia, també si el mes comença en diumenge.
+
+
+## v0.7.4: desplaçament mensual estable
+
+- La càrrega i retirada de mesos s’executa després que s’aturi el moviment i sense cap dit premut, per respectar la inèrcia tàctil.
+- La posició només es compensa si ha canviat el contingut; les correccions no activen un nou cicle de càrrega. Es desactiva l’ancoratge automàtic del navegador al calendari per evitar compensacions dobles.

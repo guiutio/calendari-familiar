@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.7.3';
+const APP_VERSION = '0.7.4';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -758,7 +758,8 @@ function mountCalendarScroll(position, resetScroll = false) {
     else
         restore(position);
     monthScrollTarget = false;
-    let frame = 0;
+    let frame = 0, idleTimer, touching = false, correctedScroll;
+    const scrollTop = () => mobile() ? main.scrollTop : window.scrollY;
     const refresh = () => {
         frame = 0;
         if (!sequence.isConnected)
@@ -766,30 +767,6 @@ function mountCalendarScroll(position, resetScroll = false) {
         const anchor = monthPosition();
         if (!anchor)
             return;
-        const first = sequence.firstElementChild, last = sequence.lastElementChild;
-        const top = bar.getBoundingClientRect().bottom;
-        const bottom = mobile() ? main.getBoundingClientRect().bottom : window.innerHeight;
-        let firstIndex = Number(first.dataset.monthIndex), lastIndex = Number(last.dataset.monthIndex);
-        const children = activeChildren(), today = localDate(new Date());
-        if (first.getBoundingClientRect().top > top - 700) {
-            sequence.insertAdjacentHTML('afterbegin', monthPanel(firstIndex - 2, children, today) + monthPanel(firstIndex - 1, children, today));
-            firstIndex -= 2;
-        }
-        if (last.getBoundingClientRect().bottom < bottom + 700) {
-            sequence.insertAdjacentHTML('beforeend', monthPanel(lastIndex + 1, children, today) + monthPanel(lastIndex + 2, children, today));
-            lastIndex += 2;
-        }
-        // Never remove the visible panel; retain at least two months on either side.
-        while (lastIndex - firstIndex >= 9 && firstIndex < anchor.index - 2) {
-            sequence.firstElementChild.remove();
-            firstIndex++;
-        }
-        while (lastIndex - firstIndex >= 9 && lastIndex > anchor.index + 2) {
-            sequence.lastElementChild.remove();
-            lastIndex--;
-        }
-        monthRange = { first: firstIndex, last: lastIndex };
-        restore(anchor);
         // En saltar a un mes que comença en una setmana compartida, mantenim el mes sol·licitat.
         const visibleWeek = anchor.date ? weekStart(anchor.date) : '';
         const shownIndex = visibleWeek && selectedDate >= visibleWeek && selectedDate <= addDays(visibleWeek, 6)
@@ -803,12 +780,84 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (title)
             title.textContent = periodTitle();
     };
-    const schedule = () => { if (!frame)
-        frame = window.requestAnimationFrame(refresh); };
+    const extendMonths = () => {
+        idleTimer = undefined;
+        if (touching || !sequence.isConnected)
+            return;
+        const anchor = monthPosition();
+        if (!anchor)
+            return;
+        const first = sequence.firstElementChild, last = sequence.lastElementChild;
+        const top = bar.getBoundingClientRect().bottom;
+        const bottom = mobile() ? main.getBoundingClientRect().bottom : window.innerHeight;
+        let firstIndex = Number(first.dataset.monthIndex), lastIndex = Number(last.dataset.monthIndex), changed = false;
+        const children = activeChildren(), today = localDate(new Date());
+        if (first.getBoundingClientRect().top > top - 700) {
+            sequence.insertAdjacentHTML('afterbegin', monthPanel(firstIndex - 2, children, today) + monthPanel(firstIndex - 1, children, today));
+            firstIndex -= 2;
+            changed = true;
+        }
+        if (last.getBoundingClientRect().bottom < bottom + 700) {
+            sequence.insertAdjacentHTML('beforeend', monthPanel(lastIndex + 1, children, today) + monthPanel(lastIndex + 2, children, today));
+            lastIndex += 2;
+            changed = true;
+        }
+        while (lastIndex - firstIndex >= 9 && firstIndex < anchor.index - 2) {
+            sequence.firstElementChild.remove();
+            firstIndex++;
+            changed = true;
+        }
+        while (lastIndex - firstIndex >= 9 && lastIndex > anchor.index + 2) {
+            sequence.lastElementChild.remove();
+            lastIndex--;
+            changed = true;
+        }
+        monthRange = { first: firstIndex, last: lastIndex };
+        // Safari pot accelerar o interrompre la inèrcia si escrivim scrollTop durant el gest.
+        // Només compensem una mutació real, quan ja no hi ha moviment ni cap dit premut.
+        if (changed) {
+            const el = sequence.querySelector(`[data-month-index="${anchor.index}"]`);
+            const delta = el ? el.getBoundingClientRect().top - anchor.top : 0;
+            if (Math.abs(delta) > .5) {
+                shift(delta);
+                correctedScroll = scrollTop();
+            }
+        }
+    };
+    const scheduleIdle = () => {
+        window.clearTimeout(idleTimer);
+        if (!touching)
+            idleTimer = window.setTimeout(extendMonths, 180);
+    };
+    const schedule = () => {
+        // La correcció de píxels produeix un altre esdeveniment scroll: no és un nou gest.
+        if (correctedScroll !== undefined && Math.abs(scrollTop() - correctedScroll) < 1) {
+            correctedScroll = undefined;
+            return;
+        }
+        correctedScroll = undefined;
+        if (!frame)
+            frame = window.requestAnimationFrame(refresh);
+        scheduleIdle();
+    };
+    const touchStart = () => { touching = true; window.clearTimeout(idleTimer); };
+    const touchEnd = () => { touching = false; scheduleIdle(); };
     main.addEventListener('scroll', schedule, { passive: true });
+    main.addEventListener('touchstart', touchStart, { passive: true });
+    main.addEventListener('touchend', touchEnd, { passive: true });
+    main.addEventListener('touchcancel', touchEnd, { passive: true });
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
-    stopCalendarScroll = () => { main.removeEventListener('scroll', schedule); window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); window.cancelAnimationFrame(frame); };
+    stopCalendarScroll = () => {
+        main.removeEventListener('scroll', schedule);
+        main.removeEventListener('touchstart', touchStart);
+        main.removeEventListener('touchend', touchEnd);
+        main.removeEventListener('touchcancel', touchEnd);
+        window.removeEventListener('scroll', schedule);
+        window.removeEventListener('resize', schedule);
+        window.cancelAnimationFrame(frame);
+        window.clearTimeout(idleTimer);
+    };
     schedule();
 }
 function calendarPage() {
@@ -819,7 +868,7 @@ function calendarPage() {
     if (calendarView === 'month') {
         const index = viewYear * 12 + viewMonth;
         if (!monthRange || index <= monthRange.first || index >= monthRange.last)
-            monthRange = { first: index - 1, last: index + 2 };
+            monthRange = { first: index - 3, last: index + 3 };
         content = `${!state.children.length ? `<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>` : ''}<div class="month-sequence">${Array.from({ length: monthRange.last - monthRange.first + 1 }, (_, i) => monthPanel(monthRange.first + i, children, today)).join('')}</div>`;
     }
     else if (calendarView === 'week') {
