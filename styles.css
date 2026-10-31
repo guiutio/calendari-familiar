@@ -904,10 +904,9 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .calendar-layout .calendar-sticky-bar {position:relative;top:auto;align-self:stretch;flex:0 0 auto;width:100%;}
 }
 .month-sequence {overflow-anchor:none;}
-.month-section-title {margin:0;padding:18px 14px 14px;font-size:calc(18px * var(--font-scale,1));text-transform:capitalize;}
-.month-panel + .month-panel {border-top:10px solid #f6f7f8;}
+.month-panel + .month-panel {border:0;}
 :root[data-theme="dark"] .calendar-sticky-bar {background:#192436;border-color:#304058;box-shadow:none;}
-:root[data-theme="dark"] .month-panel + .month-panel {border-color:#101722;}
+
 .calendar-sticky-bar .filter-button {min-height:33px;padding:6px 9px;position:relative;}
 @media(min-width:901px) {
   .sidebar {position:sticky;top:0;align-self:start;min-height:100vh;}
@@ -915,4 +914,13 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 @media(max-width:560px) {
   .calendar-sticky-bar .filter-button {width:32px;min-height:32px;padding:0;}
   .calendar-sticky-bar .calendar-toolbar {padding-inline:9px;gap:6px;}
+}
+
+/* v0.7.3 · Una sola successió de setmanes, amb capçalera de dies fixa. */
+.calendar-sticky-bar .weekdays {width:calc(100% - 30px);padding:0 0 10px;max-width:800px;margin:0 auto;}
+@media(min-width:561px) and (max-width:900px) {
+  .calendar-sticky-bar .weekdays {width:calc(100% - 48px);}
+}
+@media(min-width:901px) {
+  .calendar-sticky-bar .weekdays {width:calc(100% - 92px);}
 }

@@ -295,3 +295,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - La barra de navegació ocupa tota l’amplada superior, sense cantonades arrodonides ni efecte flotant.
 - En mòbil és fora del contenidor desplaçable, inclou la zona segura superior amb fons opac i el calendari queda retallat per sota. També s’aplica a Dia i Setmana.
 - Es conserva la posició dels mesos en navegar, aplicar filtres i carregar mesos consecutius.
+
+
+## v0.7.3: mesos units sense setmanes repetides
+
+- Les setmanes compartides entre mesos apareixen una sola vegada, en una graella contínua sense separadors ni títols intermedis.
+- La capçalera dels dies de la setmana queda una sola vegada a la barra fixa; el títol superior indica el mes visible.
+- Es conserven els contorns reals de cada mes i la navegació enfoca la setmana que conté el primer dia, també si el mes comença en diumenge.

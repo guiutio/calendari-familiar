@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.7.2';
+const APP_VERSION = '0.7.3';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -676,7 +676,7 @@ function calendarNavigation() {
     const children = activeChildren(), bands = activeBands();
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || bands.length !== BANDS.length;
     return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
-    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div></header>`;
+    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}"><aside class="sidebar">
@@ -686,25 +686,33 @@ function layout(content) {
   </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar', 'Calendari', 'calendar', 'mobile')}${navButton('rotation', 'Rotacions', 'repeat', 'mobile')}${navButton('schools', 'Escoles', 'school', 'mobile')}${navButton('settings', 'Ajustos', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
-function monthPanel(index, children, today) {
+// Cada setmana pertany al mes del seu dijous, de manera que només es dibuixa una vegada.
+function monthWeekStart(index) {
     const year = Math.floor(index / 12), month = index - year * 12;
-    const monthStart = new Date(year, month, 1, 12), firstDay = (monthStart.getDay() + 6) % 7;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const starting = localDate(new Date(year, month, 1 - firstDay, 12));
-    const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, i) => {
-        const date = addDays(starting, i), d = parseDate(date), other = d.getMonth() !== month;
+    const first = localDate(new Date(year, month, 1, 12)), monday = weekStart(first);
+    return parseDate(addDays(monday, 3)).getMonth() === month ? monday : addDays(monday, 7);
+}
+function monthPanel(index, children, today) {
+    const panelYear = Math.floor(index / 12), panelMonth = index - panelYear * 12;
+    const starting = monthWeekStart(index), ending = monthWeekStart(index + 1);
+    const cells = Array.from({ length: diffDays(ending, starting) }, (_, offset) => {
+        const date = addDays(starting, offset), d = parseDate(date);
+        // El contorn es calcula respecte al mes real de cada data, fins i tot a les setmanes compartides.
+        const year = d.getFullYear(), month = d.getMonth();
+        const firstDay = (new Date(year, month, 1, 12).getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate(), i = firstDay + d.getDate() - 1;
         const monthEdges = monthDayUI.outline(date, year, month, i, Math.ceil((firstDay + daysInMonth) / 7) * 7, daysInMonth);
-        const iso = i % 7 === 0 ? monthDayUI.isoWeek(date) : null;
+        const iso = offset % 7 === 0 ? monthDayUI.isoWeek(date) : null;
         const changed = monthDayUI.hasChanges(state, date);
         const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
         const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
-        return `${iso ? `<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date, 6)}">${iso.week}</button>` : ''}<button type="button" class="day-cell ${other ? 'other-month' : ''} ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
+        return `${iso ? `<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date, 6)}">${iso.week}</button>` : ''}<button type="button" class="day-cell ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
         ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}
       </button>`;
     });
-    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year, month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year, month))}</h2><div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div></section>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(panelYear, panelMonth))}"><div class="month-grid">${cells.join('')}</div></section>`;
 }
 // Keep a small sliding window of months. Extending either end preserves the
 // visible month's pixel position, including when older panels are removed.
@@ -716,7 +724,8 @@ function monthPosition() {
     const panels = Array.from(sequence.querySelectorAll('.month-panel'));
     const top = bar.getBoundingClientRect().bottom;
     const panel = panels.find(el => el.getBoundingClientRect().bottom > top + 1) ?? panels.at(-1);
-    return panel ? { index: Number(panel.dataset.monthIndex), top: panel.getBoundingClientRect().top } : null;
+    const cell = panel ? Array.from(panel.querySelectorAll('.day-cell')).find(el => el.getBoundingClientRect().bottom > top + 1) : null;
+    return panel ? { index: Number(panel.dataset.monthIndex), top: panel.getBoundingClientRect().top, date: cell?.dataset.date } : null;
 }
 function mountCalendarScroll(position, resetScroll = false) {
     if (resetScroll && !window.matchMedia('(max-width:900px)').matches)
@@ -737,7 +746,9 @@ function mountCalendarScroll(position, resetScroll = false) {
             shift(el.getBoundingClientRect().top - anchor.top);
     };
     if (monthScrollTarget || !position) {
-        const target = sequence.querySelector(`[data-month-index="${viewYear * 12 + viewMonth}"]`);
+        const firstDate = localDate(new Date(viewYear, viewMonth, 1, 12));
+        const target = sequence.querySelector(`[data-action="show-calendar-day"][data-date="${firstDate}"]`)
+            ?? sequence.querySelector(`[data-month-index="${viewYear * 12 + viewMonth}"]`);
         if (target) {
             // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
             const top = bar.getBoundingClientRect().bottom;
@@ -779,8 +790,12 @@ function mountCalendarScroll(position, resetScroll = false) {
         }
         monthRange = { first: firstIndex, last: lastIndex };
         restore(anchor);
-        viewYear = Math.floor(anchor.index / 12);
-        viewMonth = anchor.index - viewYear * 12;
+        // En saltar a un mes que comença en una setmana compartida, mantenim el mes sol·licitat.
+        const visibleWeek = anchor.date ? weekStart(anchor.date) : '';
+        const shownIndex = visibleWeek && selectedDate >= visibleWeek && selectedDate <= addDays(visibleWeek, 6)
+            ? parseDate(selectedDate).getFullYear() * 12 + parseDate(selectedDate).getMonth() : anchor.index;
+        viewYear = Math.floor(shownIndex / 12);
+        viewMonth = shownIndex - viewYear * 12;
         const selected = parseDate(selectedDate);
         if (selected.getFullYear() !== viewYear || selected.getMonth() !== viewMonth)
             selectedDate = localDate(new Date(viewYear, viewMonth, 1, 12));
@@ -803,7 +818,7 @@ function calendarPage() {
     let content = '';
     if (calendarView === 'month') {
         const index = viewYear * 12 + viewMonth;
-        if (!monthRange || index < monthRange.first || index > monthRange.last)
+        if (!monthRange || index <= monthRange.first || index >= monthRange.last)
             monthRange = { first: index - 1, last: index + 2 };
         content = `${!state.children.length ? `<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>` : ''}<div class="month-sequence">${Array.from({ length: monthRange.last - monthRange.first + 1 }, (_, i) => monthPanel(monthRange.first + i, children, today)).join('')}</div>`;
     }
