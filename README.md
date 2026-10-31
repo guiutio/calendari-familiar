@@ -288,3 +288,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - La pantalla d’actualització detecta la versió que serveix index.html i comprova que app.js coincideixi abans de renovar els fitxers temporals. Ja no exigeix una versió antiga fixada al codi.
 - El botó d’actualització obre la comprovació amb una URL nova per evitar una pàgina antiga a la memòria cau. Les dades familiars es conserven.
+
+
+## v0.7.2: barra superior ancorada fora del calendari
+
+- La barra de navegació ocupa tota l’amplada superior, sense cantonades arrodonides ni efecte flotant.
+- En mòbil és fora del contenidor desplaçable, inclou la zona segura superior amb fons opac i el calendari queda retallat per sota. També s’aplica a Dia i Setmana.
+- Es conserva la posició dels mesos en navegar, aplicar filtres i carregar mesos consecutius.

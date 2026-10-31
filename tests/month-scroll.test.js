@@ -10,7 +10,7 @@ const dateHelpers=extract('function localDate(', 'function monthTitle(');
 function controller(mobile=true){
  let frame,listen;
  const base=2026*12+9;
- const main={scrollTop:0,addEventListener:(_,f)=>listen=f,removeEventListener:()=>{},getBoundingClientRect:()=>({top:0,bottom:800})};
+ const main={scrollTop:0,addEventListener:(_,f)=>listen=f,removeEventListener:()=>{},getBoundingClientRect:()=>({top:mobile?100:0,bottom:800})};
  const win={innerHeight:800,matchMedia:()=>({matches:mobile}),scrollBy:(_,delta)=>main.scrollTop+=delta,scrollTo:(_,y)=>main.scrollTop=y,requestAnimationFrame:f=>(frame=f,1),cancelAnimationFrame:()=>{},addEventListener:()=>{},removeEventListener:()=>{}};
  let panels=[];
  const panel=index=>({dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
@@ -78,4 +78,17 @@ test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de trasp
  assert.equal(context.selectedDate,'2028-02-29');context.navigateCalendar(1);
  assert.equal(context.selectedDate,'2028-03-01');context.navigateCalendar(-1);
  assert.equal(context.selectedDate,'2028-02-29');
+});
+
+
+test('la barra superior és fora del contenidor desplaçable en les tres vistes',()=>{
+ const source=extract('function layout(content)', 'function monthPanel(');
+ for(const calendarView of ['month','week','day']){
+  const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
+  vm.runInContext(source,ctx);
+  const html=ctx.layout('<section>Calendari</section>');
+  assert.match(html,/<\/aside><header class="calendar-sticky-bar">Controls<\/header><main class="main-area">/);
+  const main=html.slice(html.indexOf('<main'),html.indexOf('</main>'));
+  assert.doesNotMatch(main,/calendar-sticky-bar/);
+ }
 });

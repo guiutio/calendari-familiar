@@ -885,19 +885,28 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 
 /* v0.7.0 · Navegació sempre visible i mesos consecutius amb scroll de pàgina. */
 .calendar-sticky-bar {
-  position:sticky;top:0;z-index:30;
-  background:#fff;border:1px solid #e8ebef;border-radius:18px 18px 0 0;
-  box-shadow:0 3px 8px #233b5912;
+  position:sticky;top:0;z-index:30;align-self:start;
+  background:#fff;border:0;border-bottom:1px solid #e8ebef;border-radius:0;
+  box-shadow:none;
   padding-top:env(safe-area-inset-top,0px);
 }
 .calendar-sticky-bar .calendar-toolbar {padding:12px 14px 8px;flex-wrap:wrap;}
 .calendar-sticky-bar .calendar-title {flex:1;min-width:125px;}
 .calendar-sticky-bar .calendar-view-switch {margin:0 12px 10px;}
-.calendar-sticky-bar + .calendar-card {border-top:0;border-radius:0 0 20px 20px;}
+/* La barra és germana del scroll principal: el calendari queda retallat a sota. */
+.calendar-layout .calendar-sticky-bar {grid-column:2;grid-row:1;}
+.calendar-layout .sidebar {grid-column:1;grid-row:1 / span 2;}
+.calendar-layout .main-area {grid-column:2;grid-row:2;}
+@media(min-width:901px) {
+  .calendar-layout {grid-template-rows:auto 1fr;}
+}
+@media(max-width:900px) {
+  .calendar-layout .calendar-sticky-bar {position:relative;top:auto;align-self:stretch;flex:0 0 auto;width:100%;}
+}
 .month-sequence {overflow-anchor:none;}
 .month-section-title {margin:0;padding:18px 14px 14px;font-size:calc(18px * var(--font-scale,1));text-transform:capitalize;}
 .month-panel + .month-panel {border-top:10px solid #f6f7f8;}
-:root[data-theme="dark"] .calendar-sticky-bar {background:#192436;border-color:#304058;box-shadow:0 3px 8px #050c1744;}
+:root[data-theme="dark"] .calendar-sticky-bar {background:#192436;border-color:#304058;box-shadow:none;}
 :root[data-theme="dark"] .month-panel + .month-panel {border-color:#101722;}
 .calendar-sticky-bar .filter-button {min-height:33px;padding:6px 9px;position:relative;}
 @media(min-width:901px) {
