@@ -187,7 +187,7 @@ test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
  assert.deepEqual(classes('2026-09-30',2026,9,2,35,31),[]);
  assert.deepEqual(classes('2026-10-01',2026,9,3,35,31),['month-current','month-edge-top','month-edge-left']);
  assert.deepEqual(classes('2026-10-04',2026,9,6,35,31),['month-current','month-edge-top','month-edge-right']);
- assert.deepEqual(classes('2026-10-05',2026,9,7,35,31),['month-current','month-edge-left']);
+ assert.deepEqual(classes('2026-10-05',2026,9,7,35,31),['month-current','month-edge-top','month-edge-left']);
  assert.deepEqual(classes('2026-10-26',2026,9,28,35,31),['month-current','month-edge-bottom','month-edge-left']);
  assert.deepEqual(classes('2026-10-31',2026,9,33,35,31),['month-current','month-edge-bottom','month-edge-right']);
  assert.deepEqual(classes('2026-11-01',2026,9,34,35,31),[]);
@@ -203,9 +203,9 @@ test('el mes no mostra cap comptador escolar i destaca el límit amb una línia 
  assert.match(ts,/monthDayUI\.outline\(date,viewYear,viewMonth,i/);
  assert.match(app,/monthDayUI\.outline\(date, viewYear, viewMonth, i/);
  assert.match(ts,/\$\{monthEdges\}" data-action="show-calendar-day"/);
- assert.match(css,/\.month-grid\s*\{--month-outline:#205b99;\}/);
- assert.match(css,/\.month-grid \.day-cell\.month-current\s*\{[\s\S]*?inset 0 4px/);
- for(const edge of ['top','bottom','left','right'])assert.match(css,new RegExp('\\.month-grid \\.day-cell\\.month-edge-'+edge+' \\{--month-'+edge+':var\\(--month-outline\\);\\}'));
+  assert.match(css,/\.month-grid\s*\{--month-outline:#205b99;--month-outline-width:4px;\}/);
+  assert.match(css,/\.month-grid \.day-cell\.month-current::after\s*\{[\s\S]*?content:"";[\s\S]*?position:absolute;[\s\S]*?inset:-1px;[\s\S]*?z-index:8;[\s\S]*?pointer-events:none;[\s\S]*?border-style:solid;[\s\S]*?border-color:var\(--month-outline\)/);
+  for(const edge of ['top','bottom','left','right'])assert.ok(css.includes('.month-grid .day-cell.month-edge-'+edge+' {--month-'+edge+'-w:var(--month-outline-width);}'));
  assert.match(css,/:root\[data-theme="dark"\] \.month-grid\s*\{--month-outline:#88baff;\}/);
  assert.match(html,/styles\.css\?v=0\.6\.5/);
  assert.match(sw,/calendari-familiar-v0\.6\.5/);
@@ -271,4 +271,46 @@ test('mes: les files es redueixen realment i només s’expandeixen les de nits 
   assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.month-mini\.night-expanded \{height:96px;\}/);
   assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
   assert.match(timelineSource,/function renderWeek\(/);
+});
+
+test('el perímetre no deixa buits quan els mesos comencen o acaben a mitja setmana',()=>{
+  // El costat d'una cel·la és perímetre només si el veí de la graella
+  // (amunt, avall, esquerra o dreta) no forma part del mes actual.
+  for(let year=2024;year<=2030;year++)for(let month=0;month<12;month++){
+    const days=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+    const leading=(new Date(Date.UTC(year,month,1)).getUTCDay()+6)%7;
+    const total=Math.ceil((leading+days)/7)*7;
+    for(let d=1;d<=days;d++){
+      const index=leading+d-1;
+      const date=[year,String(month+1).padStart(2,'0'),String(d).padStart(2,'0')].join('-');
+      const got=new Set(ui.outline(date,year,month,index,total,days).split(' ').filter(Boolean));
+      const expected=new Set([
+        'month-current',
+        d<=7?'month-edge-top':'',
+        d+7>days?'month-edge-bottom':'',
+        index%7===0||d===1?'month-edge-left':'',
+        index%7===6||d===days?'month-edge-right':''
+      ].filter(Boolean));
+      assert.deepEqual([...got].sort(),[...expected].sort(),date);
+    }
+  }
+  // Novembre 2026, com a la captura: Dg 1 a la primera fila i Dl 30 a l'última.
+  const november=(d,i)=>ui.outline('2026-11-'+String(d).padStart(2,'0'),2026,10,i,42,30);
+  for(const d of [1,2,7])assert.match(november(d,6+d-1),/month-edge-top/);
+  assert.doesNotMatch(november(8,13),/month-edge-top/);
+  for(const d of [24,29,30])assert.match(november(d,6+d-1),/month-edge-bottom/);
+  assert.match(november(30,35),/month-edge-right/);
+});
+test('el marc de 4 px es dibuixa per sobre de la graella a tots els costats, sense interceptar tocs',()=>{
+  const overlay=css.match(/\.month-grid \.day-cell\.month-current::after\s*\{([^}]*)\}/)?.[1];
+  assert.ok(overlay);
+  assert.match(overlay,/pointer-events:none/);
+  assert.match(overlay,/z-index:8/);
+  assert.match(overlay,/inset:-1px/);
+  assert.ok(overlay.includes('border-width:'));
+  for(const edge of ['top','right','bottom','left'])assert.ok(overlay.includes('var(--month-'+edge+'-w,0px)'));
+  assert.ok(css.includes('--month-outline-width:4px;'));
+  assert.match(css,/\.month-grid \.day-cell\.month-current\.month-edge-top,[\s\S]*?month-edge-right \{z-index:2;\}/);
+  assert.doesNotMatch(css,/inset 0 4px 0 var\(--month-top/);
+  assert.match(ts,/data-action="show-calendar-day"/);
 });
