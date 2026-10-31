@@ -54,8 +54,8 @@ test('el tutor i l’hora comparteixen un sol formulari sense graella separada',
  assert.match(css,/\.rotation-tutor-choice:has\(\.rotation-guardian-radio:checked\)/);
  assert.match(css,/\.rotation-guardian-radio \{position:absolute/);
  assert.match(css,/\.rotation-day-time input\[type="time"\]/);
- assert.match(html,/app\.js\?v=0\.6\.4/);
- assert.match(sw,/calendari-familiar-v0\.6\.4/);
+ assert.match(html,/app\.js\?v=0\.6\.5/);
+ assert.match(sw,/calendari-familiar-v0\.6\.5/);
 });
 
 test('tutor i hora diferents queden actualitzats conjuntament a l’esborrany del patró',()=>{
