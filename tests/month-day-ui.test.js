@@ -74,7 +74,7 @@ test('respecta franges antigues i impedeix solapar-les amb excepcions noves',()=
  assert.equal(s.bandOverrides[date+'|elna|dinar'],undefined);
  assert.equal(s.daySlots[date+'|elna'][0].startTime,'13:00');
 });
-test('la miniatura representa proporcionalment 24 h i escola per sobre de pernocta i excepció',()=>{
+test('la miniatura comprimeix les hores nocturnes sense franges especials, mantenint editors de 24 h',()=>{
  const night=timeline.overnightSegments(date,'elna','19:00',d=>d===date?'mare':'pare',()=>yesterday,id=>guardians.find(g=>g.id===id),['pare','mare']);
  const s=state();ui.save(s,date,'elna','',params('09:00','12:00'),newId);
  const schools=[{childId:'elna',schoolId:'escola',id:'sessio',start:9*60,end:10*60,color:'#66cc99',schoolName:'Escola',kind:'classe',startTime:'09:00',endTime:'10:00'}];
@@ -82,8 +82,10 @@ test('la miniatura representa proporcionalment 24 h i escola per sobre de pernoc
  assert.match(output,/month-mini-night/);
  assert.match(output,/month-mini-custom/);
  assert.match(output,/month-mini-school/);
- assert.match(output,/top:79\.16666666666667%/); // canvi a les 19:00
- assert.match(output,/top:37\.5%/); // 09:00
+ assert.match(output,/class="month-mini night-compressed"/);
+ const at19=ui.miniGeometry(19*60,20*60),at9=ui.miniGeometry(9*60,10*60);
+ assert.match(output,new RegExp('top:'+at19.top+'%'));
+ assert.match(output,new RegExp('top:'+at9.top+'%'));
  assert.ok(output.indexOf('month-mini-school')>output.indexOf('month-mini-custom'));
  const expanded=ui.detail(date,'Dijous',children,{elna:night},schools,ui.slots(s,date,children,guardians,['pare','mare']),s);
  assert.match(expanded,/00:00/);
