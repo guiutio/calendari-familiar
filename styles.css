@@ -609,7 +609,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .month-mini-night,.month-mini-custom,.month-mini-school{display:block;position:absolute;left:0;right:0;box-sizing:border-box;}
 .month-mini-night{z-index:1;opacity:.86;}
 .month-mini-custom{z-index:2;box-shadow:inset 0 0 0 1px #ffffffaa;}
-.month-mini-school{z-index:3;left:18%;right:4%;border-left:2px solid #ffffff88;box-shadow:0 0 0 1px #61748a55;}
+.month-mini-school{z-index:3;left:0;right:0;border-left:2px solid #ffffff88;box-shadow:0 0 0 1px #61748a55;}
 .month-mini-empty{color:#9eabb9;margin:auto;}
 .day-cell:has(.month-mini){min-height:155px;}
 .month-day-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
@@ -640,7 +640,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
  .day-cell:has(.month-mini){padding:5px 2px;min-height:138px;gap:1px;}
  .month-mini{height:96px;grid-template-rows:11px minmax(0,1fr);gap:1px;}
  .month-mini-child{font-size:calc(8px * var(--font-scale, 1));}
- .month-mini-school{left:14%;right:1%;border-left-width:1px;}
+ .month-mini-school{border-left-width:1px;}
  .sheet.month-day-sheet{padding-inline:12px;}
  .month-day-actions button{min-height:38px;}
 }
@@ -818,7 +818,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .day-extra-block:focus-visible {outline:3px solid #1e4e93;outline-offset:1px;z-index:7;}
 /* Rotacions: amb tutor es tapa tota la columna; sense tutor es conserva la franja de responsabilitat. */
 .day-extra-block.with-guardian {left:0;width:100%;}
-.month-mini-extra {display:block;position:absolute;z-index:4;left:48%;right:0;opacity:.95;box-sizing:border-box;box-shadow:inset 0 0 0 1px #fff;}
+.month-mini-extra {display:block;position:absolute;z-index:4;left:23%;right:0;opacity:.95;box-sizing:border-box;box-shadow:inset 0 0 0 1px #fff;}
 .month-mini-extra.with-guardian {left:0;right:0;}
 :root[data-theme="dark"] .day-extra-block {background:color-mix(in srgb,var(--extra-color) 58%,#19324f);color:#f4f8ff;border-color:#192d45;}
 :root[data-theme="dark"] .extra-editor input,:root[data-theme="dark"] .extra-editor select {color:#eaf3ff;}

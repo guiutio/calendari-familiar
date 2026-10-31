@@ -321,3 +321,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Cada mes acaba el seu últim dia; després hi ha el nom del següent mes a tota l’amplada i la seva graella comença pel dia 1.
 - Els espais abans de l’1 i després de l’últim dia queden buits per respectar les columnes de dilluns a diumenge. No es repeteixen dates ni assignacions d’altres mesos.
 - La navegació enfoca el títol del mes i es conserven la barra fixa, els contorns i l’estabilització de la inèrcia.
+
+
+## v0.7.7: amplada de les franges mensuals coherent amb Dia i Setmana
+
+- Les activitats de rotació amb tutor ocupen tota la columna del fill. Sense tutor deixen el mateix marge lateral del 23% que a Dia i Setmana, en lloc del 48% anterior.
+- Les activitats escolars aprofiten tota l’amplada de la columna, sense el marge especial que només s’aplicava al mes, també en pantalles estretes.
+- Es conserven els horaris, els colors, els filtres i la compressió de les hores nocturnes.
