@@ -86,13 +86,33 @@
     firstThursday.setUTCDate(firstThursday.getUTCDate()+4-(firstThursday.getUTCDay()||7));
     return {week:1+Math.round((thursday.getTime()-firstThursday.getTime())/(7*86400000)),year:weekYear};
   }
+  // Vista Mes: mantenim proporcions reals entre les 06:00 i les 22:00, i
+  // comprimim les vuit hores de nit (00–06 + 22–24) a menys d'una hora i mitja
+  // visual. Una franja especial nocturna restaura l'escala real de 24 hores
+  // en aquella casella; la pernocta habitual NO compta com a franja especial.
+  const NIGHT_WEIGHT=0.18, MORNING_END=360, EVENING_START=1320;
+  function miniGeometry(from,to,expanded=false){
+    const clamp=n=>Math.max(0,Math.min(DAY,Number(n)||0));
+    const visual=n=>expanded?clamp(n):
+      n<=MORNING_END?clamp(n)*NIGHT_WEIGHT:
+      n<=EVENING_START?MORNING_END*NIGHT_WEIGHT+(clamp(n)-MORNING_END):
+      MORNING_END*NIGHT_WEIGHT+(EVENING_START-MORNING_END)+(clamp(n)-EVENING_START)*NIGHT_WEIGHT;
+    const total=visual(DAY),a=visual(clamp(from)),b=visual(clamp(to));
+    return {top:100*a/total,height:100*Math.max(0,b-a)/total};
+  }
   function mini(children,nights,activities,customSlots,rotatingSlots=[]){
     if(!children.length)return '';
+    const special=children.some(c=>
+      [...(customSlots[c.id]??[]),
+        ...activities.filter(a=>a.childId===c.id).map(a=>({from:a.start,to:a.end})),
+        ...rotatingSlots.filter(a=>a.childId===c.id&&a.visible)
+      ].some(a=>a.from<MORNING_END||a.to>EVENING_START)
+    );
     const rect=(from,to,color,klass,label)=>{
-      const top=100*Math.max(0,from)/DAY, height=100*Math.max(0,Math.min(DAY,to)-Math.max(0,from))/DAY;
+      const {top,height}=miniGeometry(from,to,special);
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
-    return `<span class="month-mini" style="--month-children:${children.length}" aria-hidden="true">
+    return `<span class="month-mini ${special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
       ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape([...c.name][0]??'?')}</span>`).join('')}
       ${children.map(c=>`<span class="month-mini-column">
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
@@ -230,5 +250,5 @@
   function removeChild(daySlots,id){
     for(const key of Object.keys(daySlots||{}))if(key.endsWith('|'+id))delete daySlots[key];
   }
-  window.monthDayUI={clean,hasChanges,slots,isoWeek,outline,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
+  window.monthDayUI={clean,hasChanges,slots,isoWeek,outline,miniGeometry,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
 })();
