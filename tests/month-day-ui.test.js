@@ -110,8 +110,8 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.7\.4/);
- assert.match(sw,/month-day-ui\.js\?v=0\.7\.4/);
+ assert.match(html,/month-day-ui\.js\?v=0\.7\.5/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.7\.5/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
@@ -165,8 +165,8 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
  assert.match(ts,/monthDayUI\.restore\(state,date\);rotationPatterns\.clearDate\(state,date\);sheet=null;update\(\)/);
  assert.match(app,/monthDayUI\.restore\(state, date\);\s*rotationPatterns\.clearDate\(state, date\);\s*sheet = null;/);
- assert.match(html,/app\.js\?v=0\.7\.4/);
- assert.match(sw,/calendari-familiar-v0\.7\.4/);
+ assert.match(html,/app\.js\?v=0\.7\.5/);
+ assert.match(sw,/calendari-familiar-v0\.7\.5/);
 });
 
 test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',()=>{
@@ -177,8 +177,8 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
  assert.match(css,/@media\(max-width:360px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:24px;\s*height:24px;\s*font-size:calc\(15px/);
  assert.doesNotMatch(ts,/school-month-count/);
  assert.doesNotMatch(app,/school-month-count/);
- assert.match(html,/styles\.css\?v=0\.7\.4/);
- assert.match(sw,/calendari-familiar-v0\.7\.4/);
+ assert.match(html,/styles\.css\?v=0\.7\.5/);
+ assert.match(sw,/calendari-familiar-v0\.7\.5/);
 });
 
 test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
@@ -207,8 +207,8 @@ test('el mes no mostra cap comptador escolar i destaca el límit amb una línia 
   assert.match(css,/\.month-grid \.day-cell\.month-current::after\s*\{[\s\S]*?content:"";[\s\S]*?position:absolute;[\s\S]*?inset:-1px;[\s\S]*?z-index:8;[\s\S]*?pointer-events:none;[\s\S]*?border-style:solid;[\s\S]*?border-color:var\(--month-outline\)/);
   for(const edge of ['top','bottom','left','right'])assert.ok(css.includes('.month-grid .day-cell.month-edge-'+edge+' {--month-'+edge+'-w:var(--month-outline-width);}'));
  assert.match(css,/:root\[data-theme="dark"\] \.month-grid\s*\{--month-outline:#88baff;\}/);
- assert.match(html,/styles\.css\?v=0\.7\.4/);
- assert.match(sw,/calendari-familiar-v0\.7\.4/);
+ assert.match(html,/styles\.css\?v=0\.7\.5/);
+ assert.match(sw,/calendari-familiar-v0\.7\.5/);
 });
 
 test('mes: comprimeix 22:00–06:00 però manté les hores diürnes proporcionals',()=>{

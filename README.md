@@ -308,3 +308,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - La càrrega i retirada de mesos s’executa després que s’aturi el moviment i sense cap dit premut, per respectar la inèrcia tàctil.
 - La posició només es compensa si ha canviat el contingut; les correccions no activen un nou cicle de càrrega. Es desactiva l’ancoratge automàtic del navegador al calendari per evitar compensacions dobles.
+
+
+## v0.7.5: filtres de fills, tutors i escoles
+
+- Es retira el filtre antic de Matí, Dinar, Tarda, Sopar i Nit. L’indicador de filtres actius ja no té en compte aquesta preferència antiga.
+- «Mostra-ho tot» actua sobre els fills, tutors i escoles. Es mantenen els horaris, les franges familiars i les còpies de seguretat existents.
