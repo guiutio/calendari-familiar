@@ -12,7 +12,7 @@ function part(start, end) {
 // El MVP és un script global. Aïllem el validador sense executar el navegador.
 const cleanSchools = new Function(
   part('const SESSION_KINDS', 'const BANDS') +
-  part('function localDate(', 'const DEMO_START_DATE') +
+  part('function localDate(', 'function emptyState(') +
   part('const SCHOOL_PALETTE', 'function cleanState(') +
   '\nreturn cleanSchools;'
 )();

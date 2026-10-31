@@ -59,7 +59,6 @@ test('preferència desada, validada, importable i scroll centrat',()=>{
  assert.match(ts,/timelineZoom:50/);
  assert.match(ts,/TIMELINE_ZOOM_LEVELS.includes\(value\)\?value:50/);
  assert.match(ts,/timelineZoom:validTimelineZoom\(obj\.preferences\.timelineZoom\)/);
- assert.match(ts,/timelineZoom=state\.preferences\.timelineZoom/);
  assert.match(ts,/state\.preferences\.timelineZoom=next;update\(\)/);
  assert.match(ts,/minuteAtCenter/);
  assert.match(ts,/newOffset\+minuteAtCenter\*newScale-main\.clientHeight\/2/);
@@ -73,6 +72,6 @@ test('gradients horaris segueixen el zoom, i PWA actualitzada',()=>{
  assert.match(css,/data-zoom="25"/);
  assert.match(css,/\.week-timeline-viewport \{/);
  assert.match(css,/overflow-y:hidden;/);
- assert.match(html,/app\.js\?v=0\.7\.8/);
- assert.match(sw,/app\.js\?v=0\.7\.8/);
+ assert.match(html,/app\.js\?v=0\.7\.9/);
+ assert.match(sw,/app\.js\?v=0\.7\.9/);
 });

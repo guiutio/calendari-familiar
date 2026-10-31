@@ -18,8 +18,7 @@ vm.runInNewContext(monthSource,monthContext);
 const rotationContext={window:{}};vm.runInNewContext(readFileSync(new URL('../rotation-patterns.js',import.meta.url),'utf8'),rotationContext);
 const functions=[
   extract('function emptyState()','const SCHOOL_PALETTE'),
-  extract('function cleanState(raw)','/** Actualitza només'),
-  extract('function upgradeOriginalDemo(data)','function resizedRotation('),
+  extract('function cleanState(raw)','function resizedRotation('),
   extract('function removeGuardian(id)','async function exportData()'),
   extract('function clearAllData()','function clickAction(button)'),
   extract('function clickAction(button)',"document.addEventListener('click'")
@@ -71,9 +70,8 @@ test('el JSON buit es pot importar i reobrir sense restaurar les dades de mostra
   const {context}=makeContext();
   const stored=asJSON(context.state);
   context.raw=JSON.parse(JSON.stringify(stored));
-  const result=vm.runInContext('upgradeDemo(cleanState(raw))',context);
-  assert.equal(result.changed,false);
-  assert.deepEqual(asJSON(result.data),stored);
+  const result=vm.runInContext('cleanState(raw)',context);
+  assert.deepEqual(asJSON(result),stored);
   assert.match(ts,/if\(children.length>30 \|\| guardians.length>30/);
   assert.doesNotMatch(ts,/if\(!children.length \|\| !guardians.length/);
 });
@@ -144,15 +142,16 @@ test('esborrar-ho tot requereix confirmació i conserva un estat buit importable
 test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>{
   assert.match(ts,/data-action="clear-all"/);
   assert.match(js,/case 'clear-all':/);
-  assert.match(ts,/data-action="reset">Carrega les dades d’exemple/);
+  assert.doesNotMatch(ts,/data-action="reset"|seedState|upgradeDemo|Elna|Blai/);
+  assert.match(ts,/let state=emptyState\(\);/);
   assert.match(ts,/function emptyState\(\):AppState/);
   assert.match(ts,/function removeChild\(id:string\)\{\s*const c=childById/);
   assert.match(ts,/function removeGuardian\(id:string\)\{\s*const g=guardian/);
   assert.match(ts,/data-action="tab" data-tab="settings">Ves a Configuració/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.7\.8/);
-  assert.match(sw,/calendari-familiar-v0\.7\.8/);
+  assert.match(html,/app\.js\?v=0\.7\.9/);
+  assert.match(sw,/calendari-familiar-v0\.7\.9/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -160,4 +159,44 @@ test('el mes amb zero fills és visualment net i ofereix un botó per començar'
   assert.match(ts,/El calendari encara no té fills\./);
   assert.match(ts,/data-action="tab" data-tab="settings">Afegeix un fill/);
   assert.match(js,/El calendari encara no té fills\./);
+});
+
+async function simulateLoad(raw,{fallback=false}={}){
+ const control=makeContext(),context=control.context,writes=[];
+ context.db=null;context.storageMode='session';
+ context.openDB=async()=>{if(fallback)throw Error('IndexedDB no disponible');return {};};
+ context.idbGet=async()=>raw;
+ context.idbPut=async data=>writes.push(asJSON(data));
+ context.localStorage={getItem:()=>raw?JSON.stringify(raw):null,setItem:(_key,data)=>writes.push(JSON.parse(data))};
+ vm.runInContext(extract('async function loadState()', 'function saveState()'),context);
+ await context.loadState();
+ return {context,writes};
+}
+test('la primera obertura desa un calendari buit sense generar dades d’exemple',async()=>{
+ for(const fallback of [false,true]){
+  const {context,writes}=await simulateLoad(null,{fallback});
+  assert.deepEqual(asJSON(context.state.children),[]);
+  assert.deepEqual(asJSON(context.state.guardians),[]);
+  assert.deepEqual(asJSON(context.state.schools),[]);
+  assert.deepEqual(asJSON(context.state.extraRotations),[]);
+  assert.deepEqual(asJSON(context.state.rotation.assignments),{});
+  assert.equal(writes.length,1);
+ }
+});
+test('actualitzar l’app conserva les dades familiars i les preferències ja desades',async()=>{
+ const {context}=makeContext();
+ context.clickAction({dataset:{action:'add-child'}});context.clickAction({dataset:{action:'add-guardian'}});
+ context.state.children[0].name='Fill personalitzat';
+ context.state.rotation.assignments[context.state.children[0].id].fill(context.state.guardians[0].id);
+ context.state.preferences.theme='dark';context.state.preferences.fontSize='xlarge';context.state.preferences.timelineZoom=25;
+ const saved=asJSON(context.state);
+ for(const fallback of [false,true]){
+  const result=await simulateLoad(saved,{fallback});
+  assert.deepEqual(asJSON(result.context.state),saved);
+  assert.deepEqual(result.writes,[],'Obrir l’app no substitueix ni torna a omplir dades existents');
+ }
+});
+test('no queda cap opció ni migració que pugui tornar a carregar mostres',()=>{
+ assert.doesNotMatch(js,/seedState|demoSequence|upgradeDemo|DEMO_START_DATE|Dades d’exemple|case 'reset':/);
+ assert.doesNotMatch(ts,/data-action="reset"/);
 });

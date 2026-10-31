@@ -36,7 +36,6 @@ Per obrir-lo des de l'iPhone, has de servir els mateixos fitxers en una URL **HT
 - Fills i tutors editables; data de naixement opcional i aniversaris.
 - Persistència automàtica en **IndexedDB** (fallback a localStorage quan no és disponible).
 - Còpies de seguretat: exportació/importació JSON, amb comprovacions bàsiques.
-- Dades de mostra: Elna i Blai, Pare i Mare, sense dates de naixement, amb patró de **10 setmanes (70 dies)** des del **12 d’octubre de 2026**. Una mostra antiga intacta s’actualitza automàticament; si hi ha canvis, es conserven i es poden restablir explícitament les dades de mostra.
 - PWA amb manifest, icones i memòria cau de fitxers per a ús offline.
 
 ## Desenvolupament
@@ -72,26 +71,6 @@ assets/                  Icones
 ## Aparença (v0.1.2)
 
 A **Configuració → Aparença** es pot seleccionar **Automàtic** (segueix el tema del sistema), **Clar** o **Fosc**. La preferència es desa amb les dades locals, s’inclou al fitxer exportat i els fitxers de còpies anteriors continuen sent compatibles.
-
-## Dades d’exemple (v0.1.3)
-
-El patró comença el **dilluns 12 d’octubre de 2026** i es repeteix cada **70 dies**, igual per a Elna i Blai.
-
-| Setmana | Tutor principal | Dies especials |
-|---|---|---|
-| 1 | Pare | — |
-| 2 | Mare | Diumenge: Pare (25/10/2026) |
-| 3 | Pare | — |
-| 4 | Mare | — |
-| 5 | Pare | — |
-| 6 | Pare | — |
-| 7 | Mare | Diumenge: Pare (29/11/2026) |
-| 8 | Pare | — |
-| 9 | Mare | — |
-| 10 | Pare | Dissabte i diumenge: Mare (19–20/12/2026) |
-
-Les excepcions formen part del patró que es repeteix, no són canvis d'una sola data. Per veure aquest patró amb dades guardades d'una altra versió, ves a **Configuració → Restableix les dades d'exemple**; l'acció demana confirmació i esborra els teus canvis (recomanem exportar un JSON abans). Si les dades eren les mostres anteriors intactes, s'actualitzen soles.
-
 
 ## v0.1.7: escoles visibles opcionalment al calendari
 
@@ -335,3 +314,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Cada rotació addicional té «Desa els canvis» i «Descarta canvis», com el patró de pernocta.
 - Nom, horari, dates, durada, participants, dies actius i tutors s’editen en un esborrany. El calendari i les exportacions continuen utilitzant el patró confirmat fins que es desa.
 - Les rotacions noves també s’han de desar. Descartar-les elimina només l’esborrany. Els canvis puntuals d’una data al calendari mantenen el seu desament propi.
+
+
+## v0.7.9: sense dades d’exemple
+
+- L’app comença buida, sense fills, tutors, escoles ni assignacions predefinides.
+- S’elimina el botó de carregar dades d’exemple i les migracions automàtiques d’aquelles mostres. Les dades familiars ja desades es conserven.

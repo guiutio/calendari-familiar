@@ -11,7 +11,7 @@ function part(start,end){
 const lib = new Function(
   part('const SESSION_KINDS','const BANDS')+
   part('function clippedWeeklySchedule','const $app')+
-  part('function localDate','const DEMO_START_DATE')+
+  part('function localDate','function emptyState(')+
   part('const SCHOOL_PALETTE','function cleanState(')+
   '\nreturn {clippedWeeklySchedule,ordinaryScheduleForChild,reducedScheduleForChild,scheduleForSchoolDay,cleanSchools};'
 )();

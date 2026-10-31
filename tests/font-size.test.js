@@ -36,11 +36,10 @@ test('la lletra fixa es transforma a mida adaptable sense canviar la mida normal
   assert.equal((css.match(/font-size:\s*[\d.]+px\b/g)||[]).length,0);
 });
 
-test('importació antiga, exportació i reinicialització conserven la mida',()=>{
+test('importació antiga i exportació conserven la mida',()=>{
   assert.match(js,/fontSize: validFontSize\(obj\.preferences\.fontSize\)/);
   assert.match(js,/fontSize: 'normal'/);
-  assert.match(js,/state\.preferences\.fontSize = fontSize/);
   assert.match(js,/document\.documentElement\.dataset\.fontSize = validFontSize/);
-  assert.match(html,/styles\.css\?v=0\.7\.8/);
-  assert.match(html,/app\.js\?v=0\.7\.8/);
+  assert.match(html,/styles\.css\?v=0\.7\.9/);
+  assert.match(html,/app\.js\?v=0\.7\.9/);
 });
