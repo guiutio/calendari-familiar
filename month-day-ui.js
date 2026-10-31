@@ -69,10 +69,13 @@
   function outline(date,year,month,index,totalCells,daysInMonth){
     const [y,m,day]=date.split('-').map(Number);
     if(y!==year||m!==month+1)return '';
+    // Cada costat és perímetre només si el veí de la graella no és d'aquest mes.
+    // Al principi/final de mes, els set primers/últims dies també necessiten
+    // un contorn superior/inferior encara que no estiguin a la primera/última fila.
     return [
       'month-current',
-      index<7?'month-edge-top':'',
-      index>=totalCells-7?'month-edge-bottom':'',
+      (index<7||day<=7)?'month-edge-top':'',
+      (index>=totalCells-7||day+7>daysInMonth)?'month-edge-bottom':'',
       (index%7===0||day===1)?'month-edge-left':'',
       (index%7===6||day===daysInMonth)?'month-edge-right':''
     ].filter(Boolean).join(' ');
