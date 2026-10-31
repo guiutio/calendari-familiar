@@ -12,7 +12,7 @@
       const applicable=years.filter(year=>date>=year.startDate&&date<=year.endDate);
       if(years.length&&!applicable.length)continue;
       for(const year of applicable.length?applicable:[undefined]) {
-        if(year?.holidays.includes(date))continue;
+        if(year&&(year.holidays.includes(date)||year.vacations?.some(p=>date>=p.startDate&&date<=p.endDate)))continue;
         for(const child of children) {
           const group=year?.groups.find(g=>g.childIds.includes(child.id));
           if(!(school.childIds??[]).includes(child.id)&&!group)continue;

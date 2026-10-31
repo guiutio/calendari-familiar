@@ -341,3 +341,11 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Els canvis no reconstrueixen la pantalla mentre un selector nadiu és actiu. El redibuix pendent s’aplica en acabar l’edició, respectant els clics de desar i els formularis.
 - Canviar l’hora d’una pernocta puntual conserva el panell obert fins que l’usuari el tanca.
 - Es limita l’amplada dels controls nadius i dels seus contenidors per evitar que surtin del requadre a iOS.
+
+
+## v0.9.0: períodes de vacances escolars
+
+- A Escoles → curs → Calendari escolar es poden afegir, editar i eliminar períodes amb nom, inici i final, com Setmana Santa o Vacances de Nadal.
+- Tots els dies de l’interval, inclosos els extrems, tenen el mateix efecte que un festiu escolar: no generen jornada ni activitats escolars a Mes, Setmana o Dia. La informació diària mostra el nom del període.
+- Els períodes es desen amb el curs i s’inclouen a les còpies JSON. Les còpies anteriors es carreguen amb la llista de vacances buida. Han de quedar dins del curs i no poden coincidir amb dies d’horari reduït.
+- Es conserven els festius individuals, els altres períodes i les assignacions familiars.
