@@ -150,8 +150,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.8\.0/);
-  assert.match(sw,/calendari-familiar-v0\.8\.0/);
+  assert.match(html,/app\.js\?v=0\.8\.1/);
+  assert.match(sw,/calendari-familiar-v0\.8\.1/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -199,4 +199,20 @@ test('actualitzar l’app conserva les dades familiars i les preferències ja de
 test('no queda cap opció ni migració que pugui tornar a carregar mostres',()=>{
  assert.doesNotMatch(js,/seedState|demoSequence|upgradeDemo|DEMO_START_DATE|Dades d’exemple|case 'reset':/);
  assert.doesNotMatch(ts,/data-action="reset"/);
+});
+
+test('les còpies antigues migren el zoom compartit i les noves conserven cada vista',()=>{
+ const {context}=makeContext();
+ const raw=asJSON(context.state);
+ delete raw.preferences.timelineZooms;
+ for(const legacy of [25,50,75,100,125,150]){
+  raw.preferences.timelineZoom=legacy;
+  const migrated=context.cleanState(raw);
+  assert.deepEqual(asJSON(migrated.preferences.timelineZooms),{day:legacy,week:legacy});
+ }
+ raw.preferences.timelineZooms={day:25,week:125};
+ const reloaded=context.cleanState(JSON.parse(JSON.stringify(context.cleanState(raw))));
+ assert.deepEqual(asJSON(reloaded.preferences.timelineZooms),{day:25,week:125});
+ raw.preferences.timelineZooms={day:999,week:'malament'};
+ assert.deepEqual(asJSON(context.cleanState(raw).preferences.timelineZooms),{day:50,week:50});
 });

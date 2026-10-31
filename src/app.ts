@@ -81,17 +81,17 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
  return sessions.every(a=>a.startTime>=window.startTime&&a.endTime<=window.endTime);
 }
 
-type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number };
+type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
 type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
-type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.8.0';
+const APP_VERSION = '0.8.1';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -108,6 +108,7 @@ const icons: Record<string,string> = {
   repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
   settings:'<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2 2-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-2.85v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06-2-2 .06-.06A1.65 1.65 0 0 0 7.6 15a1.65 1.65 0 0 0-1.51-1H6v-2.85h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06 2-2 .06.06A1.65 1.65 0 0 0 11.09 6a1.65 1.65 0 0 0 1-1.51V4h2.85v.49a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06 2 2-.06.06A1.65 1.65 0 0 0 19.4 10a1.65 1.65 0 0 0 1.51 1H21v3h-.09a1.65 1.65 0 0 0-1.51 1Z" transform="translate(-.5 -.5) scale(.94)"/>',
   chevronLeft:'<path d="m15 18-6-6 6-6"/>', chevronRight:'<path d="m9 18 6-6-6-6"/>',
+  zoom:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M7.5 10.5h6m-3-3v6"/>',
   filter:'<path d="M4 7h16M7 12h10M10 17h4"/>',
   close:'<path d="M18 6 6 18M6 6l12 12"/>',
   check:'<path d="m20 6-11 11-5-5"/>',
@@ -143,7 +144,7 @@ function emptyState():AppState {
     version:1,children:[],guardians:[],
     rotation:{startDate:localDate(new Date()),length:7,assignments:{},changeTime:DEFAULT_CHANGE_TIME},
     overrides:{},bandOverrides:{},daySlots:{},schools:[],nightPatternTimes:{},nightDateTimes:{},extraRotations:[],extraExceptions:{},
-    preferences:{visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50}
+    preferences:{visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
   };
 }
 const SCHOOL_PALETTE = ['#74c6a3','#f0be75','#afa4e6','#7bbcc9','#d3a1cd','#bbc773','#d4a68f','#87b8e1'];
@@ -163,6 +164,17 @@ function suggestedSchoolColor(schools:School[]):string{
 function validTheme(value:unknown):ThemeMode {return value==='light'||value==='dark'?value:'auto';}
 function validFontSize(value:unknown):FontSize{return value==='large'||value==='xlarge'?value:'normal';}
 function validTimelineZoom(value:unknown):number{return typeof value==='number'&&TIMELINE_ZOOM_LEVELS.includes(value)?value:50;}
+function timelineZoomForView(view:'day'|'week'=calendarView==='day'?'day':'week'):number{
+  return validTimelineZoom(state.preferences.timelineZooms?.[view]??state.preferences.timelineZoom);
+}
+function setTimelineZoomForView(value:number){
+  if(calendarView==='month')return;
+  const next=validTimelineZoom(value);
+  if(next===timelineZoomForView())return;
+  state.preferences.timelineZooms={day:timelineZoomForView('day'),week:timelineZoomForView('week'),[calendarView]:next};
+  update();
+}
+
 function isValidDate(s:string) {return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime()) && localDate(parseDate(s))===s;}
 /** Validació i migració no destructiva: còpies anteriors a Escoles són vàlides. */
 /** Horari ordinari general de l'escola, independent dels grups. */
@@ -297,7 +309,7 @@ function cleanState(raw:unknown):AppState {
   const nightPatternTimes=rotationPatterns.cleanNightTimes(obj.nightPatternTimes,rotation) as Record<string,string>;
   const nightDateTimes=rotationPatterns.cleanDateTimes(obj.nightDateTimes) as Record<string,string>;
   const extraExceptions=rotationPatterns.cleanExtraExceptions(obj.extraExceptions,extraRotations,children,guardians) as Record<string,ExtraException>;
-  return {version:1,children,guardians,rotation,nightPatternTimes,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom)},schools};
+  return {version:1,children,guardians,rotation,nightPatternTimes,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
 }
 function resizedRotation(rotation:Rotation,length:number):Rotation{
   const fallback=defaultGuardian();
@@ -470,7 +482,7 @@ function dayTimeline(date:string,children:Child[]):string{
  const nights:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
  for(const c of children)nights[c.id]=dayTimelineUI.overnightSegments(date,c.id,changeTime,assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
  if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="people"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
- return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,validTimelineZoom(state.preferences.timelineZoom),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extraSlots(date,children));
+ return dayTimelineUI.render(date,fullDate(date),children,schoolActivities(date,children),nights,changeTime,timelineZoomForView('day'),monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extraSlots(date,children));
 }
 function weekTimeline(start:string,children:Child[]):string{
  if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
@@ -482,7 +494,7 @@ function weekTimeline(start:string,children:Child[]):string{
    return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),rotatingSlots:extraSlots(date,children)};
  });
  if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="people"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
- return dayTimelineUI.renderWeek(start,days,children,validTimelineZoom(state.preferences.timelineZoom),selectedDate,localDate(new Date()));
+ return dayTimelineUI.renderWeek(start,days,children,timelineZoomForView('week'),selectedDate,localDate(new Date()));
 }
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
   if(!children.length||!bands.length)return '<span class="mini-empty">—</span>';
@@ -519,7 +531,7 @@ function navButton(target:Tab,label:string,name:string,kind:'side'|'mobile'){
 function calendarNavigation(){
   const children=activeChildren();
   const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0;
-  return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
+  return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button>${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}"><aside class="sidebar">
@@ -658,9 +670,18 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   schedule();
 }
 
+function zoomControls(){
+  const zoom=timelineZoomForView(),zoomIndex=TIMELINE_ZOOM_LEVELS.indexOf(zoom);
+  return `<div class="timeline-zoom-toolbar zoom-sheet-controls" role="group" aria-label="Zoom vertical de les hores">
+      <label for="timeline-zoom">Escala horària</label>
+      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="-1" aria-label="Allunya el zoom per veure més hores" ${zoomIndex===0?'disabled':''}>−</button>
+      <input id="timeline-zoom" data-action="timeline-zoom" type="range" min="0" max="5" step="1" value="${zoomIndex}" aria-label="Zoom de la línia temporal" aria-valuetext="${zoom} per cent" />
+      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="1" aria-label="Apropa el zoom per veure més detall" ${zoomIndex===TIMELINE_ZOOM_LEVELS.length-1?'disabled':''}>+</button>
+      <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
+    </div>`;
+}
 function calendarPage(){
   const today=localDate(new Date()),children=activeChildren();
-  const zoom=validTimelineZoom(state.preferences.timelineZoom),zoomIndex=TIMELINE_ZOOM_LEVELS.indexOf(zoom);
   let content='';
   if(calendarView==='month'){
     const index=viewYear*12+viewMonth;
@@ -674,13 +695,6 @@ function calendarPage(){
   return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'||calendarView==='week'?'Pernoctes i activitats per fill durant les 24 hores.':'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
     </header>
     <section class="calendar-card" aria-label="Calendari familiar">
-    ${calendarView==='day'||calendarView==='week'?`<div class="timeline-zoom-toolbar" role="group" aria-label="Zoom vertical de les hores">
-      <label for="timeline-zoom">Zoom</label>
-      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="-1" aria-label="Allunya el zoom per veure més hores" ${zoomIndex===0?'disabled':''}>−</button>
-      <input id="timeline-zoom" data-action="timeline-zoom" type="range" min="0" max="5" step="1" value="${zoomIndex}" aria-label="Zoom de la línia temporal" aria-valuetext="${zoom} per cent" />
-      <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="1" aria-label="Apropa el zoom per veure més detall" ${zoomIndex===TIMELINE_ZOOM_LEVELS.length-1?'disabled':''}>+</button>
-      <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
-    </div>`:''}
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
@@ -889,7 +903,11 @@ function settingsPage(){
 function returnFromDetail(date:string):Sheet{return detailOrigin==='day'?{type:'day',date:detailReturnDate||date}:null;}
 function sheetMarkup(){
   let contents='';
-  if(sheet?.type==='filters'){
+  if(sheet?.type==='zoom'){
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Zoom · ${calendarView==='day'?'Dia':'Setmana'}</h2><p class="sheet-subtitle">El nivell de zoom es desa per a aquesta vista.</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    ${zoomControls()}
+    <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
+  } else if(sheet?.type==='filters'){
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Decideix qui vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     <div class="sheet-section-label">Fills</div>${state.children.map(c=>filterOption(c.id,c.name,state.preferences.visibleChildren.includes(c.id),'child')).join('')}
     <div class="sheet-section-label">Tutors</div>${state.guardians.map(g=>filterOption(g.id,g.name,state.preferences.visibleGuardians.includes(g.id),'guardian',g.color)).join('')}
@@ -946,7 +964,7 @@ function sheetMarkup(){
       <p class="settings-note">Per confirmar tots els canvis, prem «Desa el patró» a Rotacions.</p>
     </form>`;
   }
-  return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type==='day'?'month-day-sheet':''}" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type==='filters'?'Filtres':'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+  return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type==='day'?'month-day-sheet':''}" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type==='filters'?'Filtres':sheet?.type==='zoom'?'Zoom':'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guardian'|'school',color?:string){
   const symbol=kind==='child'?'person':kind==='school'?'school':'home';
@@ -1140,14 +1158,15 @@ function clickAction(button:HTMLElement){
     case 'set-theme':state.preferences.theme=validTheme(button.dataset.themeMode);update();break;
     case 'check-update':window.location.assign('./actualitza.html?comprovacio='+Date.now());break;
     case 'open-filters':sheet={type:'filters'};render();break;
+    case 'open-zoom':if(calendarView!=='month'){sheet={type:'zoom'};render();}break;
     case 'close-sheet':sheet=null;render();break;
     case 'return-detail':sheet=returnFromDetail(button.dataset.date??detailReturnDate);render();break;
     case 'today':{selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();monthScrollTarget=true;render();break;}
     case 'timeline-zoom-step':{
       if(calendarView==='month')break;
-      const index=TIMELINE_ZOOM_LEVELS.indexOf(validTimelineZoom(state.preferences.timelineZoom));
+      const index=TIMELINE_ZOOM_LEVELS.indexOf(timelineZoomForView());
       const next=TIMELINE_ZOOM_LEVELS[Math.max(0,Math.min(TIMELINE_ZOOM_LEVELS.length-1,index+(button.dataset.step==='-1'?-1:1)))];
-      if(next!==undefined&&next!==state.preferences.timelineZoom){state.preferences.timelineZoom=next;update();}
+      if(next!==undefined)setTimelineZoomForView(next);
       break;
     }
     case 'calendar-view':{const v=button.dataset.view;if(v==='month'||v==='week'||v==='day'){
@@ -1428,7 +1447,7 @@ document.addEventListener('change',event=>{
   if(action==='timeline-zoom'){
     if(calendarView!=='month'){
       const next=TIMELINE_ZOOM_LEVELS[Number(target.value)];
-      if(next!==undefined&&next!==state.preferences.timelineZoom){state.preferences.timelineZoom=next;update();}
+      if(next!==undefined)setTimelineZoomForView(next);
     }
     return;
   }

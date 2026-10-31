@@ -938,3 +938,8 @@ html:has(.calendar-layout) {overflow-anchor:none;scroll-behavior:auto;}
 /* v0.8.0 · Cinc pestanyes amb Persones per gestionar fills i tutors. */
 .mobile-tab {min-width:0;}
 .mobile-tab>span {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* v0.8.1 · Zoom al costat dels filtres, dins d’un panell propi. */
+.calendar-sticky-bar .zoom-panel-button {width:32px;min-width:32px;padding:0;justify-content:center;}
+.sheet .zoom-sheet-controls {margin:16px 0;padding:16px 12px;}
+.zoom-sheet-controls label {flex:0 0 100%;}

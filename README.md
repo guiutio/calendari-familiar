@@ -327,3 +327,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Nova pestanya «Persones», amb icona de grup de persones, a la barra inferior i al menú lateral.
 - La gestió de fills, dates de naixement, tutors i colors passa d’Ajustos a Persones. Els accessos per començar a afegir fills o tutors també porten a aquesta pestanya.
 - Ajustos conserva aparença, mida de lletra, actualitzacions, còpies de seguretat i gestió de dades.
+
+
+## v0.8.1: zoom en un panell propi
+
+- El zoom de Dia i Setmana es configura des d’un botó amb lupa al costat dels filtres, a la barra superior.
+- S’obre un panell com el de filtres, amb botons −/+, lliscador, percentatge i «Fet». Es retira el control que ocupava espai damunt de la graella.
+- Es mantenen els nivells de 25% a 150% i la mateixa hora visible en ajustar el zoom. Dia i Setmana desen nivells independents, que es recuperen en canviar de vista i en reobrir l’app. Les còpies anteriors amb un únic nivell es migren a les dues vistes.
