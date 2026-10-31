@@ -27,7 +27,7 @@ test('render preserva el desplaçament de la vista i el diàleg, i el reinicia e
   };
   const doc={body:{style:{overflow:''}}};
   const factory=new Function('$app','document','layout','calendarPage','rotationPage','schoolsPage','settingsPage','schoolNav','sheet','calendarView',
-    'let tab="calendar";'+renderSource+';return {render,setTab:(value)=>{tab=value;}};');
+    'let tab="calendar";const monthPosition=()=>null,mountCalendarScroll=()=>{};let stopCalendarScroll=null;'+renderSource+';return {render,setTab:(value)=>{tab=value;}};');
   const control=factory(app,doc,()=>'',()=>'',()=>'',()=>'',()=>'',{}, {type:'filters'},'month');
   control.render();
   assert.equal(main.scrollTop,320);

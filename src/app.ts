@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.6.6';
+const APP_VERSION = '0.7.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -382,6 +382,10 @@ let state=seedState();
 let viewYear=new Date().getFullYear(),viewMonth=new Date().getMonth();
 let calendarView:CalendarView='month';
 let selectedDate=localDate(new Date());
+let monthRange:{first:number;last:number}|null=null;
+let monthScrollTarget=true;
+let stopCalendarScroll:(()=>void)|null=null;
+type MonthPosition={index:number;top:number};
 let tab:Tab='calendar';
 let schoolNav:{schoolId?:string;yearId?:string;groupId?:string;scheduleChildId?:string;scheduleMode?:ScheduleMode}={};
 let sheet:Sheet=null;
@@ -574,7 +578,7 @@ function periodTitle(){
 function navigateCalendar(delta:number){
   if(calendarView==='month'){const d=new Date(viewYear,viewMonth+delta,1,12);viewYear=d.getFullYear();viewMonth=d.getMonth();selectedDate=localDate(new Date(viewYear,viewMonth,1,12));}
   else selectedDate=addDays(selectedDate,delta*(calendarView==='week'?7:1));
-  viewYear=parseDate(selectedDate).getFullYear();viewMonth=parseDate(selectedDate).getMonth();render();
+  viewYear=parseDate(selectedDate).getFullYear();viewMonth=parseDate(selectedDate).getMonth();monthScrollTarget=true;render();
 }
 function navButton(target:Tab,label:string,name:string,kind:'side'|'mobile'){
   return `<button type="button" class="${kind==='side'?'nav-button':'mobile-tab'} ${tab===target?'active':''}" data-action="tab" data-tab="${target}" aria-current="${tab===target?'page':'false'}">${icon(name,20)}<span>${label}</span></button>`;
@@ -585,18 +589,14 @@ function layout(content:string){return `<div class="app-layout"><aside class="si
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
   </aside><main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
-function calendarPage(){
-  const today=localDate(new Date()),children=activeChildren(),bands=activeBands();
-  const zoom=validTimelineZoom(state.preferences.timelineZoom),zoomIndex=TIMELINE_ZOOM_LEVELS.indexOf(zoom);
-  const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||bands.length!==BANDS.length;
-  let content='';
-  if(calendarView==='month'){
-    const monthStart=new Date(viewYear,viewMonth,1,12),firstDay=(monthStart.getDay()+6)%7;
-    const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
-    const starting=localDate(new Date(viewYear,viewMonth,1-firstDay,12));
+function monthPanel(index:number,children:Child[],today:string):string {
+    const year=Math.floor(index/12),month=index-year*12;
+    const monthStart=new Date(year,month,1,12),firstDay=(monthStart.getDay()+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const starting=localDate(new Date(year,month,1-firstDay,12));
     const cells=Array.from({length:Math.ceil((firstDay+daysInMonth)/7)*7},(_,i)=>{
-      const date=addDays(starting,i),d=parseDate(date),other=d.getMonth()!==viewMonth;
-      const monthEdges=monthDayUI.outline(date,viewYear,viewMonth,i,Math.ceil((firstDay+daysInMonth)/7)*7,daysInMonth);
+      const date=addDays(starting,i),d=parseDate(date),other=d.getMonth()!==month;
+      const monthEdges=monthDayUI.outline(date,year,month,i,Math.ceil((firstDay+daysInMonth)/7)*7,daysInMonth);
       const iso=i%7===0?monthDayUI.isoWeek(date):null;
       const changed=monthDayUI.hasChanges(state,date);
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
@@ -607,7 +607,86 @@ function calendarPage(){
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
     });
-    content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>`:''}<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year,month))}</h2><div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div><div class="month-grid">${cells.join('')}</div></section>`;
+}
+// Keep a small sliding window of months. Extending either end preserves the
+// visible month's pixel position, including when older panels are removed.
+function monthPosition():MonthPosition|null {
+  const sequence=$app.querySelector<HTMLElement>('.month-sequence');
+  const bar=$app.querySelector<HTMLElement>('.calendar-sticky-bar');
+  if(!sequence||!bar)return null;
+  const panels=Array.from(sequence.querySelectorAll<HTMLElement>('.month-panel'));
+  const top=bar.getBoundingClientRect().bottom;
+  const panel=panels.find(el=>el.getBoundingClientRect().bottom>top+1)??panels.at(-1);
+  return panel?{index:Number(panel.dataset.monthIndex),top:panel.getBoundingClientRect().top}:null;
+}
+function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
+  if(resetScroll&&!window.matchMedia('(max-width:900px)').matches)window.scrollTo(0,0);
+  if(tab!=='calendar'||calendarView!=='month')return;
+  const main=$app.querySelector<HTMLElement>('.main-area')!;
+  const sequence=$app.querySelector<HTMLElement>('.month-sequence')!;
+  const bar=$app.querySelector<HTMLElement>('.calendar-sticky-bar')!;
+  const mobile=()=>window.matchMedia('(max-width:900px)').matches;
+  const shift=(delta:number)=>{if(mobile())main.scrollTop+=delta;else window.scrollBy(0,delta);};
+  const restore=(anchor:MonthPosition)=>{
+    const el=sequence.querySelector<HTMLElement>(`[data-month-index="${anchor.index}"]`);
+    if(el)shift(el.getBoundingClientRect().top-anchor.top);
+  };
+  if(monthScrollTarget||!position){
+    const target=sequence.querySelector<HTMLElement>(`[data-month-index="${viewYear*12+viewMonth}"]`);
+    if(target){
+      // The toolbar becomes sticky after this jump; use its final viewport offset.
+      const top=(mobile()?main.getBoundingClientRect().top:0)+bar.getBoundingClientRect().height;
+      shift(target.getBoundingClientRect().top-top);
+    }
+  } else restore(position);
+  monthScrollTarget=false;
+  let frame=0;
+  const refresh=()=>{
+    frame=0;
+    if(!sequence.isConnected)return;
+    const anchor=monthPosition();
+    if(!anchor)return;
+    const first=sequence.firstElementChild as HTMLElement,last=sequence.lastElementChild as HTMLElement;
+    const top=bar.getBoundingClientRect().bottom;
+    const bottom=mobile()?main.getBoundingClientRect().bottom:window.innerHeight;
+    let firstIndex=Number(first.dataset.monthIndex),lastIndex=Number(last.dataset.monthIndex);
+    const children=activeChildren(),today=localDate(new Date());
+    if(first.getBoundingClientRect().top>top-700){
+      sequence.insertAdjacentHTML('afterbegin',monthPanel(firstIndex-2,children,today)+monthPanel(firstIndex-1,children,today));
+      firstIndex-=2;
+    }
+    if(last.getBoundingClientRect().bottom<bottom+700){
+      sequence.insertAdjacentHTML('beforeend',monthPanel(lastIndex+1,children,today)+monthPanel(lastIndex+2,children,today));
+      lastIndex+=2;
+    }
+    // Never remove the visible panel; retain at least two months on either side.
+    while(lastIndex-firstIndex>=9&&firstIndex<anchor.index-2){sequence.firstElementChild!.remove();firstIndex++;}
+    while(lastIndex-firstIndex>=9&&lastIndex>anchor.index+2){sequence.lastElementChild!.remove();lastIndex--;}
+    monthRange={first:firstIndex,last:lastIndex};
+    restore(anchor);
+    viewYear=Math.floor(anchor.index/12);viewMonth=anchor.index-viewYear*12;
+    const selected=parseDate(selectedDate);
+    if(selected.getFullYear()!==viewYear||selected.getMonth()!==viewMonth)selectedDate=localDate(new Date(viewYear,viewMonth,1,12));
+    const title=bar.querySelector<HTMLElement>('.calendar-title');
+    if(title)title.textContent=periodTitle();
+  };
+  const schedule=()=>{if(!frame)frame=window.requestAnimationFrame(refresh);};
+  main.addEventListener('scroll',schedule,{passive:true});
+  window.addEventListener('scroll',schedule,{passive:true});
+  window.addEventListener('resize',schedule);
+  stopCalendarScroll=()=>{main.removeEventListener('scroll',schedule);window.removeEventListener('scroll',schedule);window.removeEventListener('resize',schedule);window.cancelAnimationFrame(frame);};
+  schedule();
+}
+function calendarPage(){
+  const today=localDate(new Date()),children=activeChildren(),bands=activeBands();
+  const zoom=validTimelineZoom(state.preferences.timelineZoom),zoomIndex=TIMELINE_ZOOM_LEVELS.indexOf(zoom);
+  const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||bands.length!==BANDS.length;
+  let content='';
+  if(calendarView==='month'){
+    const index=viewYear*12+viewMonth;
+    if(!monthRange||index<monthRange.first||index>monthRange.last)monthRange={first:index-1,last:index+2};
+    content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="settings">Afegeix un fill</button></div>`:''}<div class="month-sequence">${Array.from({length:monthRange.last-monthRange.first+1},(_,i)=>monthPanel(monthRange!.first+i,children,today)).join('')}</div>`;
   } else if(calendarView==='week'){
     content=weekTimeline(weekStart(selectedDate),children);
   } else {
@@ -615,9 +694,10 @@ function calendarPage(){
   }
   const visibleNames=bands.map(b=>BAND_NAMES[b]).join(' · ');
   return `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">${calendarView==='day'||calendarView==='week'?'Pernoctes i activitats per fill durant les 24 hores.':'Miniatures proporcionals a les 24 hores de cada dia.'}</p></div>
-    <div class="heading-actions"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button></div></header>
-    <section class="calendar-card" aria-label="Calendari familiar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="Anterior">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="Següent">${icon('chevronRight',18)}</button></div></div>
-    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>
+    </header>
+    <div class="calendar-sticky-bar"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors, escoles i franges">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
+    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div></div>
+    <section class="calendar-card" aria-label="Calendari familiar">
     ${calendarView==='day'||calendarView==='week'?`<div class="timeline-zoom-toolbar" role="group" aria-label="Zoom vertical de les hores">
       <label for="timeline-zoom">Zoom</label>
       <button type="button" class="timeline-zoom-button" data-action="timeline-zoom-step" data-step="-1" aria-label="Allunya el zoom per veure més hores" ${zoomIndex===0?'disabled':''}>−</button>
@@ -628,7 +708,7 @@ function calendarPage(){
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Les miniatures mostren 00:00–24:00. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
+    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage(){
@@ -897,6 +977,8 @@ function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guard
   return `<button class="option ${selected?'selected':''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol,18)}</span>${color?`<span class="color-dot" style="background:${color}"></span>`:''}${escapeHtml(name)}</span>${selected?icon('check',17):'<span class="badge-soft">Ocult</span>'}</button>`;
 }
 function render(){
+  const monthAnchor=monthPosition();
+  stopCalendarScroll?.();stopCalendarScroll=null;
   const previousTimeline=$app.querySelector<HTMLElement>('.day-timeline-viewport');
   const timelineKey=tab==='calendar'?(calendarView==='day'?`day:${selectedDate}`:calendarView==='week'?`week:${weekStart(selectedDate)}`:''):'';
   const keepTimeline=Boolean(timelineKey&&previousTimeline?.dataset.timelineKey===timelineKey);
@@ -939,6 +1021,7 @@ function render(){
       main.scrollTop=Math.max(0,newOffset+minuteAtCenter*newScale-main.clientHeight/2);
     }
   }
+  mountCalendarScroll(monthAnchor,previousMain?.dataset.scrollKey!==scrollKey);
   document.body.style.overflow=sheet?'hidden':'';
 }
 function notify(message:string){
@@ -1084,7 +1167,7 @@ function clickAction(button:HTMLElement){
     case 'open-filters':sheet={type:'filters'};render();break;
     case 'close-sheet':sheet=null;render();break;
     case 'return-detail':sheet=returnFromDetail(button.dataset.date??detailReturnDate);render();break;
-    case 'today':{selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();render();break;}
+    case 'today':{selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();monthScrollTarget=true;render();break;}
     case 'timeline-zoom-step':{
       if(calendarView==='month')break;
       const index=TIMELINE_ZOOM_LEVELS.indexOf(validTimelineZoom(state.preferences.timelineZoom));
@@ -1092,7 +1175,10 @@ function clickAction(button:HTMLElement){
       if(next!==undefined&&next!==state.preferences.timelineZoom){state.preferences.timelineZoom=next;update();}
       break;
     }
-    case 'calendar-view':{const v=button.dataset.view;if(v==='month'||v==='week'||v==='day'){calendarView=v;render();}break;}
+    case 'calendar-view':{const v=button.dataset.view;if(v==='month'||v==='week'||v==='day'){
+      if(v===calendarView)break;
+      calendarView=v;const d=parseDate(selectedDate);viewYear=d.getFullYear();viewMonth=d.getMonth();monthScrollTarget=true;render();
+    }break;}
     case 'calendar-navigate':navigateCalendar(Number(button.dataset.step)===-1?-1:1);break;
     case 'prev-month':goToMonth(-1);break;
     case 'next-month':goToMonth(1);break;

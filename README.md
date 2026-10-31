@@ -274,3 +274,11 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - **Columnes més estretes:** cada fill té una columna d'uns **98 px**, en lloc dels **145 px** anteriors, tant en la vista diària com en cadascun dels set dies de la setmana. Quan hi ha molts fills, es manté el scroll horitzontal.
 - **Zoom:** es conserven els sis nivells **25%, 50%, 75%, 100%, 125% i 150%**, amb **50% per defecte**. En ampliar o reduir la cronologia, l'app procura conservar l'hora que es veia al centre, ara ajustant el scroll de la pàgina.
 - La línia temporal completa comença a 00:00 i acaba a 24:00; quan no es mostren totes les hores, el desplaçament de la pàgina permet consultar-les. Les pernoctes, activitats, filtres i còpies JSON no canvien.
+
+
+## v0.7.0: mesos continus i navegació fixa
+
+- Vista Mes amb desplaçament vertical pels mesos consecutius, en ambdues direccions. Els mesos es carreguen a mesura que calen i es limita el nombre de panells per mantenir el rendiment.
+- Barra superior fixa amb Mes, Setmana i Dia, el període visible, Avui i fletxes per avançar o retrocedir segons la vista.
+- En desplaçar els mesos, la barra mostra el mes visible. Canviar de vista conserva la data de referència; Avui torna a la data actual.
+- Es conserven miniatures, contorns, filtres, números de setmana i edició de pernoctes i activitats.

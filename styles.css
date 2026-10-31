@@ -882,3 +882,28 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .day-cell:has(.month-mini.night-expanded) {min-height:138px;}
   .month-mini.night-expanded {height:96px;}
 }
+
+/* v0.7.0 · Navegació sempre visible i mesos consecutius amb scroll de pàgina. */
+.calendar-sticky-bar {
+  position:sticky;top:0;z-index:30;
+  background:#fff;border:1px solid #e8ebef;border-radius:18px 18px 0 0;
+  box-shadow:0 3px 8px #233b5912;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.calendar-sticky-bar .calendar-toolbar {padding:12px 14px 8px;flex-wrap:wrap;}
+.calendar-sticky-bar .calendar-title {flex:1;min-width:125px;}
+.calendar-sticky-bar .calendar-view-switch {margin:0 12px 10px;}
+.calendar-sticky-bar + .calendar-card {border-top:0;border-radius:0 0 20px 20px;}
+.month-sequence {overflow-anchor:none;}
+.month-section-title {margin:0;padding:18px 14px 14px;font-size:calc(18px * var(--font-scale,1));text-transform:capitalize;}
+.month-panel + .month-panel {border-top:10px solid #f6f7f8;}
+:root[data-theme="dark"] .calendar-sticky-bar {background:#192436;border-color:#304058;box-shadow:0 3px 8px #050c1744;}
+:root[data-theme="dark"] .month-panel + .month-panel {border-color:#101722;}
+.calendar-sticky-bar .filter-button {min-height:33px;padding:6px 9px;position:relative;}
+@media(min-width:901px) {
+  .sidebar {position:sticky;top:0;align-self:start;min-height:100vh;}
+}
+@media(max-width:560px) {
+  .calendar-sticky-bar .filter-button {width:32px;min-height:32px;padding:0;}
+  .calendar-sticky-bar .calendar-toolbar {padding-inline:9px;gap:6px;}
+}

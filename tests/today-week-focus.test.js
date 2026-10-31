@@ -41,8 +41,8 @@ test('el mes inverteix el fons de tot el requadre i elimina el cercle de la data
  assert.match(css,/\.month-grid \.day-cell\.today \.month-mini-child/);
  assert.match(css,/\.week-day-header\.today[\s\S]*?background:#285782;/);
  assert.match(css,/\.week-date-columns\.today \.day-time-column[\s\S]*?background:repeating-linear-gradient/);
- assert.match(html,/styles\.css\?v=0\.6\.6/);
- assert.match(sw,/calendari-familiar-v0\.6\.6/);
+ assert.match(html,/styles\.css\?v=0\.7\.0/);
+ assert.match(sw,/calendari-familiar-v0\.7\.0/);
 });
 
 const between=(a,b)=>{
@@ -83,7 +83,7 @@ function simulateRender({oldFocus='',oldLeft=0,focusDate='2026-10-29',start='202
    set innerHTML(value){assert.equal(value,'layout');painted=true;}
  };
  const context=vm.createContext({
-   $app,tab:'calendar',calendarView:'week',selectedDate:focusDate,
+   monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},$app,tab:'calendar',calendarView:'week',selectedDate:focusDate,
    weekStart:()=>start,schoolNav:{},sheet:null,
    layout:()=> 'layout',calendarPage:()=> '',rotationPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',
    document:{body:{style:{overflow:''}}}
