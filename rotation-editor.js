@@ -46,12 +46,42 @@
                }).join('')}</div></div>`;
              }).join('')}</div>`;
          }).join('')}
+         <div class="action-row"><button type="button" class="primary-btn" data-action="extra-save" data-rotation="${escape(r.id)}">Desa els canvis</button><button type="button" class="soft-btn" data-action="extra-cancel" data-rotation="${escape(r.id)}">Descarta canvis</button></div>
+         <p class="settings-note">Els canvis només s’aplicaran al calendari quan premis «Desa els canvis».</p>
        </div>`:''}
      </section>`;
    });
    return `<div class="extra-rotation-section"><div class="panel-header"><h2 class="section-title">Altres rotacions</h2><button class="secondary-btn" data-action="extra-add">+ Nova rotació</button></div>
      <p class="section-description">Recollida d'escola, trajectes, activitats o qualsevol altre motiu. Cada rotació té dates, durada i horari independents de la pernocta; pots assignar un responsable per fill i fer excepcions al calendari.</p>
      ${cards.join('')||'<p class="settings-note">Encara no has creat cap rotació addicional.</p>'}</div>`;
+ }
+ // L’editor treballa amb còpies; el calendari i les exportacions només veuen les dades confirmades.
+ function draftState(state,drafts,rotationId){
+   if(rotationId&&!drafts[rotationId]){
+     const saved=state.extraRotations.find(r=>r.id===rotationId);
+     if(saved)drafts[rotationId]=JSON.parse(JSON.stringify(saved));
+   }
+   return {...state,
+     extraRotations:[...state.extraRotations.map(r=>drafts[r.id]??r),
+       ...Object.values(drafts).filter(r=>!state.extraRotations.some(saved=>saved.id===r.id))],
+     extraExceptions:{...state.extraExceptions}
+   };
+ }
+ function saveDraft(state,drafts,rotationId){
+   const draft=drafts[rotationId];if(!draft)return '';
+   let saved;
+   try{saved=window.rotationPatterns.cleanExtras([draft],state.children,state.guardians)[0];}
+   catch(error){return error instanceof Error?error.message:'No s’ha pogut validar el patró';}
+   const index=state.extraRotations.findIndex(r=>r.id===rotationId);
+   if(index<0){
+     if(state.extraRotations.length>=100)return 'No es poden afegir més de 100 rotacions';
+     state.extraRotations.push(saved);
+   }else state.extraRotations[index]=saved;
+   for(const key of Object.keys(state.extraExceptions)){
+     if(key.startsWith(rotationId+'|')&&!saved.childIds.some(id=>key.endsWith('|'+id)))delete state.extraExceptions[key];
+   }
+   delete drafts[rotationId];
+   return '';
  }
  function addDays(date,n){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
  function nextGuardian(current,guardians){const choices=['',...guardians.map(g=>g.id)];return choices[(choices.indexOf(current)+1)%choices.length]??'';}
@@ -108,7 +138,7 @@
      units[r.id]=value==='weeks'?'weeks':'days';
      if(units[r.id]==='weeks'&&r.length%7!==0){
        const next=window.rotationPatterns.resized(r,Math.ceil(r.length/7)*7,state.children);
-       r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;r.childActiveDays=next.childActiveDays;r.childActiveDays=next.childActiveDays;
+       r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;r.childActiveDays=next.childActiveDays;
        return {save:true};
      }
      return {save:false};
@@ -119,7 +149,7 @@
      const scale=(units[r.id]??safeLength(r))==='weeks'?7:1,n=Number(value)*scale;
      if(!Number.isInteger(n)||n<1||n>3640)return {error:'Durada incorrecta'};
      const next=window.rotationPatterns.resized(r,n,state.children);
-     r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;
+     r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;r.childActiveDays=next.childActiveDays;
    }else if(field==='startTime'||field==='endTime'){
      if(!window.rotationPatterns.validClock(value))return {error:'Hora incorrecta'};
      const from=field==='startTime'?value:r.startTime,to=field==='endTime'?value:r.endTime;
@@ -147,7 +177,7 @@
          <label class="option rotation-tutor-choice"><input class="rotation-guardian-radio" type="radio" name="guardianId" value="" ${!current?'checked':''}><span class="option-left">Sense tutor assignat</span><span class="rotation-choice-check">✓</span></label>
        </div>
        <div class="action-row"><button type="submit" class="primary-btn">Aplica al patró</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div>
-       <p class="settings-note">La selecció s’aplicarà a aquest fill i a aquest dia del patró, cada vegada que es repeteixi.</p>
+       <p class="settings-note">La selecció queda a l’esborrany d’aquest fill i dia. Per confirmar-la, prem «Desa els canvis» a la rotació.</p>
      </form>`;
  }
  function savePatternDay(state,rotationId,childId,index,params){
@@ -196,5 +226,5 @@
    else state.extraExceptions[key]={startTime,endTime,guardianId,disabled};
    return '';
  }
- window.rotationEditor={render,create,click,change,patternDayForm,savePatternDay,dateForm,datePicker,saveDate};
+ window.rotationEditor={render,create,click,change,draftState,saveDraft,patternDayForm,savePatternDay,dateForm,datePicker,saveDate};
 })();

@@ -328,3 +328,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Les activitats de rotació amb tutor ocupen tota la columna del fill. Sense tutor deixen el mateix marge lateral del 23% que a Dia i Setmana, en lloc del 48% anterior.
 - Les activitats escolars aprofiten tota l’amplada de la columna, sense el marge especial que només s’aplicava al mes, també en pantalles estretes.
 - Es conserven els horaris, els colors, els filtres i la compressió de les hores nocturnes.
+
+
+## v0.7.8: desament explícit de les altres rotacions
+
+- Cada rotació addicional té «Desa els canvis» i «Descarta canvis», com el patró de pernocta.
+- Nom, horari, dates, durada, participants, dies actius i tutors s’editen en un esborrany. El calendari i les exportacions continuen utilitzant el patró confirmat fins que es desa.
+- Les rotacions noves també s’han de desar. Descartar-les elimina només l’esborrany. Els canvis puntuals d’una data al calendari mantenen el seu desament propi.

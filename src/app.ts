@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.7.7';
+const APP_VERSION = '0.7.8';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -393,6 +393,7 @@ let detailOrigin:'day'|'calendar'='calendar';
 let detailReturnDate='';
 let rotationDraft:Rotation|null=null;
 let extraRotationOpen:string|null=null;
+let extraRotationDrafts:Record<string,ExtraRotation>={};
 let extraRotationUnit:'days'|'weeks'='weeks';
 let rotationShowAll=false;
 let nightPatternDraft:Record<string,string>={};
@@ -774,7 +775,7 @@ function rotationPage(){
     }).join('')}</div></div>`).join('')}</div>`).join('')}
     <div class="action-row"><button class="primary-btn" data-action="rotation-save">Desa el patró</button>${rotationDraft?'<button class="soft-btn" data-action="rotation-cancel">Descarta canvis</button>':''}</div>
     <p class="settings-note">Les excepcions de dates concretes tenen prioritat sobre el patró. Si canvies el patró, les excepcions es mantenen.</p></section>
-    ${rotationEditor.render(state,extraRotationOpen,extraRotationUnits)}`;
+    ${rotationEditor.render(rotationEditor.draftState(state,extraRotationDrafts),extraRotationOpen,extraRotationUnits)}`;
 }
 function schoolById(id:string|undefined){return state.schools.find(s=>s.id===id);}
 function yearById(school:School|undefined,id:string|undefined){return school?.years.find(y=>y.id===id);}
@@ -975,7 +976,7 @@ function sheetMarkup(){
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close',17)}</button></div>
     ${activity?`<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name??'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description?`<p>${escapeHtml(activity.description)}</p>`:''}</div>`:'<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
   } else if(sheet?.type==='extraCell'){
-     contents=rotationEditor.patternDayForm(state,sheet.rotationId,sheet.childId,sheet.index);
+     contents=rotationEditor.patternDayForm(rotationEditor.draftState(state,extraRotationDrafts,sheet.rotationId),sheet.rotationId,sheet.childId,sheet.index);
   } else if(sheet?.type==='extraDate'){
      contents=sheet.rotationId?rotationEditor.dateForm(state,sheet.date,sheet.rotationId,sheet.childId):rotationEditor.datePicker(state,sheet.date);
   } else if(sheet?.type==='bandEdit'){
@@ -1087,7 +1088,7 @@ function removeGuardian(id:string){
   Object.keys(state.overrides).forEach(key=>{if(state.overrides[key]===id)state.overrides[key]=alternate;});
   Object.keys(state.bandOverrides).forEach(key=>{if(state.bandOverrides[key]===id)state.bandOverrides[key]=alternate;});
   monthDayUI.removeGuardian(state.daySlots,id,alternate);rotationPatterns.removeGuardian(state,id);
-   state.preferences.visibleGuardians=state.preferences.visibleGuardians.filter(x=>x!==id);rotationDraft=null;update();
+   state.preferences.visibleGuardians=state.preferences.visibleGuardians.filter(x=>x!==id);rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;update();
 }
 function removeChild(id:string){
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
@@ -1096,7 +1097,7 @@ function removeChild(id:string){
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   Object.keys(state.bandOverrides).forEach(key=>{if(key.split('|')[1]===id)delete state.bandOverrides[key];});
   monthDayUI.removeChild(state.daySlots,id);rotationPatterns.removeChild(state,id);
-   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;update();
+   state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;update();
 }
 async function exportData(){
   await writeQueue;
@@ -1109,13 +1110,13 @@ async function importData(file:File){
   if(file.size>5_000_000) {notify('El fitxer és massa gran');return;}
   try {const text=await file.text();const imported=cleanState(JSON.parse(text));
     if(!confirm('Vols substituir totes les dades actuals per les del fitxer?'))return;
-    state=imported;rotationDraft=null;sheet=null;schoolNav={};update();notify('Dades importades correctament');
+    state=imported;rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;sheet=null;schoolNav={};update();notify('Dades importades correctament');
   }catch(err){notify(err instanceof Error?err.message:'No es pot importar aquest fitxer');}
 }
-async function resetData(){if(!confirm('Vols carregar les dades d’exemple? Se substituiran totes les dades actuals.'))return;const theme=state.preferences.theme,fontSize=state.preferences.fontSize,timelineZoom=state.preferences.timelineZoom;state=seedState();state.preferences.theme=theme;state.preferences.fontSize=fontSize;state.preferences.timelineZoom=timelineZoom;rotationDraft=null;sheet=null;schoolNav={};update();notify('Dades d’exemple carregades');}
+async function resetData(){if(!confirm('Vols carregar les dades d’exemple? Se substituiran totes les dades actuals.'))return;const theme=state.preferences.theme,fontSize=state.preferences.fontSize,timelineZoom=state.preferences.timelineZoom;state=seedState();state.preferences.theme=theme;state.preferences.fontSize=fontSize;state.preferences.timelineZoom=timelineZoom;rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;sheet=null;schoolNav={};update();notify('Dades d’exemple carregades');}
 function clearAllData(){
   if(!confirm('ATENCIÓ: vols esborrar tots els fills, tutors, escoles, horaris, rotacions i assignacions? No es pot desfer. Exporta una còpia JSON abans si vols conservar-los.'))return;
-  state=emptyState();rotationDraft=null;sheet=null;schoolNav={};tab='settings';
+  state=emptyState();rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;sheet=null;schoolNav={};tab='settings';
   calendarView='month';selectedDate=localDate(new Date());viewYear=parseDate(selectedDate).getFullYear();viewMonth=parseDate(selectedDate).getMonth();
   update();notify('Totes les dades esborrades. Ja pots començar de zero.');
 }
@@ -1283,16 +1284,36 @@ function clickAction(button:HTMLElement){
     }
     case 'extra-cell':{
       const rotationId=button.dataset.rotation??'',childId=button.dataset.child??'',index=Number(button.dataset.index);
-      const rotation=state.extraRotations.find(r=>r.id===rotationId);
+      const rotation=rotationEditor.draftState(state,extraRotationDrafts,rotationId).extraRotations.find((r:ExtraRotation)=>r.id===rotationId);
       if(!rotation||!rotation.childIds.includes(childId)||!Number.isInteger(index)||index<0||index>=rotation.length)break;
       sheet={type:'extraCell',rotationId,childId,index};render();break;
     }
+    case 'extra-save':{
+      const id=button.dataset.rotation??'',error=rotationEditor.saveDraft(state,extraRotationDrafts,id);
+      if(error){notify(error);break;}
+      update();notify('Canvis de la rotació desats');break;
+    }
+    case 'extra-cancel':{
+      const id=button.dataset.rotation??'';
+      delete extraRotationDrafts[id];
+      if(!state.extraRotations.some(r=>r.id===id))extraRotationOpen=null;
+      render();notify('Canvis descartats');break;
+    }
     case 'extra-add':case 'extra-toggle':case 'extra-delete':case 'extra-child':case 'extra-week':case 'extra-all':case 'extra-copy':{
-      const result=rotationEditor.click(state,button.dataset.action,button.dataset,newId,localDate(new Date()),confirm);
+      const id=button.dataset.rotation??'',work=rotationEditor.draftState(state,extraRotationDrafts,id);
+      const result=rotationEditor.click(work,button.dataset.action,button.dataset,newId,localDate(new Date()),confirm);
       if(!result)break;
-      if(result.toggle){extraRotationOpen=extraRotationOpen===result.open?null:result.open;render();}
-      else {extraRotationOpen=result.open;if(result.save)update();else render();}
-      break;
+      if(button.dataset.action==='extra-add'){
+        const added=work.extraRotations.find((r:ExtraRotation)=>r.id===result.open);
+        if(added)extraRotationDrafts[added.id]=added;
+      }
+      if(button.dataset.action==='extra-delete'){
+        delete extraRotationDrafts[id];
+        state.extraRotations=state.extraRotations.filter(r=>r.id!==id);state.extraExceptions=work.extraExceptions;
+        extraRotationOpen=null;update();break;
+      }
+      extraRotationOpen=result.toggle&&extraRotationOpen===result.open?null:result.open;
+      render();break;
     }
     case 'rotation-save':{
       if(!rotationDraft)return;
@@ -1303,7 +1324,7 @@ function clickAction(button:HTMLElement){
     case 'rotation-cancel':rotationDraft=JSON.parse(JSON.stringify(state.rotation));nightPatternDraft={...state.nightPatternTimes};render();notify('Canvis descartats');break;
     case 'add-child':{
       const id=newId();const prev=state.children[0];const name=`Fill ${state.children.length+1}`;
-      state.children.push({id,name,birthDate:''});state.rotation.assignments[id]=[...(state.rotation.assignments[prev?.id??'']??Array.from({length:state.rotation.length},()=>defaultGuardian()))];state.preferences.visibleChildren.push(id);for(const extra of state.extraRotations){if(extra.childIds.length===state.children.length-1){extra.childIds.push(id);extra.assignments[id]=[...(extra.assignments[prev?.id??'']??Array.from({length:extra.length},()=>''))];}}rotationDraft=null;update();notify('Fill afegit · pots editar-ne el nom');break;
+      state.children.push({id,name,birthDate:''});state.rotation.assignments[id]=[...(state.rotation.assignments[prev?.id??'']??Array.from({length:state.rotation.length},()=>defaultGuardian()))];state.preferences.visibleChildren.push(id);for(const extra of state.extraRotations){if(extra.childIds.length===state.children.length-1){extra.childIds.push(id);extra.assignments[id]=[...(extra.assignments[prev?.id??'']??Array.from({length:extra.length},()=>''))];}}rotationDraft=null;extraRotationDrafts={};extraRotationOpen=null;update();notify('Fill afegit · pots editar-ne el nom');break;
     }
     case 'add-guardian':{
       const palette=['#b2a0e9','#97cbb7','#f0c17c','#8eb9d9','#d6a8bb'];const color=palette[state.guardians.length%palette.length]??'#aabbcc',id=newId();
@@ -1330,9 +1351,9 @@ document.addEventListener('submit',event=>{
  if(!(form instanceof HTMLFormElement))return;
   if(form.dataset.extraPatternDayForm){
     event.preventDefault();
-    const error=rotationEditor.savePatternDay(state,form.dataset.rotation??'',form.dataset.child??'',Number(form.dataset.index),new FormData(form));
+    const error=rotationEditor.savePatternDay(rotationEditor.draftState(state,extraRotationDrafts,form.dataset.rotation),form.dataset.rotation??'',form.dataset.child??'',Number(form.dataset.index),new FormData(form));
     if(error){notify(error);return;}
-    sheet=null;update();notify('Dia del patró actualitzat');return;
+    sheet=null;render();notify('Dia aplicat a l’esborrany. Prem «Desa els canvis» per confirmar-lo.');return;
   }
   if(form.dataset.rotationCellForm){
     event.preventDefault();
@@ -1483,7 +1504,12 @@ document.addEventListener('change',event=>{
   if(action==='font-size'){const chosen=FONT_SIZE_OPTIONS[Number(target.value)];if(chosen){state.preferences.fontSize=chosen;applyFontSize();saveState();}return;}
   if(action==='rotation-change-time'&&rotationDraft){rotationDraft.changeTime=validChangeTime(target.value);render();}
   else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);sheet=returnFromDetail(target.dataset.date!);update();}
-  else if(target.dataset.extraChange){const result=rotationEditor.change(state,target.dataset,target.value,extraRotationUnits);if(result?.error){notify(result.error);render();}else if(result?.save)update();else render();}
+  else if(target.dataset.extraChange){
+    const work=rotationEditor.draftState(state,extraRotationDrafts,target.dataset.rotation);
+    const result=rotationEditor.change(work,target.dataset,target.value,extraRotationUnits);
+    if(result?.error){notify(result.error);render();}
+    else if(['unit','length','startDate'].includes(target.dataset.extraChange))render();
+  }
   else if(action==='rotation-start'&&rotationDraft&&isValidDate(target.value)){rotationDraft.startDate=target.value;render();}
   else if(action==='rotation-length'&&rotationDraft){
     const count=Number(target.value),factor=rotationUnit==='weeks'?7:1,length=count*factor;

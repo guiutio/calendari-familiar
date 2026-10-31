@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.7.7';
+const APP_VERSION = '0.7.8';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -416,6 +416,7 @@ let detailOrigin = 'calendar';
 let detailReturnDate = '';
 let rotationDraft = null;
 let extraRotationOpen = null;
+let extraRotationDrafts = {};
 let extraRotationUnit = 'weeks';
 let rotationShowAll = false;
 let nightPatternDraft = {};
@@ -905,7 +906,7 @@ function rotationPage() {
     }).join('')}</div></div>`).join('')}</div>`).join('')}
     <div class="action-row"><button class="primary-btn" data-action="rotation-save">Desa el patró</button>${rotationDraft ? '<button class="soft-btn" data-action="rotation-cancel">Descarta canvis</button>' : ''}</div>
     <p class="settings-note">Les excepcions de dates concretes tenen prioritat sobre el patró. Si canvies el patró, les excepcions es mantenen.</p></section>
-    ${rotationEditor.render(state, extraRotationOpen, extraRotationUnits)}`;
+    ${rotationEditor.render(rotationEditor.draftState(state, extraRotationDrafts), extraRotationOpen, extraRotationUnits)}`;
 }
 function schoolById(id) { return state.schools.find(s => s.id === id); }
 function yearById(school, id) { return school?.years.find(y => y.id === id); }
@@ -1126,7 +1127,7 @@ function sheetMarkup() {
     ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
     else if (sheet?.type === 'extraCell') {
-        contents = rotationEditor.patternDayForm(state, sheet.rotationId, sheet.childId, sheet.index);
+        contents = rotationEditor.patternDayForm(rotationEditor.draftState(state, extraRotationDrafts, sheet.rotationId), sheet.rotationId, sheet.childId, sheet.index);
     }
     else if (sheet?.type === 'extraDate') {
         contents = sheet.rotationId ? rotationEditor.dateForm(state, sheet.date, sheet.rotationId, sheet.childId) : rotationEditor.datePicker(state, sheet.date);
@@ -1267,6 +1268,8 @@ function removeGuardian(id) {
     rotationPatterns.removeGuardian(state, id);
     state.preferences.visibleGuardians = state.preferences.visibleGuardians.filter(x => x !== id);
     rotationDraft = null;
+    extraRotationDrafts = {};
+    extraRotationOpen = null;
     update();
 }
 function removeChild(id) {
@@ -1286,6 +1289,8 @@ function removeChild(id) {
     rotationPatterns.removeChild(state, id);
     state.preferences.visibleChildren = state.preferences.visibleChildren.filter(x => x !== id);
     rotationDraft = null;
+    extraRotationDrafts = {};
+    extraRotationOpen = null;
     update();
 }
 async function exportData() {
@@ -1313,6 +1318,8 @@ async function importData(file) {
             return;
         state = imported;
         rotationDraft = null;
+        extraRotationDrafts = {};
+        extraRotationOpen = null;
         sheet = null;
         schoolNav = {};
         update();
@@ -1323,12 +1330,14 @@ async function importData(file) {
     }
 }
 async function resetData() { if (!confirm('Vols carregar les dades d’exemple? Se substituiran totes les dades actuals.'))
-    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize, timelineZoom = state.preferences.timelineZoom; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; state.preferences.timelineZoom = timelineZoom; rotationDraft = null; sheet = null; schoolNav = {}; update(); notify('Dades d’exemple carregades'); }
+    return; const theme = state.preferences.theme, fontSize = state.preferences.fontSize, timelineZoom = state.preferences.timelineZoom; state = seedState(); state.preferences.theme = theme; state.preferences.fontSize = fontSize; state.preferences.timelineZoom = timelineZoom; rotationDraft = null; extraRotationDrafts = {}; extraRotationOpen = null; sheet = null; schoolNav = {}; update(); notify('Dades d’exemple carregades'); }
 function clearAllData() {
     if (!confirm('ATENCIÓ: vols esborrar tots els fills, tutors, escoles, horaris, rotacions i assignacions? No es pot desfer. Exporta una còpia JSON abans si vols conservar-los.'))
         return;
     state = emptyState();
     rotationDraft = null;
+    extraRotationDrafts = {};
+    extraRotationOpen = null;
     sheet = null;
     schoolNav = {};
     tab = 'settings';
@@ -1799,11 +1808,30 @@ function clickAction(button) {
         }
         case 'extra-cell': {
             const rotationId = button.dataset.rotation ?? '', childId = button.dataset.child ?? '', index = Number(button.dataset.index);
-            const rotation = state.extraRotations.find(r => r.id === rotationId);
+            const rotation = rotationEditor.draftState(state, extraRotationDrafts, rotationId).extraRotations.find((r) => r.id === rotationId);
             if (!rotation || !rotation.childIds.includes(childId) || !Number.isInteger(index) || index < 0 || index >= rotation.length)
                 break;
             sheet = { type: 'extraCell', rotationId, childId, index };
             render();
+            break;
+        }
+        case 'extra-save': {
+            const id = button.dataset.rotation ?? '', error = rotationEditor.saveDraft(state, extraRotationDrafts, id);
+            if (error) {
+                notify(error);
+                break;
+            }
+            update();
+            notify('Canvis de la rotació desats');
+            break;
+        }
+        case 'extra-cancel': {
+            const id = button.dataset.rotation ?? '';
+            delete extraRotationDrafts[id];
+            if (!state.extraRotations.some(r => r.id === id))
+                extraRotationOpen = null;
+            render();
+            notify('Canvis descartats');
             break;
         }
         case 'extra-add':
@@ -1813,20 +1841,25 @@ function clickAction(button) {
         case 'extra-week':
         case 'extra-all':
         case 'extra-copy': {
-            const result = rotationEditor.click(state, button.dataset.action, button.dataset, newId, localDate(new Date()), confirm);
+            const id = button.dataset.rotation ?? '', work = rotationEditor.draftState(state, extraRotationDrafts, id);
+            const result = rotationEditor.click(work, button.dataset.action, button.dataset, newId, localDate(new Date()), confirm);
             if (!result)
                 break;
-            if (result.toggle) {
-                extraRotationOpen = extraRotationOpen === result.open ? null : result.open;
-                render();
+            if (button.dataset.action === 'extra-add') {
+                const added = work.extraRotations.find((r) => r.id === result.open);
+                if (added)
+                    extraRotationDrafts[added.id] = added;
             }
-            else {
-                extraRotationOpen = result.open;
-                if (result.save)
-                    update();
-                else
-                    render();
+            if (button.dataset.action === 'extra-delete') {
+                delete extraRotationDrafts[id];
+                state.extraRotations = state.extraRotations.filter(r => r.id !== id);
+                state.extraExceptions = work.extraExceptions;
+                extraRotationOpen = null;
+                update();
+                break;
             }
+            extraRotationOpen = result.toggle && extraRotationOpen === result.open ? null : result.open;
+            render();
             break;
         }
         case 'rotation-save': {
@@ -1860,6 +1893,8 @@ function clickAction(button) {
                 }
             }
             rotationDraft = null;
+            extraRotationDrafts = {};
+            extraRotationOpen = null;
             update();
             notify('Fill afegit · pots editar-ne el nom');
             break;
@@ -1916,14 +1951,14 @@ document.addEventListener('submit', event => {
         return;
     if (form.dataset.extraPatternDayForm) {
         event.preventDefault();
-        const error = rotationEditor.savePatternDay(state, form.dataset.rotation ?? '', form.dataset.child ?? '', Number(form.dataset.index), new FormData(form));
+        const error = rotationEditor.savePatternDay(rotationEditor.draftState(state, extraRotationDrafts, form.dataset.rotation), form.dataset.rotation ?? '', form.dataset.child ?? '', Number(form.dataset.index), new FormData(form));
         if (error) {
             notify(error);
             return;
         }
         sheet = null;
-        update();
-        notify('Dia del patró actualitzat');
+        render();
+        notify('Dia aplicat a l’esborrany. Prem «Desa els canvis» per confirmar-lo.');
         return;
     }
     if (form.dataset.rotationCellForm) {
@@ -2238,14 +2273,13 @@ document.addEventListener('change', event => {
         update();
     }
     else if (target.dataset.extraChange) {
-        const result = rotationEditor.change(state, target.dataset, target.value, extraRotationUnits);
+        const work = rotationEditor.draftState(state, extraRotationDrafts, target.dataset.rotation);
+        const result = rotationEditor.change(work, target.dataset, target.value, extraRotationUnits);
         if (result?.error) {
             notify(result.error);
             render();
         }
-        else if (result?.save)
-            update();
-        else
+        else if (['unit', 'length', 'startDate'].includes(target.dataset.extraChange))
             render();
     }
     else if (action === 'rotation-start' && rotationDraft && isValidDate(target.value)) {
