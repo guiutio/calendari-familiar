@@ -314,3 +314,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - Es retira el filtre antic de Matí, Dinar, Tarda, Sopar i Nit. L’indicador de filtres actius ja no té en compte aquesta preferència antiga.
 - «Mostra-ho tot» actua sobre els fills, tutors i escoles. Es mantenen els horaris, les franges familiars i les còpies de seguretat existents.
+
+
+## v0.7.6: límits de mes amb títol a tota l’amplada
+
+- Cada mes acaba el seu últim dia; després hi ha el nom del següent mes a tota l’amplada i la seva graella comença pel dia 1.
+- Els espais abans de l’1 i després de l’últim dia queden buits per respectar les columnes de dilluns a diumenge. No es repeteixen dates ni assignacions d’altres mesos.
+- La navegació enfoca el títol del mes i es conserven la barra fixa, els contorns i l’estabilització de la inèrcia.

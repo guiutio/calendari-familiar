@@ -101,25 +101,35 @@ function continuousRenderer(){
   escapeHtml:String,fullDate:String,monthTitle:(y,m)=>`${y}-${m+1}`,
   monthDayUI:{...uiContext.window.monthDayUI,hasChanges:()=>false,mini:()=>''}
  });
- vm.runInContext(dateHelpers+extract('function weekStart(', 'function fullAgenda(')+extract('function monthWeekStart(', '// Keep a small sliding window'),context);
+ vm.runInContext(dateHelpers+extract('function weekStart(', 'function fullAgenda(')+extract('function monthPanel(', '// Keep a small sliding window'),context);
  return context;
 }
-test('graella contínua: totes les dates i setmanes són úniques i consecutives entre mesos i anys',()=>{
+test('mesos consecutius: cada data apareix una vegada i les capçaleres separen els mesos',()=>{
  const ctx=continuousRenderer();
  let html='';
  for(let index=2025*12;index<2029*12;index++)html+=ctx.monthPanel(index,[],'2026-10-31');
  const dates=Array.from(html.matchAll(/data-action="show-calendar-day" data-date="([^"]+)"/g),m=>m[1]);
  const weeks=Array.from(html.matchAll(/data-action="show-calendar-week" data-date="([^"]+)"/g),m=>m[1]);
  assert.equal(new Set(dates).size,dates.length);
- assert.equal(new Set(weeks).size,weeks.length);
- assert.equal(dates.length,weeks.length*7);
  for(let i=1;i<dates.length;i++)assert.equal(dates[i],ctx.addDays(dates[i-1],1));
- for(let i=1;i<weeks.length;i++)assert.equal(weeks[i],ctx.addDays(weeks[i-1],7));
  assert.ok(dates.includes('2028-02-29'));
  assert.equal(dates.filter(d=>d==='2026-10-31').length,1);
- assert.doesNotMatch(html,/other-month|month-section-title|class="weekdays"/);
+ assert.doesNotMatch(html,/other-month|class="weekdays"/);
+ assert.equal((html.match(/class="month-section-title"/g)||[]).length,48);
+ for(let index=2025*12;index<2029*12;index++){
+  const year=Math.floor(index/12),month=index-year*12;
+  const panel=ctx.monthPanel(index,[],'2026-10-31');
+  const actual=Array.from(panel.matchAll(/data-action="show-calendar-day" data-date="([^"]+)"/g),m=>m[1]);
+  const count=new Date(year,month+1,0).getDate();
+  assert.equal(actual.length,count);
+  assert.equal(actual[0],ctx.localDate(new Date(year,month,1,12)));
+  assert.equal(actual.at(-1),ctx.localDate(new Date(year,month,count,12)));
+  assert.ok(panel.indexOf('month-section-title')<panel.indexOf('show-calendar-day'));
+  const offset=(new Date(year,month,1,12).getDay()+6)%7;
+  assert.equal((panel.match(/class="month-empty-cell"/g)||[]).length,Math.ceil((offset+count)/7)*7-count);
+ }
 });
-test('la setmana compartida octubre–novembre conserva els contorns reals dels dos mesos',()=>{
+test('octubre acaba al 31 i novembre comença a l’1 amb una capçalera al mig',()=>{
  const ctx=continuousRenderer();
  const html=ctx.monthPanel(2026*12+9,[],'2026-10-31')+ctx.monthPanel(2026*12+10,[],'2026-10-31');
  const cell=date=>html.match(new RegExp('class="day-cell ([^"]+)" data-action="show-calendar-day" data-date="'+date+'"'))[1];
@@ -129,7 +139,11 @@ test('la setmana compartida octubre–novembre conserva els contorns reals dels 
  assert.match(cell('2026-11-01'),/month-edge-top/);
  assert.match(cell('2026-11-01'),/month-edge-left/);
  assert.match(cell('2026-11-01'),/month-edge-right/);
- assert.equal((html.match(/data-action="show-calendar-week" data-date="2026-10-26"/g)||[]).length,1);
+ assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-10-31"/g)||[]).length,1);
+ assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-11-01"/g)||[]).length,1);
+ const split=html.indexOf('<h2 class="month-section-title">2026-11</h2>');
+ assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-10-31"')<split);
+ assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-11-01"')>split);
 });
 
 // Layout realista: inserir/retirar panells mou físicament els altres i pot

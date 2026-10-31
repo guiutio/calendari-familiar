@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'settings';
 type Sheet = { type:'filters' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.7.5';
+const APP_VERSION = '0.7.6';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -595,33 +595,29 @@ function layout(content:string){return `<div class="app-layout ${tab==='calendar
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
   </aside>${tab==='calendar'?calendarNavigation():''}<main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar','Calendari','calendar','mobile')}${navButton('rotation','Rotacions','repeat','mobile')}${navButton('schools','Escoles','school','mobile')}${navButton('settings','Ajustos','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
-// Cada setmana pertany al mes del seu dijous, de manera que només es dibuixa una vegada.
-function monthWeekStart(index:number):string {
-  const year=Math.floor(index/12),month=index-year*12;
-  const first=localDate(new Date(year,month,1,12)),monday=weekStart(first);
-  return parseDate(addDays(monday,3)).getMonth()===month?monday:addDays(monday,7);
-}
 function monthPanel(index:number,children:Child[],today:string):string {
-    const panelYear=Math.floor(index/12),panelMonth=index-panelYear*12;
-    const starting=monthWeekStart(index),ending=monthWeekStart(index+1);
-    const cells=Array.from({length:diffDays(ending,starting)},(_,offset)=>{
-      const date=addDays(starting,offset),d=parseDate(date);
-      // El contorn es calcula respecte al mes real de cada data, fins i tot a les setmanes compartides.
-      const year=d.getFullYear(),month=d.getMonth();
-      const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
-      const daysInMonth=new Date(year,month+1,0).getDate(),i=firstDay+d.getDate()-1;
-      const monthEdges=monthDayUI.outline(date,year,month,i,Math.ceil((firstDay+daysInMonth)/7)*7,daysInMonth);
+    const year=Math.floor(index/12),month=index-year*12;
+    const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const starting=localDate(new Date(year,month,1-firstDay,12));
+    const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
+    const cells=Array.from({length:totalCells},(_,offset)=>{
+      const date=addDays(starting,offset),d=parseDate(date),i=offset;
       const iso=offset%7===0?monthDayUI.isoWeek(date):null;
+      const weekButton=iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:'';
+      // Els espais dels altres mesos només alineen els dies: no repeteixen cap data ni assignació.
+      if(offset<firstDay||offset>=firstDay+daysInMonth)return `${weekButton}<span class="month-empty-cell" aria-hidden="true"></span>`;
+      const monthEdges=monthDayUI.outline(date,year,month,i,totalCells,daysInMonth);
       const changed=monthDayUI.hasChanges(state,date);
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
       const snapshot=monthData(date,children),schoolCount=snapshot.activities.length;
-      return `${iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:''}<button type="button" class="day-cell ${date===today?'today':''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date===today?'aria-current="date"':''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
+      return `${weekButton}<button type="button" class="day-cell ${date===today?'today':''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date===today?'aria-current="date"':''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}</span>
         ${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra)}
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
       </button>`;
     });
-    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(panelYear,panelMonth))}"><div class="month-grid">${cells.join('')}</div></section>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year,month))}</h2><div class="month-grid">${cells.join('')}</div></section>`;
 }
 // Keep a small sliding window of months. Extending either end preserves the
 // visible month's pixel position, including when older panels are removed.
@@ -648,9 +644,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(el)shift(el.getBoundingClientRect().top-anchor.top);
   };
   if(monthScrollTarget||!position){
-    const firstDate=localDate(new Date(viewYear,viewMonth,1,12));
-    const target=sequence.querySelector<HTMLElement>(`[data-action="show-calendar-day"][data-date="${firstDate}"]`)
-      ??sequence.querySelector<HTMLElement>(`[data-month-index="${viewYear*12+viewMonth}"]`);
+    const target=sequence.querySelector<HTMLElement>(`[data-month-index="${viewYear*12+viewMonth}"]`);
     if(target){
       // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
       const top=bar.getBoundingClientRect().bottom;
@@ -665,11 +659,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(!sequence.isConnected)return;
     const anchor=monthPosition();
     if(!anchor)return;
-    // En saltar a un mes que comença en una setmana compartida, mantenim el mes sol·licitat.
-    const visibleWeek=anchor.date?weekStart(anchor.date):'';
-    const shownIndex=visibleWeek&&selectedDate>=visibleWeek&&selectedDate<=addDays(visibleWeek,6)
-      ?parseDate(selectedDate).getFullYear()*12+parseDate(selectedDate).getMonth():anchor.index;
-    viewYear=Math.floor(shownIndex/12);viewMonth=shownIndex-viewYear*12;
+    viewYear=Math.floor(anchor.index/12);viewMonth=anchor.index-viewYear*12;
     const selected=parseDate(selectedDate);
     if(selected.getFullYear()!==viewYear||selected.getMonth()!==viewMonth)selectedDate=localDate(new Date(viewYear,viewMonth,1,12));
     const title=bar.querySelector<HTMLElement>('.calendar-title');

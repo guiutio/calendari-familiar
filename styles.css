@@ -928,3 +928,9 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 /* v0.7.4 · Una sola compensació del scroll, sense ancoratge addicional del navegador. */
 .calendar-layout .main-area {overflow-anchor:none;scroll-behavior:auto;}
 html:has(.calendar-layout) {overflow-anchor:none;scroll-behavior:auto;}
+
+/* v0.7.6 · Cada mes conté només les seves dates i comença amb un títol a tota l’amplada. */
+.month-section-title {margin:0;padding:16px 14px;font-size:calc(18px * var(--font-scale,1));font-weight:780;text-transform:capitalize;background:#fff;border-block:1px solid #e8ebef;}
+.month-empty-cell {display:block;min-width:0;background:#f6f7f8;}
+:root[data-theme="dark"] .month-section-title {background:#192436;border-color:#304058;}
+:root[data-theme="dark"] .month-empty-cell {background:#172336;}
