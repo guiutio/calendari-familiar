@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.8.1';
+const APP_VERSION = '0.8.2';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1116,7 +1116,45 @@ function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
     return `<button class="option ${selected ? 'selected' : ''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol, 18)}</span>${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(name)}</span>${selected ? icon('check', 17) : '<span class="badge-soft">Ocult</span>'}</button>`;
 }
+// Els selectors nadius d’iOS emeten change mentre encara s’està triant una roda.
+// Conservem el node actiu i només ajornem el redibuix; les dades es poden desar igualment.
+let nativePickerRenderPending = false, nativePickerPointerDown = false;
+let nativePickerRenderTimer;
+function nativePickerIsActive() {
+    const input = document.activeElement;
+    return input instanceof HTMLInputElement && ['date', 'time', 'datetime-local', 'month', 'week', 'color'].includes(input.type);
+}
+function deferRenderForNativePicker() {
+    if (nativePickerIsActive() || nativePickerPointerDown) {
+        nativePickerRenderPending = true;
+        return true;
+    }
+    nativePickerRenderPending = false;
+    return false;
+}
+function finishNativePickerEdit() {
+    if (nativePickerIsActive())
+        document.activeElement.blur();
+}
+function flushNativePickerRender() {
+    nativePickerRenderTimer = undefined;
+    if (!nativePickerRenderPending || nativePickerPointerDown || nativePickerIsActive())
+        return;
+    const active = document.activeElement;
+    // Tampoc substituïm un altre camp si l’usuari hi ha passat a escriure.
+    if (active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement)
+        return;
+    render();
+}
+function queueNativePickerRender(delay = 100) {
+    if (!nativePickerRenderPending)
+        return;
+    window.clearTimeout(nativePickerRenderTimer);
+    nativePickerRenderTimer = window.setTimeout(flushNativePickerRender, delay);
+}
 function render() {
+    if (deferRenderForNativePicker())
+        return;
     const monthAnchor = monthPosition();
     stopCalendarScroll?.();
     stopCalendarScroll = null;
@@ -1877,18 +1915,22 @@ document.addEventListener('click', event => {
         return;
     if (actionButton.dataset.action === 'close-backdrop') {
         if (target === actionButton) {
+            finishNativePickerEdit();
             sheet = null;
             render();
         }
         return;
     }
-    if (actionButton.matches('button') && !actionButton.disabled)
+    if (actionButton.matches('button') && !actionButton.disabled) {
+        finishNativePickerEdit();
         clickAction(actionButton);
+    }
 });
 document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement))
         return;
+    finishNativePickerEdit();
     if (form.dataset.extraPatternDayForm) {
         event.preventDefault();
         const error = rotationEditor.savePatternDay(rotationEditor.draftState(state, extraRotationDrafts, form.dataset.rotation), form.dataset.rotation ?? '', form.dataset.child ?? '', Number(form.dataset.index), new FormData(form));
@@ -2207,7 +2249,6 @@ document.addEventListener('change', event => {
     }
     else if (action === 'night-date-time' && isValidDate(target.dataset.date ?? '')) {
         state.nightDateTimes[target.dataset.date] = validChangeTime(target.value);
-        sheet = returnFromDetail(target.dataset.date);
         update();
     }
     else if (target.dataset.extraChange) {
@@ -2277,9 +2318,17 @@ document.addEventListener('change', event => {
     }
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && sheet) {
+    finishNativePickerEdit();
     sheet = null;
     render();
 } });
+// focusout pot precedir el clic de Desa/Fet. Esperem el final del gest perquè
+// el botó o formulari no desaparegui entre pointerdown i click.
+document.addEventListener('pointerdown', () => { nativePickerPointerDown = true; window.clearTimeout(nativePickerRenderTimer); }, true);
+document.addEventListener('pointerup', () => { nativePickerPointerDown = false; queueNativePickerRender(); }, true);
+document.addEventListener('pointercancel', () => { nativePickerPointerDown = false; queueNativePickerRender(); }, true);
+document.addEventListener('focusout', () => queueNativePickerRender(), true);
+document.addEventListener('click', () => queueNativePickerRender(0));
 async function init() {
     await loadState();
     applyTheme();

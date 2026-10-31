@@ -943,3 +943,14 @@ html:has(.calendar-layout) {overflow-anchor:none;scroll-behavior:auto;}
 .calendar-sticky-bar .zoom-panel-button {width:32px;min-width:32px;padding:0;justify-content:center;}
 .sheet .zoom-sheet-controls {margin:16px 0;padding:16px 12px;}
 .zoom-sheet-controls label {flex:0 0 100%;}
+
+/* v0.8.2 · Els controls nadius de data/hora han de poder encongir-se dins del seu camp. */
+.field {min-width:0;max-width:100%;grid-template-columns:minmax(0,1fr);}
+.field label,.form-row,.settings-item {min-width:0;}
+input[type="date"],input[type="time"],input[type="datetime-local"],input[type="month"],input[type="week"] {
+  display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;
+  inline-size:100%;max-inline-size:100%;min-inline-size:0;
+  -webkit-appearance:none;appearance:none;overflow:hidden;
+}
+input::-webkit-date-and-time-value {min-width:0;max-width:100%;text-align:left;}
+input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}

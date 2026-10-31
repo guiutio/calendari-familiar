@@ -334,3 +334,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - El zoom de Dia i Setmana es configura des d’un botó amb lupa al costat dels filtres, a la barra superior.
 - S’obre un panell com el de filtres, amb botons −/+, lliscador, percentatge i «Fet». Es retira el control que ocupava espai damunt de la graella.
 - Es mantenen els nivells de 25% a 150% i la mateixa hora visible en ajustar el zoom. Dia i Setmana desen nivells independents, que es recuperen en canviar de vista i en reobrir l’app. Les còpies anteriors amb un únic nivell es migren a les dues vistes.
+
+
+## v0.8.2: selectors de dates i hores estables
+
+- Els canvis no reconstrueixen la pantalla mentre un selector nadiu és actiu. El redibuix pendent s’aplica en acabar l’edició, respectant els clics de desar i els formularis.
+- Canviar l’hora d’una pernocta puntual conserva el panell obert fins que l’usuari el tanca.
+- Es limita l’amplada dels controls nadius i dels seus contenidors per evitar que surtin del requadre a iOS.

@@ -91,7 +91,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced'} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.8.1';
+const APP_VERSION = '0.8.2';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -970,7 +970,37 @@ function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guard
   const symbol=kind==='child'?'person':kind==='school'?'school':'home';
   return `<button class="option ${selected?'selected':''}" aria-pressed="${selected}" data-action="toggle-filter" data-filter-kind="${kind}" data-id="${escapeHtml(id)}"><span class="option-left"><span class="filter-entity-icon">${icon(symbol,18)}</span>${color?`<span class="color-dot" style="background:${color}"></span>`:''}${escapeHtml(name)}</span>${selected?icon('check',17):'<span class="badge-soft">Ocult</span>'}</button>`;
 }
+// Els selectors nadius d’iOS emeten change mentre encara s’està triant una roda.
+// Conservem el node actiu i només ajornem el redibuix; les dades es poden desar igualment.
+let nativePickerRenderPending=false,nativePickerPointerDown=false;
+let nativePickerRenderTimer:number|undefined;
+function nativePickerIsActive():boolean {
+  const input=document.activeElement;
+  return input instanceof HTMLInputElement&&['date','time','datetime-local','month','week','color'].includes(input.type);
+}
+function deferRenderForNativePicker():boolean {
+  if(nativePickerIsActive()||nativePickerPointerDown){nativePickerRenderPending=true;return true;}
+  nativePickerRenderPending=false;
+  return false;
+}
+function finishNativePickerEdit(){
+  if(nativePickerIsActive())(document.activeElement as HTMLInputElement).blur();
+}
+function flushNativePickerRender(){
+  nativePickerRenderTimer=undefined;
+  if(!nativePickerRenderPending||nativePickerPointerDown||nativePickerIsActive())return;
+  const active=document.activeElement;
+  // Tampoc substituïm un altre camp si l’usuari hi ha passat a escriure.
+  if(active instanceof HTMLInputElement||active instanceof HTMLSelectElement||active instanceof HTMLTextAreaElement)return;
+  render();
+}
+function queueNativePickerRender(delay=100){
+  if(!nativePickerRenderPending)return;
+  window.clearTimeout(nativePickerRenderTimer);
+  nativePickerRenderTimer=window.setTimeout(flushNativePickerRender,delay);
+}
 function render(){
+  if(deferRenderForNativePicker())return;
   const monthAnchor=monthPosition();
   stopCalendarScroll?.();stopCalendarScroll=null;
   const previousTimeline=$app.querySelector<HTMLElement>('.day-timeline-viewport');
@@ -1293,12 +1323,13 @@ document.addEventListener('click',event=>{
   if(!(target instanceof Element))return;
   const actionButton=target.closest<HTMLElement>('[data-action]');
   if(!actionButton)return;
-  if(actionButton.dataset.action==='close-backdrop') {if(target===actionButton){sheet=null;render();}return;}
-  if(actionButton.matches('button') && !(actionButton as HTMLButtonElement).disabled)clickAction(actionButton);
+  if(actionButton.dataset.action==='close-backdrop') {if(target===actionButton){finishNativePickerEdit();sheet=null;render();}return;}
+  if(actionButton.matches('button') && !(actionButton as HTMLButtonElement).disabled){finishNativePickerEdit();clickAction(actionButton);}
 });
 document.addEventListener('submit',event=>{
  const form=event.target;
  if(!(form instanceof HTMLFormElement))return;
+ finishNativePickerEdit();
   if(form.dataset.extraPatternDayForm){
     event.preventDefault();
     const error=rotationEditor.savePatternDay(rotationEditor.draftState(state,extraRotationDrafts,form.dataset.rotation),form.dataset.rotation??'',form.dataset.child??'',Number(form.dataset.index),new FormData(form));
@@ -1453,7 +1484,7 @@ document.addEventListener('change',event=>{
   }
   if(action==='font-size'){const chosen=FONT_SIZE_OPTIONS[Number(target.value)];if(chosen){state.preferences.fontSize=chosen;applyFontSize();saveState();}return;}
   if(action==='rotation-change-time'&&rotationDraft){rotationDraft.changeTime=validChangeTime(target.value);render();}
-  else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);sheet=returnFromDetail(target.dataset.date!);update();}
+  else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);update();}
   else if(target.dataset.extraChange){
     const work=rotationEditor.draftState(state,extraRotationDrafts,target.dataset.rotation);
     const result=rotationEditor.change(work,target.dataset,target.value,extraRotationUnits);
@@ -1478,7 +1509,14 @@ document.addEventListener('change',event=>{
   else if(action==='guardian-color') {const g=guardian(target.dataset.guardian!);if(g&&/^#[0-9a-fA-F]{6}$/.test(target.value)){g.color=target.value;update();}}
   else if(target instanceof HTMLInputElement&&target.id==='import-file'&&target.files?.[0]){void importData(target.files[0]);target.value='';}
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sheet){sheet=null;render();}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sheet){finishNativePickerEdit();sheet=null;render();}});
+// focusout pot precedir el clic de Desa/Fet. Esperem el final del gest perquè
+// el botó o formulari no desaparegui entre pointerdown i click.
+document.addEventListener('pointerdown',()=>{nativePickerPointerDown=true;window.clearTimeout(nativePickerRenderTimer);},true);
+document.addEventListener('pointerup',()=>{nativePickerPointerDown=false;queueNativePickerRender();},true);
+document.addEventListener('pointercancel',()=>{nativePickerPointerDown=false;queueNativePickerRender();},true);
+document.addEventListener('focusout',()=>queueNativePickerRender(),true);
+document.addEventListener('click',()=>queueNativePickerRender(0));
 async function init(){await loadState();applyTheme();applyFontSize();render();if('serviceWorker'in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update().catch(()=>{})).catch(err=>console.warn('Service worker no registrat:',err));
 }}
