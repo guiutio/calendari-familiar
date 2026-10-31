@@ -210,3 +210,65 @@ test('el mes no mostra cap comptador escolar i destaca el límit amb una línia 
  assert.match(html,/styles\.css\?v=0\.6\.4/);
  assert.match(sw,/calendari-familiar-v0\.6\.4/);
 });
+
+test('mes: comprimeix 22:00–06:00 però manté les hores diürnes proporcionals',()=>{
+  const total=ui.miniGeometry(0,1440),morning=ui.miniGeometry(0,360),
+    evening=ui.miniGeometry(1320,1440),day=ui.miniGeometry(360,1320);
+  const near=(a,b)=>assert.ok(Math.abs(a-b)<0.000001,`Esperat ${b}, rebut ${a}`);
+  near(total.top,0);near(total.height,100);
+  near(morning.height+evening.height+day.height,100);
+  assert.ok(morning.height+evening.height<10,'Les 8 hores de nit ocupen menys del 10% de la miniatura');
+  assert.ok(day.height>90,'Les hores entre 06:00 i 22:00 reben gairebé tota l’alçada');
+  near(ui.miniGeometry(360,420).height,ui.miniGeometry(720,780).height);
+  near(ui.miniGeometry(360,420).height,ui.miniGeometry(1260,1320).height);
+  assert.ok(ui.miniGeometry(0,60).height<ui.miniGeometry(360,420).height);
+  assert.ok(ui.miniGeometry(1380,1440).height<ui.miniGeometry(360,420).height);
+  assert.equal(ui.miniGeometry(360,420,true).top,25);
+  assert.equal(ui.miniGeometry(540,600,true).top,37.5);
+});
+
+test('mes: pernocta habitual NO fa expandir la nit; una franja especial sí',()=>{
+  const base={elna:[{from:0,to:360,guardianColor:'#ffadcc',guardianName:'Mare',visible:true},
+                    {from:1320,to:1440,guardianColor:'#88bbee',guardianName:'Pare',visible:true}],blai:[]};
+  const plain=()=>ui.mini(children,base,[],{},[]);
+  assert.match(plain(),/class="month-mini night-compressed"/);
+  assert.doesNotMatch(plain(),/night-expanded/);
+
+  const morningSlot={elna:[{from:120,to:240,color:'#4488ff',name:'Excepció',startTime:'02:00',endTime:'04:00'}]};
+  const nightCustom=ui.mini(children,base,[],morningSlot,[]);
+  assert.match(nightCustom,/class="month-mini night-expanded"/);
+  assert.match(nightCustom,/top:8.333333333333334%/);
+  assert.match(nightCustom,/height:8.333333333333334%/);
+
+  const nightSchool=ui.mini(children,base,[{childId:'elna',start:330,end:420,color:'#11aa77',schoolName:'Escola'}],{elna:[]},[]);
+  assert.match(nightSchool,/class="month-mini night-expanded"/);
+  const lateSchool=ui.mini(children,base,[{childId:'elna',start:1260,end:1380,color:'#11aa77',schoolName:'Escola'}],{},[]);
+  assert.match(lateSchool,/class="month-mini night-expanded"/);
+
+  const extra=[{childId:'blai',from:1320,to:1440,visible:true,guardianId:'',color:'#77bb33',rotationName:'Recollida',guardianName:'Sense tutor'}];
+  assert.match(ui.mini(children,base,[],{},extra),/class="month-mini night-expanded"/);
+  assert.match(ui.mini(children,base,[],{},[{...extra[0],visible:false}]),/class="month-mini night-compressed"/);
+});
+
+test('mes: franges especials només diürnes mantenen les nits comprimides, inclosos els límits',()=>{
+  const slots={elna:[{from:360,to:420,color:'#aaa',name:'Matí',startTime:'06:00',endTime:'07:00'},
+                     {from:1260,to:1320,color:'#bbb',name:'Tarda',startTime:'21:00',endTime:'22:00'}]};
+  const activities=[{childId:'blai',start:540,end:900,color:'#aabbcc',schoolName:'Escola'}];
+  const extra=[{childId:'blai',from:900,to:1020,color:'#5588ee',guardianId:'pare',guardianName:'Pare',rotationName:'Activitat',visible:true}];
+  const result=ui.mini(children,{elna:[],blai:[]},activities,slots,extra);
+  assert.match(result,/class="month-mini night-compressed"/);
+  assert.match(result,/month-mini-extra with-guardian/);
+  assert.match(result,/month-mini-custom/);
+  assert.match(result,/month-mini-school/);
+});
+
+test('mes: les files es redueixen realment i només s’expandeixen les de nits especials, també en mòbil',()=>{
+  assert.match(css,/\.month-mini \{height:74px;\}/);
+  assert.match(css,/\.month-mini\.night-expanded \{height:110px;\}/);
+  assert.match(css,/\.day-cell:has\(\.month-mini\) \{min-height:121px;\}/);
+  assert.match(css,/\.day-cell:has\(\.month-mini\.night-expanded\) \{min-height:155px;\}/);
+  assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.month-mini \{height:60px;\}/);
+  assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.month-mini\.night-expanded \{height:96px;\}/);
+  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
+  assert.match(timelineSource,/function renderWeek\(/);
+});
