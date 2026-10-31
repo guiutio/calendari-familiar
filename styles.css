@@ -844,3 +844,23 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .extra-pattern-day-form .action-row {margin-top:10px;display:flex;flex-wrap:wrap;gap:9px;}
 :root[data-theme="dark"] .extra-pattern-cell.extra-inactive {background:#1a293c;border-color:#50627a;opacity:.8;}
 :root[data-theme="dark"] .extra-pattern-cell.extra-inactive .guardian-initial {background:#304158;color:#c2cedc;}
+
+/* v0.6.5 · Mes compacte: 22:00–06:00 no ocupa vuit hores proporcionals.
+   Si hi ha una franja addicional, escolar o personal durant la nit,
+   la casella recupera l'alçada de 24 h per mostrar-ne el detall. */
+.day-cell:has(.month-mini) {min-height:121px;}
+.month-mini {height:74px;}
+.day-cell:has(.month-mini.night-expanded) {min-height:155px;}
+.month-mini.night-expanded {height:110px;}
+@media(max-width:560px){
+  .day-cell:has(.month-mini) {min-height:105px;}
+  .month-mini {height:60px;}
+  .day-cell:has(.month-mini.night-expanded) {min-height:138px;}
+  .month-mini.night-expanded {height:96px;}
+}
+@media(max-width:360px){
+  .day-cell:has(.month-mini) {min-height:102px;}
+  .month-mini {height:56px;}
+  .day-cell:has(.month-mini.night-expanded) {min-height:138px;}
+  .month-mini.night-expanded {height:96px;}
+}
