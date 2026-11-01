@@ -92,7 +92,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.10.0';
+const APP_VERSION = '0.10.1';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -813,8 +813,12 @@ function schoolsPage():string {
  ${state.children.map(c=>{const selected=group.childIds.includes(c.id),other=year.groups.find(g=>g.id!==group.id&&g.childIds.includes(c.id));return `<button class="school-child-choice ${selected?'selected':''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other?`<small>Actualment a ${escapeHtml(other.name)}</small>`:''}</span>${selected?icon('check',18):icon('plus',17)}</button>`;}).join('')}
  </section>${schedulePanel}${schoolReducedPanel(school,year,group)}`;
 }
+function schoolDayIsWeekend(date:string):boolean {
+ const day=parseDate(date).getDay();return day===0||day===6;
+}
 function schoolDayUnavailableReason(year:SchoolYear,kind:'holiday'|'reduced',date:string):string {
  if(!isValidDate(date)||date<year.startDate||date>year.endDate)return 'Fora del curs';
+ if(schoolDayIsWeekend(date))return 'Cap de setmana';
  if(kind==='holiday')return year.reducedDays.includes(date)?'Jornada reduïda':'';
  if(year.holidays.includes(date))return 'Festiu';
  return year.vacations?.find(p=>date>=p.startDate&&date<=p.endDate)?.name??'';
@@ -863,7 +867,7 @@ function schoolFormMarkup():string {
  if(sheet.type==='schoolDayForm'){
   const year=yearById(schoolById(sheet.schoolId),sheet.yearId);if(!year)return '';
   return heading(sheet.kind==='holiday'?'Tria dies festius':'Tria dies de jornada reduïda',schoolYearName(year))+`<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}">
-    <p class="settings-note">Toca els dies per marcar-los o desmarcar-los. Pots canviar de mes abans de desar.</p>
+    <p class="settings-note">Toca els dies per marcar-los o desmarcar-los. Pots canviar de mes abans de desar. Els dissabtes i diumenges no es poden seleccionar.</p>
     ${schoolDayCalendarMarkup(year,sheet)}
     <p class="school-date-count" role="status">${sheet.dates.length} ${sheet.dates.length===1?'dia seleccionat':'dies seleccionats'}</p>
     <p class="settings-note">${sheet.kind==='holiday'?'Els dies amb jornada reduïda no es poden marcar com a festius.':'Els festius i les vacances escolars no es poden marcar com a jornada reduïda.'}</p>
@@ -1178,7 +1182,7 @@ function clickAction(button:HTMLElement){
       const school=schoolById(button.dataset.school),year=yearById(school,button.dataset.year);if(!school||!year)break;
       const kind=button.dataset.kind==='holiday'?'holiday':'reduced',today=localDate(new Date());
       const initial=today<year.startDate?year.startDate:today>year.endDate?year.endDate:today;
-      sheet={type:'schoolDayForm',schoolId:school.id,yearId:year.id,kind,month:initial.slice(0,7),dates:[...(kind==='holiday'?year.holidays:year.reducedDays)]};render();break;
+      sheet={type:'schoolDayForm',schoolId:school.id,yearId:year.id,kind,month:initial.slice(0,7),dates:(kind==='holiday'?year.holidays:year.reducedDays).filter(date=>!schoolDayIsWeekend(date))};render();break;
     }
     case 'school-day-month':{
       if(sheet?.type!=='schoolDayForm')break;

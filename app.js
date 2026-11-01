@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.10.0';
+const APP_VERSION = '0.10.1';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -937,9 +937,15 @@ function schoolsPage() {
  ${state.children.map(c => { const selected = group.childIds.includes(c.id), other = year.groups.find(g => g.id !== group.id && g.childIds.includes(c.id)); return `<button class="school-child-choice ${selected ? 'selected' : ''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other ? `<small>Actualment a ${escapeHtml(other.name)}</small>` : ''}</span>${selected ? icon('check', 18) : icon('plus', 17)}</button>`; }).join('')}
  </section>${schedulePanel}${schoolReducedPanel(school, year, group)}`;
 }
+function schoolDayIsWeekend(date) {
+    const day = parseDate(date).getDay();
+    return day === 0 || day === 6;
+}
 function schoolDayUnavailableReason(year, kind, date) {
     if (!isValidDate(date) || date < year.startDate || date > year.endDate)
         return 'Fora del curs';
+    if (schoolDayIsWeekend(date))
+        return 'Cap de setmana';
     if (kind === 'holiday')
         return year.reducedDays.includes(date) ? 'Jornada reduïda' : '';
     if (year.holidays.includes(date))
@@ -996,7 +1002,7 @@ function schoolFormMarkup() {
         if (!year)
             return '';
         return heading(sheet.kind === 'holiday' ? 'Tria dies festius' : 'Tria dies de jornada reduïda', schoolYearName(year)) + `<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}">
-    <p class="settings-note">Toca els dies per marcar-los o desmarcar-los. Pots canviar de mes abans de desar.</p>
+    <p class="settings-note">Toca els dies per marcar-los o desmarcar-los. Pots canviar de mes abans de desar. Els dissabtes i diumenges no es poden seleccionar.</p>
     ${schoolDayCalendarMarkup(year, sheet)}
     <p class="school-date-count" role="status">${sheet.dates.length} ${sheet.dates.length === 1 ? 'dia seleccionat' : 'dies seleccionats'}</p>
     <p class="settings-note">${sheet.kind === 'holiday' ? 'Els dies amb jornada reduïda no es poden marcar com a festius.' : 'Els festius i les vacances escolars no es poden marcar com a jornada reduïda.'}</p>
@@ -1443,7 +1449,7 @@ function clickAction(button) {
                 break;
             const kind = button.dataset.kind === 'holiday' ? 'holiday' : 'reduced', today = localDate(new Date());
             const initial = today < year.startDate ? year.startDate : today > year.endDate ? year.endDate : today;
-            sheet = { type: 'schoolDayForm', schoolId: school.id, yearId: year.id, kind, month: initial.slice(0, 7), dates: [...(kind === 'holiday' ? year.holidays : year.reducedDays)] };
+            sheet = { type: 'schoolDayForm', schoolId: school.id, yearId: year.id, kind, month: initial.slice(0, 7), dates: (kind === 'holiday' ? year.holidays : year.reducedDays).filter(date => !schoolDayIsWeekend(date)) };
             render();
             break;
         }

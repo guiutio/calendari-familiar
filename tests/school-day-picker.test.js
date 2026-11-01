@@ -18,7 +18,7 @@ function setup(){
   FormData:class{constructor(){return new Map();}}});
  vm.runInContext(between('function escapeHtml(', 'function emptyState(')+
   between('function isValidDate(', 'function cleanSchoolWeeklySchedule(')+
-  between('function schoolDayUnavailableReason(', '/** Festius/reducció de tots els centres')+
+  between('function schoolDayIsWeekend(', '/** Festius/reducció de tots els centres')+
   between('function clickAction(button)',"document.addEventListener('click'"),ctx);
  const body=between('if (!form.dataset.schoolForm)',"document.addEventListener('input'").trim();
  assert.ok(body.endsWith('});'));
@@ -86,7 +86,7 @@ test('el calendari alinea els dies amb dilluns i inclou el 29 de febrer',()=>{
  assert.equal((html.match(/data-action="school-day-toggle"/g)||[]).length,29);
  assert.match(html,/class="school-date-grid"[^>]*><span aria-hidden="true"><\/span><button[^>]*data-date="2028-02-01"/);
  assert.match(html,/data-date="2028-02-04"[^>]*disabled/);
- assert.doesNotMatch(html,/data-date="2028-02-05"[^>]*disabled/);
+ assert.doesNotMatch(html,/data-date="2028-02-07"[^>]*disabled/);
  assert.match(html,/data-date="2028-02-29"/);
  assert.doesNotMatch(html,/type="date"/);
 });
@@ -107,6 +107,35 @@ test('un formulari d’un altre centre o tipus no pot desar l’esborrany',()=>{
  s.submit({kind:'reduced'});s.submit({school:'other'});
  assert.equal(s.saves,0);assert.deepEqual(s.year.holidays,['2026-09-11','2026-12-25']);
  s.submit();assert.equal(s.saves,1);
+});
+
+test('dissabtes i diumenges es veuen però no es poden seleccionar en cap dels dos tipus',()=>{
+ for(const kind of ['holiday','reduced']){
+  const s=setup();s.open(kind);s.ctx.sheet.month='2026-11';
+  const before=plain(s.ctx.sheet.dates);
+  s.toggle('2026-11-07');s.toggle('2026-11-08');
+  assert.deepEqual(plain(s.ctx.sheet.dates),before);
+  s.toggle('2026-11-06');s.toggle('2026-11-09');
+  assert.ok(s.ctx.sheet.dates.includes('2026-11-06'));
+  assert.ok(s.ctx.sheet.dates.includes('2026-11-09'));
+  const html=s.ctx.schoolFormMarkup();
+  assert.equal((html.match(/data-action="school-day-toggle"/g)||[]).length,30);
+  for(const date of ['2026-11-07','2026-11-08'])assert.match(html,new RegExp('data-date="'+date+'"[^>]*aria-pressed="false"[^>]*Cap de setmana" disabled'));
+  s.ctx.sheet.dates.push('2026-11-07');s.submit();
+  assert.equal(s.saves,0);assert.ok(s.messages.length);
+ }
+});
+
+test('els caps de setmana desats abans s’exclouen de l’esborrany sense desar en cancel·lar',()=>{
+ for(const kind of ['holiday','reduced']){
+  const s=setup(),field=kind==='holiday'?'holidays':'reducedDays';
+  s.year[field].push('2026-11-07','2026-11-08');const original=[...s.year[field]];
+  s.open(kind);assert.ok(!s.ctx.sheet.dates.includes('2026-11-07'));
+  assert.ok(!s.ctx.sheet.dates.includes('2026-11-08'));
+  s.click('close-sheet');assert.deepEqual(s.year[field],original);assert.equal(s.saves,0);
+  s.open(kind);s.submit();assert.equal(s.saves,1);
+  assert.deepEqual(plain(s.year[field]),original.filter(d=>!['2026-11-07','2026-11-08'].includes(d)));
+ }
 });
 
 test('marcar dies i canviar de mes conserva el desplaçament i el focus del selector',()=>{

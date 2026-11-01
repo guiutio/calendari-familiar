@@ -362,3 +362,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Els botons «Tria dies» de festius i jornada reduïda obren un calendari mensual. Es poden marcar o desmarcar dies i navegar entre mesos sense perdre la selecció.
 - Els dies ja desats apareixen seleccionats. «Desa els dies» confirma el conjunt complet d’una vegada; «Cancel·la» conserva les dades anteriors.
 - Es bloquegen les dates fora del curs i les incompatibilitats amb l’altre tipus de jornada o les vacances. Es mantenen les vacances amb nom i l’horari reduït configurat.
+
+
+## v0.10.1: selecció escolar només entre setmana
+
+- Dissabtes i diumenges es mantenen visibles al selector mensual, però no es poden marcar com a festius o jornada reduïda.
+- La validació del desament també rebutja caps de setmana. Si hi havia dates de cap de setmana desades, l’esborrany les exclou i només es retiren de les dades en confirmar «Desa els dies»; cancel·lar conserva les dades anteriors.
