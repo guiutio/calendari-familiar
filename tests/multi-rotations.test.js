@@ -35,7 +35,7 @@ test('migra les dades v1 anteriors sense rotacions extres ni hores puntuals',()=
  assert.deepEqual(plain(core.cleanDateTimes(undefined)),{});
  assert.deepEqual(plain(core.cleanExtraExceptions(undefined,[],children,guardians)),{});
  assert.match(ts,/rotationPatterns\.cleanExtras\(obj\.extraRotations,children,guardians,MAX_ROTATION_DAYS\)/);
- assert.match(ts,/rotationPatterns\.cleanNightTimes\(obj\.nightPatternTimes,rotation\)/);
+ assert.match(ts,/rotationPatterns\.legacyNight\(obj\.rotation,obj\.nightPatternTimes,children,guardians\)/);
  assert.match(ts,/rotationPatterns\.cleanExtraExceptions\(obj\.extraExceptions,extraRotations,children,guardians\)/);
 });
 test('pernocta: el dia del patró i la data concreta tenen precedència independent',()=>{
@@ -119,12 +119,12 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(mini,/month-mini-extra/);
  assert.match(ts,/data-action="extra-date-choose"/);
  assert.match(ts,/data-action="night-date-time"/);
- assert.match(ts,/data-rotation-cell-form="true"/);
+ assert.match(editorSource,/data-extra-pattern-day-form="true"/);
  assert.match(ts,/rotationEditor\.render\(rotationEditor\.draftState\(state,extraRotationDrafts\),extraRotationOpen,extraRotationUnits\)/);
- assert.match(html,/rotation-patterns\.js\?v=0\.11\.0/);
- assert.match(html,/rotation-editor\.js\?v=0\.11\.0/);
- assert.match(sw,/rotation-patterns\.js\?v=0\.11\.0/);
- assert.match(sw,/rotation-editor\.js\?v=0\.11\.0/);
+ assert.match(html,/rotation-patterns\.js\?v=0\.12\.0/);
+ assert.match(html,/rotation-editor\.js\?v=0\.12\.0/);
+ assert.match(sw,/rotation-patterns\.js\?v=0\.12\.0/);
+ assert.match(sw,/rotation-editor\.js\?v=0\.12\.0/);
 });
 
 test('les rotacions complementàries poden excloure dissabtes, diumenges o dies individuals del patró',()=>{
@@ -151,7 +151,7 @@ test('l’editor de canvi de pernocta afecta el dia visible, no la data de la ni
  assert.match(ts,/sheet=\{type:'bandEdit',date,childId,band,viewDate:button\.dataset\.viewDate\?\?date\}/);
  assert.match(ts,/visibleDate=sheet\.viewDate\?\?date/);
  assert.match(ts,/data-action="night-date-time" data-date="\$\{escapeHtml\(visibleDate\)\}"/);
- assert.match(ts,/nightChangeTime\(visibleDate\)/);
+ assert.match(ts,/nightChangeTime\(visibleDate,childId\)/);
 });
 
 test('les opcions de còpia són bidireccionals a cada rotació',()=>{
@@ -213,10 +213,10 @@ test('el posicionament de les barres mensuals i les amplades de Dia/Setmana es d
  // Sense contorns laterals: la superfície de color conserva tota l’amplada.
  assert.match(css,/\.month-mini-extra \{[^\n]*box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #fff;/);
  assert.match(css,/\.month-mini-custom\{[^\n]*box-shadow:inset 0 1px 0 #ffffffaa,inset 0 -1px 0 #ffffffaa;/);
- assert.match(html,/month-day-ui\.js\?v=0\.11\.0/);
- assert.match(html,/day-timeline\.js\?v=0\.11\.0/);
- assert.match(sw,/month-day-ui\.js\?v=0\.11\.0/);
- assert.match(sw,/day-timeline\.js\?v=0\.11\.0/);
+ assert.match(html,/month-day-ui\.js\?v=0\.12\.0/);
+ assert.match(html,/day-timeline\.js\?v=0\.12\.0/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.12\.0/);
+ assert.match(sw,/day-timeline\.js\?v=0\.12\.0/);
 });
 
 

@@ -39,7 +39,7 @@
     return result;
   }
   function hasChanges(state,date){
-    return Object.hasOwn(state.nightDateTimes||{},date)||Object.keys(state.extraExceptions||{}).some(k=>k.split('|')[1]===date)||Object.keys(state.overrides||{}).some(k=>k.startsWith(date+'|')) ||
+    return Object.keys(state.nightDateTimes||{}).some(key=>key===date||key.startsWith(date+'|'))||Object.keys(state.extraExceptions||{}).some(k=>k.split('|')[1]===date)||Object.keys(state.overrides||{}).some(k=>k.startsWith(date+'|')) ||
       Object.keys(state.bandOverrides||{}).some(k=>k.startsWith(date+'|')) ||
       Object.keys(state.daySlots||{}).some(k=>k.startsWith(date+'|')&&(state.daySlots[k]||[]).length);
   }

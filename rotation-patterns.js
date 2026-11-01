@@ -17,14 +17,17 @@
   }
   function cleanExtras(raw,children,guardians,maxDays=3640){
     if(raw==null)return [];
-    if(!Array.isArray(raw)||raw.length>100)throw Error('Nombre de rotacions addicionals no vàlid');
+    if(!Array.isArray(raw)||raw.length>200)throw Error('Nombre de rotacions addicionals no vàlid');
     const childIds=new Set(children.map(x=>x.id)),guardianIds=new Set(guardians.map(x=>x.id));
     const ids=new Set();
-    return raw.map(item=>{
+    const rotations=raw.map(item=>{
+      const night=item?.kind==='night';
       if(!item||typeof item.id!=='string'||!item.id||item.id.length>100||ids.has(item.id)||typeof item.name!=='string'||!item.name.trim()||item.name.length>80||
          !validDate(item.startDate)||!Number.isInteger(item.length)||item.length<1||item.length>maxDays||
-         !validClock(item.startTime)||!validClock(item.endTime)||minutes(item.startTime)>=minutes(item.endTime)||
+         !validClock(item.startTime)||(!night&&(!validClock(item.endTime)||minutes(item.startTime)>=minutes(item.endTime)))||
          !Array.isArray(item.childIds)||(item.activeDays!==undefined&&(!Array.isArray(item.activeDays)||item.activeDays.length!==item.length||item.activeDays.some(a=>typeof a!=='boolean'))))throw Error('Hi ha una rotació addicional incorrecta');
+      if(item.kind!==undefined&&!['night','activity'].includes(item.kind))throw Error('Tipus de rotació incorrecte');
+      if(item.endDate!==undefined&&item.endDate!==''&&(!validDate(item.endDate)||item.endDate<item.startDate))throw Error('La data final ha de ser igual o posterior a la inicial');
       if(item.schoolDaysOnly!==undefined&&typeof item.schoolDaysOnly!=='boolean')throw Error('Condició de dies escolars incorrecta');
       if(item.childActiveDays!==undefined&&(!item.childActiveDays||typeof item.childActiveDays!=='object'||Array.isArray(item.childActiveDays)))throw Error('Dies actius per fill incorrectes');
       ids.add(item.id);
@@ -45,11 +48,61 @@
           childActiveDays[id]=[...days];
         }
       }
-      const result={id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
+      const result={id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:night?'00:00':item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
+      if(item.kind!==undefined)result.kind=item.kind;
+      if(item.endDate)result.endDate=item.endDate;
+      if(night)result.nightTimes=cleanNightTimes(item.nightTimes,{length:item.length,changeTime:item.startTime});
       if(item.childActiveDays!==undefined)result.childActiveDays=childActiveDays;
       if(item.schoolDaysOnly!==undefined)result.schoolDaysOnly=item.schoolDaysOnly;
       return result;
     });
+    validateNightOverlaps(rotations);
+    return rotations;
+  }
+  function inRange(rotation,date){return date>=rotation.startDate&&(!rotation.endDate||date<=rotation.endDate);}
+  function validateNightOverlaps(rotations){
+    const nights=rotations.filter(r=>r.kind==='night');
+    for(let i=0;i<nights.length;i++)for(let j=i+1;j<nights.length;j++){
+      const a=nights[i],b=nights[j];
+      if(a.startDate<=(b.endDate||'9999-12-31')&&b.startDate<=(a.endDate||'9999-12-31')&&a.childIds.some(id=>b.childIds.includes(id)))
+        throw Error('Les pernoctes «'+a.name+'» i «'+b.name+'» se solapen per a un mateix fill. Revisa les dates o els fills participants.');
+    }
+  }
+  function legacyNight(rotation,times,children,guardians){
+    if(!rotation||!validDate(rotation.startDate)||!Number.isInteger(rotation.length)||rotation.length<1||rotation.length>3640)throw Error('El patró de pernocta antic no és vàlid');
+    const assignments={},ids=new Set(guardians.map(g=>g.id));
+    for(const child of children){
+      const arr=rotation.assignments?.[child.id];
+      if(!Array.isArray(arr)||arr.length!==rotation.length||arr.some(id=>id!==''&&!ids.has(id)))throw Error('El patró de nits està incomplet');
+      assignments[child.id]=[...arr];
+    }
+    const startTime=validClock(rotation.changeTime)?rotation.changeTime:'19:00';
+    const nightTimes=cleanNightTimes(times,{...rotation,changeTime:startTime});
+    return children.length?[{id:'legacy-night',kind:'night',name:'Pernocta',startDate:rotation.startDate,length:rotation.length,startTime,endTime:'00:00',childIds:children.map(c=>c.id),assignments,activeDays:Array(rotation.length).fill(true),nightTimes}]:[];
+  }
+  function nightRotationFor(rotations,date,childId){return rotations.find(r=>r.kind==='night'&&r.childIds.includes(childId)&&inRange(r,date));}
+  function nightAssignment(rotations,date,childId){
+    const r=nightRotationFor(rotations,date,childId);if(!r)return '';
+    const i=dayIndex(date,r.startDate,r.length);return activeFor(r,childId,i)?r.assignments[childId]?.[i]??'':'';
+  }
+  function nightTimeFor(rotations,date,childId,dateTimes={}){
+    if(Object.hasOwn(dateTimes,date+'|'+childId))return dateTimes[date+'|'+childId];
+    if(Object.hasOwn(dateTimes,date))return dateTimes[date];
+    const previous=new Date(date+'T12:00:00Z');previous.setUTCDate(previous.getUTCDate()-1);
+    const r=nightRotationFor(rotations,date,childId)??nightRotationFor(rotations,previous.toISOString().slice(0,10),childId);
+    return r?(r.nightTimes?.[dayIndex(date,r.startDate,r.length)]??r.startTime):'19:00';
+  }
+  function cleanNightDateTimes(raw,children){
+    if(raw==null)return {};
+    if(!raw||typeof raw!=='object'||Array.isArray(raw)||Object.keys(raw).length>50000)throw Error('Hores puntuals incorrectes');
+    const ids=new Set(children.map(c=>c.id)),out={};
+    for(const [key,time] of Object.entries(raw)){
+      const [date,childId,...rest]=key.split('|');
+      if(rest.length||!validDate(date)||!validClock(time)||(childId!==undefined&&!ids.has(childId)))throw Error('Hora de canvi puntual incorrecta');
+      if(childId!==undefined)out[key]=time;
+      else for(const id of ids)if(!Object.hasOwn(raw,date+'|'+id))out[date+'|'+id]=time;
+    }
+    return out;
   }
   function cleanNightTimes(raw,rotation){
     if(raw==null)return {};
@@ -78,7 +131,7 @@
     const rotMap=new Map(rotations.map(r=>[r.id,r])),childIds=new Set(children.map(c=>c.id)),guardianIds=new Set(guardians.map(g=>g.id)),result={};
     for(const [key,value] of Object.entries(raw)){
       const [rotationId,date,childId,...extra]=key.split('|'),rotation=rotMap.get(rotationId);
-      if(extra.length||!rotation||!validDate(date)||!childIds.has(childId)||!rotation.childIds.includes(childId))continue;
+      if(extra.length||!rotation||rotation.kind==='night'||!validDate(date)||!childIds.has(childId)||!rotation.childIds.includes(childId))continue;
       if(!value||typeof value!=='object'||typeof value.disabled!=='boolean'||typeof value.guardianId!=='string'||(value.guardianId!==''&&!guardianIds.has(value.guardianId))||
         !validClock(value.startTime)||!validClock(value.endTime)||minutes(value.startTime)>=minutes(value.endTime))
         throw Error('Excepció de rotació incorrecta');
@@ -91,7 +144,7 @@
     return dayTimes[dayIndex(date,rotation.startDate,rotation.length)]??rotation.changeTime;
   }
   function slotFor(state,rotation,date,childId){
-    if(!rotation.childIds.includes(childId))return null;
+    if(!rotation.childIds.includes(childId)||!inRange(rotation,date))return null;
     const i=dayIndex(date,rotation.startDate,rotation.length),key=rotation.id+'|'+date+'|'+childId,override=state.extraExceptions?.[key];
     const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:!activeFor(rotation,childId,i)};
     return {...fallback,...override,rotationId:rotation.id,rotationName:rotation.name,childId,date,key,overridden:Boolean(override)};
@@ -99,6 +152,7 @@
   function slots(state,date,children,guardians,visibleGuardianIds,hasSchool=()=>false){
     const out=[],lookup=new Map(guardians.map(g=>[g.id,g])),visible=new Set(visibleGuardianIds);
     for(const rotation of state.extraRotations??[])for(const child of children){
+      if(rotation.kind==='night')continue;
       const item=slotFor(state,rotation,date,child.id);
       if(!item||item.disabled||(rotation.schoolDaysOnly&&!hasSchool(date,child.id)))continue;
       const guardian=lookup.get(item.guardianId);
@@ -128,13 +182,13 @@
     for(const r of state.extraRotations??[]){r.childIds=r.childIds.filter(c=>c!==id);delete r.assignments[id];if(r.childActiveDays)delete r.childActiveDays[id];}
     for(const key of Object.keys(state.extraExceptions??{}))if(key.split('|')[2]===id)delete state.extraExceptions[key];
   }
-  function removeGuardian(state,id){
-    for(const r of state.extraRotations??[])for(const arr of Object.values(r.assignments))for(let i=0;i<arr.length;i++)if(arr[i]===id)arr[i]='';
+  function removeGuardian(state,id,alternate=''){
+    for(const r of state.extraRotations??[])for(const arr of Object.values(r.assignments))for(let i=0;i<arr.length;i++)if(arr[i]===id)arr[i]=r.kind==='night'?alternate:'';
     for(const entry of Object.values(state.extraExceptions??{}))if(entry.guardianId===id)entry.guardianId='';
   }
   function clearDate(state,date){
-    delete state.nightDateTimes?.[date];
+    for(const key of Object.keys(state.nightDateTimes??{}))if(key===date||key.startsWith(date+'|'))delete state.nightDateTimes[key];
     for(const key of Object.keys(state.extraExceptions??{}))if(key.split('|')[1]===date)delete state.extraExceptions[key];
   }
-  window.rotationPatterns={minutes,fmt,validClock,validDate,dayIndex,activeFor,ensureChildDays,cleanExtras,cleanNightTimes,cleanDateTimes,cleanExtraExceptions,nightTime,slotFor,slots,resized,removeChild,removeGuardian,clearDate};
+  window.rotationPatterns={inRange,validateNightOverlaps,legacyNight,nightRotationFor,nightAssignment,nightTimeFor,cleanNightDateTimes,minutes,fmt,validClock,validDate,dayIndex,activeFor,ensureChildDays,cleanExtras,cleanNightTimes,cleanDateTimes,cleanExtraExceptions,nightTime,slotFor,slots,resized,removeChild,removeGuardian,clearDate};
 })();

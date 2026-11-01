@@ -54,14 +54,13 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
  assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.11\.0/);
- assert.match(sw,/day-timeline\.js\?v=0\.11\.0/);
+ assert.match(html,/day-timeline\.js\?v=0\.12\.0/);
+ assert.match(sw,/day-timeline\.js\?v=0\.12\.0/);
 });
-test('la rotació incorpora la nova hora per defecte, el desament i la importació',()=>{
- assert.match(ts,/const DEFAULT_CHANGE_TIME='19:00'/);
- assert.match(ts,/changeTime:DEFAULT_CHANGE_TIME/);
- assert.match(ts,/changeTime:validChangeTime\(obj\.rotation\.changeTime\)/);
- assert.match(ts,/data-action="rotation-change-time"/);
- assert.match(ts,/rotationDraft\.changeTime=validChangeTime/);
- assert.match(ts,/state\.rotation=JSON\.parse\(JSON\.stringify\(rotationDraft\)\)/);
+test('les pernoctes utilitzen l’hora de la rotació aplicable per fill',()=>{
+ assert.match(ts,/rotationPatterns\.nightTimeFor\(state\.extraRotations,date,childId,state\.nightDateTimes\)/);
+ assert.match(ts,/nightChangeTime\(date,c\.id\)/);
+ const context={window:{}};vm.runInNewContext(readFileSync(new URL('../rotation-editor.js',import.meta.url),'utf8'),context);
+ const state={children:[],extraRotations:[]};
+ assert.equal(context.window.rotationEditor.create(state,'night','2026-11-01','night').startTime,'19:00');
 });

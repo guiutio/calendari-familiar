@@ -22,12 +22,25 @@ function setup(){
  for(const file of ['rotation-patterns.js','rotation-editor.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),ctx);
  ctx.rotationEditor=ctx.window.rotationEditor;
  vm.runInContext(between('function clickAction(button)',"document.addEventListener('click'"),ctx);
- vm.runInContext('function submitPattern(form,event){'+between('if (form.dataset.extraPatternDayForm)', 'if (form.dataset.rotationCellForm)')+'}',ctx);
+ vm.runInContext('function submitPattern(form,event){'+between('if (form.dataset.extraPatternDayForm)', 'if (form.dataset.extraDateForm)')+'}',ctx);
  const click=(action,rotation='a',data={})=>ctx.clickAction({dataset:{action,rotation,...data}});
  const change=(field,value,id='a')=>ctx.rotationEditor.change(ctx.rotationEditor.draftState(state,ctx.extraRotationDrafts,id),{rotation:id,extraChange:field},value,ctx.extraRotationUnits);
  const submit=(fields,id='a',child='elna',index=0)=>ctx.submitPattern({dataset:{extraPatternDayForm:'true',rotation:id,child,index},fields},{preventDefault(){}});
  return {ctx,state,click,change,submit,messages,get saves(){return saves;},get renders(){return renders;}};
 }
+
+test('els botons comuns creen, pleguen i desen diverses pernoctes, amb error visible si se solapen',()=>{
+ const s=setup();s.click('extra-add','',{kind:'night'});
+ assert.equal(s.ctx.extraRotationDrafts['new-1'].kind,'night');assert.equal(s.state.extraRotations.length,2);
+ s.change('endDate','2026-11-30','new-1');s.click('extra-save','new-1');
+ assert.equal(s.state.extraRotations.length,3);assert.equal(s.saves,1);
+ s.click('extra-toggle','new-1');assert.equal(s.ctx.extraRotationOpen,null);
+ s.click('extra-add','',{kind:'night'});s.click('extra-save','new-2');
+ assert.equal(s.state.extraRotations.length,3);assert.equal(s.saves,1);
+ assert.match(s.messages.at(-1),/se solapen/);assert.ok(s.ctx.extraRotationDrafts['new-2']);
+ s.change('startDate','2026-12-01','new-2');s.click('extra-save','new-2');
+ assert.equal(s.state.extraRotations.length,4);assert.equal(s.saves,2);
+});
 test('editar camps, dies, participants i còpies no modifica dades confirmades ni desa automàticament',()=>{
  const s=setup(),before=JSON.stringify(s.state);
  s.click('extra-toggle');s.change('name','Recollida');s.change('startTime','15:30');s.change('startDate','2026-11-02');

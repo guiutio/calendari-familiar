@@ -19,11 +19,11 @@ function setup(){
   $app:{querySelector:()=>null,set innerHTML(_html){paints++;}},
   monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},tab:'people',calendarView:'day',selectedDate:'2026-10-31',
   schoolNav:{},sheet:null,weekStart:d=>d,layout:()=>'',peoplePage:()=>'',calendarPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',rotationPage:()=>'',
-  state:{children:[child],nightDateTimes:{},preferences:{}},childById:id=>id==='c'?child:null,
+  state:{children:[child],nightDateTimes:{},preferences:{},extraRotations:[{id:'r',kind:'night',startDate:'2026-10-01',startTime:'19:00'}]},childById:id=>id==='c'?child:null,
   isValidDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),validChangeTime:value=>value,
   notify:()=>{},saveState:()=>saves++,update:()=>{saves++;ctx.render();},
   rotationDraft:{startDate:'2026-10-01',changeTime:'19:00'},extraRotationDrafts:{},extraRotationUnits:{},
-  rotationEditor:{draftState:state=>state,change:()=>({save:true})}});
+  rotationEditor:{draftState:state=>state,change:(state,data,value)=>{state.extraRotations[0][data.extraChange]=value;return {save:true};}}});
  vm.runInContext(between('let nativePickerRenderPending', 'function notify('),ctx);
  vm.runInContext(between("document.addEventListener('change'", "document.addEventListener('keydown'"),ctx);
  vm.runInContext(between("document.addEventListener('pointerdown'", 'async function init()'),ctx);
@@ -39,20 +39,20 @@ test('el selector de naixement conserva el mateix camp mentre es canvien any, me
  input.blur();s.tick();assert.equal(s.paints,1);
 });
 test('les hores de pernocta no tanquen el selector ni el panell durant la selecció',()=>{
- const s=setup(),input=new s.Input('time','night-date-time');input.dataset.date='2026-10-31';s.doc.activeElement=input;
+ const s=setup(),input=new s.Input('time','night-date-time');input.dataset.date='2026-10-31';input.dataset.child='c';s.doc.activeElement=input;
  s.ctx.sheet={type:'bandEdit',date:'2026-10-31',band:'nit',childId:'c'};
  for(const value of ['18:00','18:30','18:45']){input.value=value;s.change(input);assert.equal(s.paints,0);assert.equal(s.ctx.sheet.type,'bandEdit');}
- assert.equal(s.ctx.state.nightDateTimes['2026-10-31'],'18:45');input.blur();s.tick();assert.equal(s.paints,1);
+ assert.equal(s.ctx.state.nightDateTimes['2026-10-31|c'],'18:45');input.blur();s.tick();assert.equal(s.paints,1);
 });
 test('les dates i hores dels patrons també mantenen viu el control nadiu',()=>{
  const s=setup();
- for(const [type,action,values,key] of [['date','rotation-start',['2026-11-01','2026-11-12'],'startDate'],['time','rotation-change-time',['18:00','18:45'],'changeTime']]){
-  const input=new s.Input(type,action);s.doc.activeElement=input;
-  const before=s.paints;for(const value of values){input.value=value;s.change(input);assert.equal(s.paints,before);}
-  assert.equal(s.ctx.rotationDraft[key],values.at(-1));input.blur();s.tick();
+ for(const [type,action,values,key] of [['date','',['2026-11-01','2026-11-12'],'startDate'],['time','',['18:00','18:45'],'startTime']]){
+  const input=new s.Input(type,action);input.dataset.extraChange=key;input.dataset.rotation='r';s.doc.activeElement=input;
+  const before=s.paints;for(const value of values){input.value=value;s.change(input);s.ctx.render();assert.equal(s.paints,before);}
+  assert.equal(s.ctx.state.extraRotations[0][key],values.at(-1));input.blur();s.tick();
  }
  const extra=new s.Input('date','');extra.dataset.extraChange='startDate';extra.dataset.rotation='r';s.doc.activeElement=extra;
- s.change(extra);assert.equal(s.paints,2);extra.blur();s.tick();assert.equal(s.paints,3);
+ s.change(extra);s.ctx.render();assert.equal(s.paints,2);extra.blur();s.tick();assert.equal(s.paints,3);
 });
 test('tots els tipus de selector nadiu ajornen redibuixos fins que s’acaba la interacció',()=>{
  for(const type of ['date','time','datetime-local','month','week','color']){

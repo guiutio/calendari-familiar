@@ -10,26 +10,27 @@
    .filter(i=>(week===undefined||Math.floor(i/7)===week)&&activeFor(r,childId,i));
  const root=id=>document.querySelector('[data-extra-rotation="'+CSS.escape(id)+'"]');
  function render(state,expanded,units={}){
-   const kids=state.children,guardians=state.guardians,rotations=state.extraRotations??[];
+   const kids=state.children,guardians=state.guardians,rotations=[...(state.extraRotations??[])].sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
    const cards=rotations.map(r=>{
-     const open=expanded===r.id,unit=units[r.id]??safeLength(r),scale=unit==='weeks'?7:1;
+     const night=r.kind==='night',open=expanded===r.id,unit=units[r.id]??safeLength(r),scale=unit==='weeks'?7:1;
      const first=r.childIds[0];
      const weeks=Array.from({length:Math.ceil(r.length/7)},(_,week)=>week);
      const allSame=r.childIds.length>1&&r.childIds.every(id=>Array.from({length:r.length},(_,i)=>i)
        .every(i=>activeFor(r,id,i)===activeFor(r,first,i)&&
          (!activeFor(r,id,i)||(r.assignments[id]?.[i]??'')===(r.assignments[first]?.[i]??''))));
      return `<section class="card extra-rotation-card" data-extra-rotation="${escape(r.id)}">
-       <div class="panel-header"><div><h2 class="section-title">${title(r)}</h2><p class="settings-note">${r.length} dies · ${escape(r.startTime)}–${escape(r.endTime)} · ${r.childIds.length} fills${r.schoolDaysOnly?' · Només dies d’escola':''}</p></div>
+       <div class="panel-header"><div><h2 class="section-title">${title(r)}</h2><p class="settings-note">${night?'Pernocta':'Franja'} · ${escape(r.startDate)}${r.endDate?' – '+escape(r.endDate):' · sense data final'} · ${r.length} dies · ${night?'Canvi a les '+escape(r.startTime):escape(r.startTime)+'–'+escape(r.endTime)} · ${r.childIds.length} fills${r.schoolDaysOnly?' · Només dies d’escola':''}</p></div>
        <div class="action-row"><button class="secondary-btn" data-action="extra-toggle" data-rotation="${escape(r.id)}">${open?'Tanca':'Edita'}</button><button class="delete-icon" data-action="extra-delete" data-rotation="${escape(r.id)}" aria-label="Suprimeix ${title(r)}">×</button></div></div>
        ${open?`<div class="extra-editor">
          <div class="field"><label>Nom de la rotació<input data-extra-change="name" data-rotation="${escape(r.id)}" maxlength="80" value="${title(r)}"></label></div>
          <div class="form-row"><div class="field"><label>Comença<input type="date" data-extra-change="startDate" data-rotation="${escape(r.id)}" value="${escape(r.startDate)}"></label></div>
-         <div class="field"><label>Durada<input type="number" min="1" max="${Math.floor(3640/scale)}" data-extra-change="length" data-rotation="${escape(r.id)}" value="${r.length/scale}" step="1"></label>
+         <div class="field"><label>Finalitza (opcional)<input type="date" data-extra-change="endDate" data-rotation="${escape(r.id)}" min="${escape(r.startDate)}" value="${escape(r.endDate??'')}"></label></div></div>
+         <div class="form-row"><div class="field"><label>Durada del patró<input type="number" min="1" max="${Math.floor(3640/scale)}" data-extra-change="length" data-rotation="${escape(r.id)}" value="${r.length/scale}" step="1"></label>
            <select data-extra-change="unit" data-rotation="${escape(r.id)}" aria-label="Unitat de la rotació"><option value="days" ${unit==='days'?'selected':''}>dies</option><option value="weeks" ${unit==='weeks'?'selected':''}>setmanes</option></select></div></div>
-         <div class="form-row"><div class="field"><label>Inici de la franja<input type="time" data-extra-change="startTime" data-rotation="${escape(r.id)}" value="${escape(r.startTime)}"></label></div>
+         ${night?`<div class="field"><label>Hora de canvi de pernocta<input type="time" data-extra-change="startTime" data-rotation="${escape(r.id)}" value="${escape(r.startTime)}"></label></div>`:`<div class="form-row"><div class="field"><label>Inici de la franja<input type="time" data-extra-change="startTime" data-rotation="${escape(r.id)}" value="${escape(r.startTime)}"></label></div>
          <div class="field"><label>Final de la franja<input type="time" data-extra-change="endTime" data-rotation="${escape(r.id)}" value="${escape(r.endTime)}"></label></div></div>
          <label class="extra-school-only"><input type="checkbox" data-extra-change="schoolDaysOnly" data-rotation="${escape(r.id)}" ${r.schoolDaysOnly?'checked':''}><span>Només si el fill té escola</span></label>
-         <p class="settings-note">Es comprova el calendari escolar de cada fill, inclosos els festius, les vacances i la jornada reduïda. La franja manté les hores indicades.</p>
+         <p class="settings-note">Es comprova el calendari escolar de cada fill, inclosos els festius, les vacances i la jornada reduïda. La franja manté les hores indicades.</p>`}
          <p class="settings-note">Selecciona els fills participants. Toca cada dia de les setmanes per indicar si la franja s’aplica i, si és així, quin tutor té (o deixa-la sense tutor).</p>
          <div class="extra-kids">${kids.map(c=>`<button class="option ${r.childIds.includes(c.id)?'selected':''}" aria-pressed="${r.childIds.includes(c.id)}" data-action="extra-child" data-rotation="${escape(r.id)}" data-child="${escape(c.id)}">${escape(c.name)} ${r.childIds.includes(c.id)?'✓':''}</button>`).join('')}</div>
          ${r.childIds.length>1?`<div class="action-row"><button class="secondary-btn" data-action="extra-all" data-rotation="${escape(r.id)}">Tots igual</button>
@@ -44,7 +45,7 @@
                <div class="rotation-days">${Array.from({length:Math.min(7,r.length-week*7)},(_,day)=>{
                  const i=week*7+day,applies=activeFor(r,id,i),g=guardians.find(x=>x.id===arr[i]);
                  const who=g?.name??'Sense tutor';
-                 return `<button type="button" class="rotation-cell extra-pattern-cell ${applies?'extra-applies':'extra-inactive'}" data-action="extra-cell" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-index="${i}" aria-label="${escape(c?.name??id)}, dia ${i+1}, ${applies?escape(who):'No s’aplica'}; toca per editar" title="${applies?escape(who):'No s’aplica'} · toca per configurar"><span class="small-day">${miniDate(addDays(r.startDate,i))}</span><span class="guardian-initial" ${applies?`style="background:${escape(g?.color??'#dbe8f5')}"`:'aria-hidden="true"'}>${applies?escape((g?.name??'∅').slice(0,1)):'×'}</span></button>`;
+                 return `<button type="button" class="rotation-cell extra-pattern-cell ${applies?'extra-applies':'extra-inactive'}" data-action="extra-cell" data-rotation="${escape(r.id)}" data-child="${escape(id)}" data-index="${i}" aria-label="${escape(c?.name??id)}, dia ${i+1}, ${applies?escape(who):'No s’aplica'}; toca per editar" title="${applies?escape(who):'No s’aplica'} · toca per configurar"><span class="small-day">${miniDate(addDays(r.startDate,i))}</span><span class="guardian-initial" ${applies?`style="background:${escape(g?.color??'#dbe8f5')}"`:'aria-hidden="true"'}>${applies?escape((g?.name??'∅').slice(0,1)):'×'}</span>${night&&r.nightTimes?.[i]?`<span class="rotation-cell-time">${escape(r.nightTimes[i])}</span>`:''}</button>`;
                }).join('')}</div></div>`;
              }).join('')}</div>`;
          }).join('')}
@@ -53,9 +54,9 @@
        </div>`:''}
      </section>`;
    });
-   return `<div class="extra-rotation-section"><div class="panel-header"><h2 class="section-title">Altres rotacions</h2><button class="secondary-btn" data-action="extra-add">+ Nova rotació</button></div>
-     <p class="section-description">Recollida d'escola, trajectes, activitats o qualsevol altre motiu. Cada rotació té dates, durada i horari independents de la pernocta; pots assignar un responsable per fill i fer excepcions al calendari.</p>
-     ${cards.join('')||'<p class="settings-note">Encara no has creat cap rotació addicional.</p>'}</div>`;
+   return `<div class="extra-rotation-section"><div class="panel-header"><h2 class="section-title">Les teves rotacions</h2><button class="secondary-btn" data-action="extra-add">+ Altra rotació</button><button class="secondary-btn" data-action="extra-add" data-kind="night">+ Pernocta</button></div>
+     <p class="section-description">Afegeix les pernoctes i les altres franges que necessitis. Cada rotació té dates i fills propis. La data final és inclusiva; deixa-la buida si no té final. Les pernoctes no es poden solapar per a un mateix fill.</p>
+     ${cards.join('')||'<p class="settings-note">Encara no has creat cap rotació. Les pernoctes també són opcionals.</p>'}</div>`;
  }
  // L’editor treballa amb còpies; el calendari i les exportacions només veuen les dades confirmades.
  function draftState(state,drafts,rotationId){
@@ -72,11 +73,11 @@
  function saveDraft(state,drafts,rotationId){
    const draft=drafts[rotationId];if(!draft)return '';
    let saved;
-   try{saved=window.rotationPatterns.cleanExtras([draft],state.children,state.guardians)[0];}
+   try{const all=window.rotationPatterns.cleanExtras([...state.extraRotations.filter(r=>r.id!==rotationId),draft],state.children,state.guardians);saved=all.find(r=>r.id===rotationId);}
    catch(error){return error instanceof Error?error.message:'No s’ha pogut validar el patró';}
    const index=state.extraRotations.findIndex(r=>r.id===rotationId);
    if(index<0){
-     if(state.extraRotations.length>=100)return 'No es poden afegir més de 100 rotacions';
+     if(state.extraRotations.length>=200)return 'No es poden afegir més de 200 rotacions';
      state.extraRotations.push(saved);
    }else state.extraRotations[index]=saved;
    for(const key of Object.keys(state.extraExceptions)){
@@ -87,14 +88,15 @@
  }
  function addDays(date,n){const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
  function nextGuardian(current,guardians){const choices=['',...guardians.map(g=>g.id)];return choices[(choices.indexOf(current)+1)%choices.length]??'';}
- function create(state,id,today){
+ function create(state,id,today,kind='activity'){
    const first=state.children[0]?.id;
-   const item={id,name:'Nova rotació',schoolDaysOnly:false,startDate:today,length:7,startTime:'16:30',endTime:'17:30',childIds:first?[first]:[],assignments:first?{[first]:Array(7).fill('')}:{},activeDays:Array(7).fill(true),childActiveDays:first?{[first]:Array(7).fill(true)}:{}};
+   const night=kind==='night';
+   const item={id,kind:night?'night':'activity',name:night?'Pernocta':'Nova rotació',schoolDaysOnly:false,startDate:today,length:7,startTime:night?'19:00':'16:30',endTime:night?'00:00':'17:30',childIds:first?[first]:[],assignments:first?{[first]:Array(7).fill('')}:{},activeDays:Array(7).fill(true),childActiveDays:first?{[first]:Array(7).fill(true)}:{}};
    state.extraRotations.push(item);return item;
  }
  function click(state,action,data,newId,today,confirmFn){
    const r=state.extraRotations.find(x=>x.id===data.rotation);
-   if(action==='extra-add')return {open:create(state,newId(),today).id,save:true};
+   if(action==='extra-add')return {open:create(state,newId(),today,data.kind).id,save:true};
    if(!r)return null;
    if(action==='extra-toggle')return {open:data.rotation,save:false,toggle:true};
    if(action==='extra-delete'){if(!confirmFn('Vols eliminar «'+r.name+'» i totes les seves excepcions?'))return null;
@@ -147,16 +149,18 @@
    }
    if(field==='name'){if(!value.trim())return {error:'El nom no pot ser buit'};r.name=value.trim().slice(0,80);}
    else if(field==='schoolDaysOnly'){if(!['true','false'].includes(value))return {error:'Condició de dies escolars incorrecta'};r.schoolDaysOnly=value==='true';}
-   else if(field==='startDate'){if(!window.rotationPatterns.validDate(value))return {error:'Data incorrecta'};r.startDate=value;}
+   else if(field==='endDate'){if(value&&(!window.rotationPatterns.validDate(value)||value<r.startDate))return {error:'La data final ha de ser igual o posterior a la inicial'};if(value)r.endDate=value;else delete r.endDate;}
+   else if(field==='startDate'){if(!window.rotationPatterns.validDate(value))return {error:'Data incorrecta'};if(r.endDate&&value>r.endDate)return {error:'La data inicial no pot ser posterior a la final'};r.startDate=value;}
    else if(field==='length'){
      const scale=(units[r.id]??safeLength(r))==='weeks'?7:1,n=Number(value)*scale;
      if(!Number.isInteger(n)||n<1||n>3640)return {error:'Durada incorrecta'};
      const next=window.rotationPatterns.resized(r,n,state.children);
      r.length=next.length;r.assignments=next.assignments;r.activeDays=next.activeDays;r.childActiveDays=next.childActiveDays;
+     if(r.nightTimes)r.nightTimes=Object.fromEntries(Object.entries(r.nightTimes).filter(([i])=>Number(i)<n));
    }else if(field==='startTime'||field==='endTime'){
      if(!window.rotationPatterns.validClock(value))return {error:'Hora incorrecta'};
      const from=field==='startTime'?value:r.startTime,to=field==='endTime'?value:r.endTime;
-     if(window.rotationPatterns.minutes(from)>=window.rotationPatterns.minutes(to))return {error:'L’hora final ha de ser posterior a la inicial'};
+     if(r.kind!=='night'&&window.rotationPatterns.minutes(from)>=window.rotationPatterns.minutes(to))return {error:'L’hora final ha de ser posterior a la inicial'};
      r[field]=value;
    }else return null;
    return {save:true};
@@ -166,7 +170,7 @@
    const child=state.children.find(c=>c.id===childId),i=Number(index);
    if(!r||!child||!r.childIds.includes(childId)||!Number.isInteger(i)||i<0||i>=r.length)return '<p class="settings-note">Dia de rotació no disponible.</p>';
    const applies=activeFor(r,childId,i),current=r.assignments[childId]?.[i]??'';
-   return `<div class="sheet-heading"><div><h2 class="sheet-title">Dia ${i+1} · ${title(r)}</h2><p class="sheet-subtitle">${escape(child.name)} · ${escape(miniDate(addDays(r.startDate,i)))}, ${escape(addDays(r.startDate,i))}</p></div>
+   return `<div class="sheet-heading"><div><h2 class="sheet-title">${r.kind==='night'?'Tutor i hora de canvi · ':''}Dia ${i+1} · ${title(r)}</h2><p class="sheet-subtitle">${escape(child.name)} · ${escape(miniDate(addDays(r.startDate,i)))}, ${escape(addDays(r.startDate,i))}</p></div>
        <button class="sheet-close" data-action="close-sheet" aria-label="Tanca">×</button></div>
      <form data-extra-pattern-day-form="true" data-rotation="${escape(r.id)}" data-child="${escape(childId)}" data-index="${i}" class="extra-pattern-day-form">
        <div class="sheet-section-label">Aquesta franja s’aplica?</div>
@@ -179,6 +183,7 @@
          ${state.guardians.map(g=>`<label class="option rotation-tutor-choice"><input class="rotation-guardian-radio" type="radio" name="guardianId" value="${escape(g.id)}" ${current===g.id?'checked':''}><span class="option-left"><span class="color-dot" style="background:${escape(g.color)}"></span>${escape(g.name)}</span><span class="rotation-choice-check">✓</span></label>`).join('')}
          <label class="option rotation-tutor-choice"><input class="rotation-guardian-radio" type="radio" name="guardianId" value="" ${!current?'checked':''}><span class="option-left">Sense tutor assignat</span><span class="rotation-choice-check">✓</span></label>
        </div>
+       ${r.kind==='night'?`<div class="field rotation-day-time"><label>Hora de canvi de responsabilitat<input name="changeTime" type="time" value="${escape(r.nightTimes?.[i]??r.startTime)}" required></label><p class="settings-note">Hora general: ${escape(r.startTime)}</p></div>`:''}
        <div class="action-row"><button type="submit" class="primary-btn">Aplica al patró</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div>
        <p class="settings-note">La selecció queda a l’esborrany d’aquest fill i dia. Per confirmar-la, prem «Desa els canvis» a la rotació.</p>
      </form>`;
@@ -190,16 +195,19 @@
    if(applies!=='yes'&&applies!=='no')return 'Indica si la franja s’aplica';
    if(guardianId&&!state.guardians.some(g=>g.id===guardianId))return 'Tutor no vàlid';
    // Desactivar una franja no esborra el tutor anterior: es recuperarà en reactivar-la.
+   const changeTime=String(params.get('changeTime')??'');
+   if(r.kind==='night'&&!window.rotationPatterns.validClock(changeTime))return 'Hora incorrecta';
    const days=window.rotationPatterns.ensureChildDays(r,childId);
    days[i]=applies==='yes';
    if(applies==='yes')r.assignments[childId][i]=guardianId;
+   if(r.kind==='night'){r.nightTimes??={};if(changeTime===r.startTime)delete r.nightTimes[i];else r.nightTimes[i]=changeTime;}
    return '';
  }
  function dateForm(state,date,rotationId,childId){
    const r=state.extraRotations.find(x=>x.id===rotationId),child=state.children.find(c=>c.id===childId);
    if(!r||!child)return '<p class="settings-note">Rotació no disponible.</p>';
    const slot=window.rotationPatterns.slotFor(state,r,date,childId);
-   if(!slot)return '<p class="settings-note">Aquest fill no participa en aquesta rotació.</p>';
+   if(!slot)return '<p class="settings-note">La franja no s’aplica a aquest fill en aquesta data.</p>';
    return `<div class="sheet-heading"><div><h2 class="sheet-title">${title(r)}</h2><p class="sheet-subtitle">${escape(child.name)} · ${escape(date)}</p></div>
      <button class="sheet-close" data-action="close-sheet" aria-label="Tanca">×</button></div>
      <p class="settings-note">Canvi només per aquesta data. El patró de rotació no es modificarà.</p>
@@ -215,7 +223,7 @@
  function datePicker(state,date){
    return `<div class="sheet-heading"><div><h2 class="sheet-title">Rotacions d'aquest dia</h2><p class="sheet-subtitle">${escape(date)}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">×</button></div>
    <p class="settings-note">Tria una franja i un fill per modificar-la només en aquesta data.</p>
-   ${(state.extraRotations??[]).map(r=>`<div class="sheet-section-label">${title(r)} · ${escape(r.startTime)}–${escape(r.endTime)}</div>
+   ${(state.extraRotations??[]).filter(r=>r.kind!=='night'&&window.rotationPatterns.inRange(r,date)).map(r=>`<div class="sheet-section-label">${title(r)} · ${escape(r.startTime)}–${escape(r.endTime)}</div>
      ${r.childIds.map(id=>`<button class="option" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(r.id)}" data-child="${escape(id)}">${escape(state.children.find(c=>c.id===id)?.name??id)}</button>`).join('')}`).join('')||'<p>Encara no hi ha rotacions addicionals.</p>'}`;
  }
  function saveDate(state,date,rotationId,childId,params){
@@ -225,6 +233,7 @@
    if(!p.validClock(startTime)||!p.validClock(endTime)||p.minutes(startTime)>=p.minutes(endTime))return 'L’hora final ha de ser posterior a la inicial';
    if(guardianId&&!state.guardians.some(g=>g.id===guardianId))return 'Responsable invàlid';
    const original=p.slotFor({...state,extraExceptions:{}},r,date,childId);
+   if(!original||r.kind==='night')return 'La franja no s’aplica a aquest fill en aquesta data';
    const key=rotationId+'|'+date+'|'+childId;
    if(disabled===original.disabled&&startTime===original.startTime&&endTime===original.endTime&&guardianId===original.guardianId)delete state.extraExceptions[key];
    else state.extraExceptions[key]={startTime,endTime,guardianId,disabled};

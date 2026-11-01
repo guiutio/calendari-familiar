@@ -382,3 +382,12 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Cada rotació addicional incorpora la casella «Només si el fill té escola», desactivada per defecte. Es confirma amb «Desa els canvis» i es conserva en les còpies JSON.
 - Es comprova la presència escolar per fill i data independentment dels filtres de visualització: matrícula, curs, festius, vacances i horari propi. La jornada reduïda continua sent lectiva, també si encara no s’han configurat les hores; sense horaris detallats es consideren lectius els dies de dilluns a divendres de la matrícula.
 - La condició no retalla ni mou les hores de la rotació. Es manté en les excepcions puntuals i es comparteix entre Mes, Setmana i Dia. Les rotacions i còpies anteriors conserven el comportament habitual.
+
+
+## v0.12.0: pernoctes opcionals i múltiples, amb intervals propis
+
+- La pernocta és un tipus de rotació dins del mateix editor que les altres franges. Es poden afegir zero, una o diverses pernoctes; cada una té nom, inici, final opcional, fills participants, patró i hores de canvi propis. Totes les targetes es poden plegar i s’ordenen per data d’inici.
+- La data final és inclusiva. La validació de desament i importació impedeix dues pernoctes amb dates compartides per a un mateix fill, encara que algun dia del patró no tingui tutor. Es permeten períodes consecutius sense dia compartit i intervals simultanis per a fills diferents. Les altres franges poden continuar solapant-se.
+- Les altres rotacions també incorporen final opcional i només s’apliquen entre l’inici i el final indicats. La durada del patró determina el cicle, independentment del període d’aplicació.
+- El tutor i l’hora de canvi de cada dia es continuen editant conjuntament. Els calendaris resolen la pernocta aplicable a cada fill, amb la seva hora de canvi; l’última nit d’un període es conserva fins al canvi de l’endemà.
+- Les dades passen al format 2: la pernocta única de les còpies anteriors es converteix automàticament en una rotació, conservant assignacions, hores del patró i excepcions. Les hores puntuals passen a ser per fill. Les còpies noves permeten no tenir cap pernocta i no en recreen una després d’eliminar-la.
