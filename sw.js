@@ -1,5 +1,5 @@
-const CACHE = 'calendari-familiar-v0.10.2';
-const ASSETS = ['./','./index.html','./actualitza.html','./scroll-guard.js?v=0.10.2','./school-schedule-core.js?v=0.10.2','./school-timeline.js?v=0.10.2','./day-timeline.js?v=0.10.2','./month-day-ui.js?v=0.10.2','./rotation-patterns.js?v=0.10.2','./rotation-editor.js?v=0.10.2','./app.js?v=0.10.2','./styles.css?v=0.10.2','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
+const CACHE = 'calendari-familiar-v0.11.0';
+const ASSETS = ['./','./index.html','./actualitza.html','./scroll-guard.js?v=0.11.0','./school-schedule-core.js?v=0.11.0','./school-timeline.js?v=0.11.0','./day-timeline.js?v=0.11.0','./month-day-ui.js?v=0.11.0','./rotation-patterns.js?v=0.11.0','./rotation-editor.js?v=0.11.0','./app.js?v=0.11.0','./styles.css?v=0.11.0','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

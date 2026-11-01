@@ -84,7 +84,7 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
 
 type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
-type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>};
+type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>;schoolDaysOnly?:boolean};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; children: Child[]; guardians: Guardian[]; rotation: Rotation; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightPatternTimes:Record<string,string>;nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
@@ -92,7 +92,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | { type:'rotationCell'; childId:string; index:number } | { type:'rotationWeek'; childId:string; week:number } | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.10.2';
+const APP_VERSION = '0.11.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -478,8 +478,28 @@ const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimel
 const monthDayUI=(window as Window & {monthDayUI?:any}).monthDayUI;
 const rotationPatterns=(window as Window & {rotationPatterns?:any}).rotationPatterns;
 const rotationEditor=(window as Window & {rotationEditor?:any}).rotationEditor;
+/** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
+function childHasSchool(date:string,childId:string):boolean {
+ const weekday=(parseDate(date).getDay()+6)%7;
+ return state.schools.some(school=>{
+  const years=school.years.filter(year=>date>=year.startDate&&date<=year.endDate);
+  if(school.years.length&&!years.length)return false;
+  return (years.length?years:[undefined]).some(year=>{
+   if(year&&(year.holidays.includes(date)||year.vacations?.some(p=>date>=p.startDate&&date<=p.endDate)))return false;
+   const group=year?.groups.find(g=>g.childIds.includes(childId));
+   if(!school.childIds.includes(childId)&&!group)return false;
+   if(schoolScheduleForCalendarDay(school,year,group,childId,date).some(s=>s.startTime<s.endTime))return true;
+   // Una jornada reduïda continua sent lectiva encara que encara no tingui hores configurades.
+   if(year?.reducedDays.includes(date))return weekday<5;
+   // Sense horaris detallats, la matrícula indica presència de dilluns a divendres.
+   // Un horari individual buit explícit sí que indica absència.
+   const individual=group?.childSchedules&&Object.hasOwn(group.childSchedules,childId);
+   return !year?.ordinaryWindow&&!school.weeklySchedule.length&&!group?.weeklySchedule.length&&!individual&&weekday<5;
+  });
+ });
+}
 function extraSlots(date:string,children:Child[]):ExtraSlot[] {
-  return rotationPatterns.slots(state,date,children,state.guardians,state.preferences.visibleGuardians) as ExtraSlot[];
+  return rotationPatterns.slots(state,date,children,state.guardians,state.preferences.visibleGuardians,childHasSchool) as ExtraSlot[];
 }
 function monthData(date:string,children:Child[]){
   const nights:Record<string,any[]>={};
@@ -1613,7 +1633,7 @@ document.addEventListener('change',event=>{
   else if(action==='night-date-time'&&isValidDate(target.dataset.date??'')){state.nightDateTimes[target.dataset.date!]=validChangeTime(target.value);update();}
   else if(target.dataset.extraChange){
     const work=rotationEditor.draftState(state,extraRotationDrafts,target.dataset.rotation);
-    const result=rotationEditor.change(work,target.dataset,target.value,extraRotationUnits);
+    const result=rotationEditor.change(work,target.dataset,target instanceof HTMLInputElement&&target.type==='checkbox'?String(target.checked):target.value,extraRotationUnits);
     if(result?.error){notify(result.error);render();}
     else if(['unit','length','startDate'].includes(target.dataset.extraChange))render();
   }

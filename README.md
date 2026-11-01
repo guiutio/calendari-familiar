@@ -375,3 +375,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Els mesos carregats es conserven durant el desplaçament. No es retiren panells anteriors ni es reajusta scrollTop per navegar pels mesos ja visitats o afegir-ne al final. Una navegació explícita amb fletxes, Avui o canvi de vista recupera un interval inicial petit.
 - Es prioritza l’esdeveniment nadiu scrollend per esperar el final de la inèrcia. En navegadors anteriors s’espera una pausa de 400 ms; en tots dos casos es comproven dues pintades estables i es cancel·la la càrrega si comença un altre gest.
 - Afegir mesos anteriors conserva el mateix mes i posició visible. Sortir de la vista cancel·la temporitzadors i pintades pendents.
+
+
+## v0.11.0: rotacions condicionades als dies d’escola
+
+- Cada rotació addicional incorpora la casella «Només si el fill té escola», desactivada per defecte. Es confirma amb «Desa els canvis» i es conserva en les còpies JSON.
+- Es comprova la presència escolar per fill i data independentment dels filtres de visualització: matrícula, curs, festius, vacances i horari propi. La jornada reduïda continua sent lectiva, també si encara no s’han configurat les hores; sense horaris detallats es consideren lectius els dies de dilluns a divendres de la matrícula.
+- La condició no retalla ni mou les hores de la rotació. Es manté en les excepcions puntuals i es comparteix entre Mes, Setmana i Dia. Les rotacions i còpies anteriors conserven el comportament habitual.

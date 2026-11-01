@@ -25,6 +25,7 @@
          !validDate(item.startDate)||!Number.isInteger(item.length)||item.length<1||item.length>maxDays||
          !validClock(item.startTime)||!validClock(item.endTime)||minutes(item.startTime)>=minutes(item.endTime)||
          !Array.isArray(item.childIds)||(item.activeDays!==undefined&&(!Array.isArray(item.activeDays)||item.activeDays.length!==item.length||item.activeDays.some(a=>typeof a!=='boolean'))))throw Error('Hi ha una rotació addicional incorrecta');
+      if(item.schoolDaysOnly!==undefined&&typeof item.schoolDaysOnly!=='boolean')throw Error('Condició de dies escolars incorrecta');
       if(item.childActiveDays!==undefined&&(!item.childActiveDays||typeof item.childActiveDays!=='object'||Array.isArray(item.childActiveDays)))throw Error('Dies actius per fill incorrectes');
       ids.add(item.id);
       const selected=[...new Set(item.childIds.filter(id=>childIds.has(id)))];
@@ -46,6 +47,7 @@
       }
       const result={id:item.id,name:item.name.trim(),startDate:item.startDate,length:item.length,startTime:item.startTime,endTime:item.endTime,childIds:selected,assignments,activeDays:[...(item.activeDays??Array(item.length).fill(true))]};
       if(item.childActiveDays!==undefined)result.childActiveDays=childActiveDays;
+      if(item.schoolDaysOnly!==undefined)result.schoolDaysOnly=item.schoolDaysOnly;
       return result;
     });
   }
@@ -94,11 +96,11 @@
     const fallback={startTime:rotation.startTime,endTime:rotation.endTime,guardianId:rotation.assignments[childId]?.[i]??'',disabled:!activeFor(rotation,childId,i)};
     return {...fallback,...override,rotationId:rotation.id,rotationName:rotation.name,childId,date,key,overridden:Boolean(override)};
   }
-  function slots(state,date,children,guardians,visibleGuardianIds){
+  function slots(state,date,children,guardians,visibleGuardianIds,hasSchool=()=>false){
     const out=[],lookup=new Map(guardians.map(g=>[g.id,g])),visible=new Set(visibleGuardianIds);
     for(const rotation of state.extraRotations??[])for(const child of children){
       const item=slotFor(state,rotation,date,child.id);
-      if(!item||item.disabled)continue;
+      if(!item||item.disabled||(rotation.schoolDaysOnly&&!hasSchool(date,child.id)))continue;
       const guardian=lookup.get(item.guardianId);
       out.push({...item,id:rotation.id+'|'+child.id,from:minutes(item.startTime),to:minutes(item.endTime),
         name:rotation.name,color:guardian?.color??'#98a9b8',guardianName:guardian?.name??'Sense assignar',

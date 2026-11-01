@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.10.2';
+const APP_VERSION = '0.11.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -533,8 +533,33 @@ const dayTimelineUI = window.dayTimelineUI;
 const monthDayUI = window.monthDayUI;
 const rotationPatterns = window.rotationPatterns;
 const rotationEditor = window.rotationEditor;
+/** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
+function childHasSchool(date, childId) {
+    const weekday = (parseDate(date).getDay() + 6) % 7;
+    return state.schools.some(school => {
+        const years = school.years.filter(year => date >= year.startDate && date <= year.endDate);
+        if (school.years.length && !years.length)
+            return false;
+        return (years.length ? years : [undefined]).some(year => {
+            if (year && (year.holidays.includes(date) || year.vacations?.some(p => date >= p.startDate && date <= p.endDate)))
+                return false;
+            const group = year?.groups.find(g => g.childIds.includes(childId));
+            if (!school.childIds.includes(childId) && !group)
+                return false;
+            if (schoolScheduleForCalendarDay(school, year, group, childId, date).some(s => s.startTime < s.endTime))
+                return true;
+            // Una jornada reduïda continua sent lectiva encara que encara no tingui hores configurades.
+            if (year?.reducedDays.includes(date))
+                return weekday < 5;
+            // Sense horaris detallats, la matrícula indica presència de dilluns a divendres.
+            // Un horari individual buit explícit sí que indica absència.
+            const individual = group?.childSchedules && Object.hasOwn(group.childSchedules, childId);
+            return !year?.ordinaryWindow && !school.weeklySchedule.length && !group?.weeklySchedule.length && !individual && weekday < 5;
+        });
+    });
+}
 function extraSlots(date, children) {
-    return rotationPatterns.slots(state, date, children, state.guardians, state.preferences.visibleGuardians);
+    return rotationPatterns.slots(state, date, children, state.guardians, state.preferences.visibleGuardians, childHasSchool);
 }
 function monthData(date, children) {
     const nights = {};
@@ -2433,7 +2458,7 @@ document.addEventListener('change', event => {
     }
     else if (target.dataset.extraChange) {
         const work = rotationEditor.draftState(state, extraRotationDrafts, target.dataset.rotation);
-        const result = rotationEditor.change(work, target.dataset, target.value, extraRotationUnits);
+        const result = rotationEditor.change(work, target.dataset, target instanceof HTMLInputElement && target.type === 'checkbox' ? String(target.checked) : target.value, extraRotationUnits);
         if (result?.error) {
             notify(result.error);
             render();
