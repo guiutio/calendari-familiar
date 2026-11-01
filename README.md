@@ -349,3 +349,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Tots els dies de l’interval, inclosos els extrems, tenen el mateix efecte que un festiu escolar: no generen jornada ni activitats escolars a Mes, Setmana o Dia. La informació diària mostra el nom del període.
 - Els períodes es desen amb el curs i s’inclouen a les còpies JSON. Les còpies anteriors es carreguen amb la llista de vacances buida. Han de quedar dins del curs i no poden coincidir amb dies d’horari reduït.
 - Es conserven els festius individuals, els altres períodes i les assignacions familiars.
+
+
+## v0.9.1: amplada visible de les franges mensuals
+
+- Les franges puntuals i les rotacions amb tutor mantenen el color fins als dos extrems de la columna del fill, com la pernocta. Es retiren els contorns laterals que les feien semblar més estretes.
+- Es conserva la separació horitzontal entre franges i l’amplada reduïda de les rotacions sense tutor.
