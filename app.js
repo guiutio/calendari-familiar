@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.9.1';
+const APP_VERSION = '0.10.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -916,11 +916,11 @@ function schoolsPage() {
         return `<header class="page-heading"><div>${schoolCrumb(school.name, { schoolId: school.id })}<div class="eyebrow">${escapeHtml(school.name)}</div><h1 class="page-title">${schoolYearName(year)}</h1><p class="page-subtitle">Del ${shortDate(year.startDate)} al ${shortDate(year.endDate)}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Calendari escolar</h2><button class="soft-btn" data-action="year-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil', 14)} Dates</button></div>
  <p class="section-description">Els festius, les vacances i els dies d’horari reduït han d’estar compresos dins del curs. Són dates concretes i no es repeteixen automàticament.</p>
- <div class="school-period"><div class="panel-header"><strong>Dies festius (${year.holidays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus', 14)} Dia</button></div>
+ <div class="school-period"><div class="panel-header"><strong>Dies festius (${year.holidays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('calendar', 14)} Tria dies</button></div>
  ${year.holidays.length ? `<div class="school-day-list">${year.holidays.map(d => `<span class="school-day-pill">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="holiday" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix el festiu ${d}">${icon('close', 13)}</button></span>`).join('')}</div>` : '<p class="settings-note">No hi ha dies festius.</p>'}</div>
  <div class="school-period"><div class="panel-header"><strong>Vacances escolars (${(year.vacations ?? []).length})</strong><button class="secondary-btn" data-action="school-vacation-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus', 14)} Període</button></div>
  ${(year.vacations ?? []).length ? [...(year.vacations ?? [])].sort((a, b) => a.startDate.localeCompare(b.startDate)).map(period => `<div class="school-schedule-row"><div><strong>${escapeHtml(period.name)}</strong><span class="school-meta">${shortDate(period.startDate)} – ${shortDate(period.endDate)}</span></div><div class="school-schedule-actions"><button type="button" class="school-schedule-edit" data-action="school-vacation-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-vacation="${escapeHtml(period.id)}" aria-label="Edita ${escapeHtml(period.name)}">${icon('pencil', 15)}</button><button type="button" class="delete-icon" data-action="school-vacation-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-vacation="${escapeHtml(period.id)}" aria-label="Suprimeix ${escapeHtml(period.name)}">${icon('trash', 15)}</button></div></div>`).join('') : '<p class="settings-note">Afegeix les vacances indicant-ne el nom i les dates d’inici i final.</p>'}</div>
- <div class="school-period"><div class="panel-header"><strong>Horari reduït (${year.reducedDays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus', 14)} Dia</button></div>
+ <div class="school-period"><div class="panel-header"><strong>Horari reduït (${year.reducedDays.length})</strong><button class="secondary-btn" data-action="school-day-add" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('calendar', 14)} Tria dies</button></div>
  ${year.reducedDays.length ? `<div class="school-day-list">${year.reducedDays.map(d => `<span class="school-day-pill reduced">${shortDate(d)} <button type="button" data-action="school-day-delete" data-kind="reduced" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-date="${d}" aria-label="Suprimeix l’horari reduït ${d}">${icon('close', 13)}</button></span>`).join('')}</div>` : '<p class="settings-note">No hi ha dies d’horari reduït.</p>'}</div>
  <div class="school-period"><div class="panel-header"><strong>Hores de jornada ordinària</strong><button class="secondary-btn" data-action="ordinary-window-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('pencil', 14)} ${year.ordinaryWindow ? 'Edita' : 'Configura'}</button></div>
   <p class="settings-note">${year.ordinaryWindow ? `De ${year.ordinaryWindow.startTime} a ${year.ordinaryWindow.endTime}. Aquestes hores delimiten la jornada normal dels dies lectius del curs. Les activitats són pròpies de cada grup.` : "Encara no s’han especificat les hores de jornada ordinària d’aquest curs."}</p></div>
@@ -936,6 +936,27 @@ function schoolsPage() {
  <section class="card"><div class="panel-header"><h2 class="section-title">Fills del grup</h2></div><p class="section-description">Selecciona els fills que pertanyen a aquest grup aquest curs. Un fill només pot estar en un grup del mateix curs i escola.</p>
  ${state.children.map(c => { const selected = group.childIds.includes(c.id), other = year.groups.find(g => g.id !== group.id && g.childIds.includes(c.id)); return `<button class="school-child-choice ${selected ? 'selected' : ''}" data-action="school-child-toggle" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}" data-child="${escapeHtml(c.id)}" aria-pressed="${selected}"><span>${escapeHtml(c.name)}${other ? `<small>Actualment a ${escapeHtml(other.name)}</small>` : ''}</span>${selected ? icon('check', 18) : icon('plus', 17)}</button>`; }).join('')}
  </section>${schedulePanel}${schoolReducedPanel(school, year, group)}`;
+}
+function schoolDayUnavailableReason(year, kind, date) {
+    if (!isValidDate(date) || date < year.startDate || date > year.endDate)
+        return 'Fora del curs';
+    if (kind === 'holiday')
+        return year.reducedDays.includes(date) ? 'Jornada reduïda' : '';
+    if (year.holidays.includes(date))
+        return 'Festiu';
+    return year.vacations?.find(p => date >= p.startDate && date <= p.endDate)?.name ?? '';
+}
+function schoolDayCalendarMarkup(year, draft) {
+    const first = draft.month + '-01', date = parseDate(first), offset = (date.getDay() + 6) % 7;
+    const count = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const title = months[date.getMonth()] + ' ' + date.getFullYear(), selected = new Set(draft.dates);
+    const cells = Array.from({ length: offset }, () => '<span aria-hidden="true"></span>');
+    for (let day = 1; day <= count; day++) {
+        const value = draft.month + '-' + String(day).padStart(2, '0'), reason = schoolDayUnavailableReason(year, draft.kind, value), pressed = selected.has(value);
+        cells.push(`<button type="button" class="school-date-cell ${pressed ? 'selected' : ''}" data-action="school-day-toggle" data-date="${value}" aria-pressed="${pressed}" aria-label="${escapeHtml(fullDate(value) + (reason ? ' · ' + reason : ''))}" ${reason ? 'disabled' : ''}>${day}</button>`);
+    }
+    return `<div class="school-date-picker ${draft.kind}"><div class="school-date-nav"><button type="button" class="soft-btn" data-action="school-day-month" data-step="-1" aria-label="Mes anterior" ${draft.month <= year.startDate.slice(0, 7) ? 'disabled' : ''}>${icon('chevronLeft', 18)}</button><h3>${escapeHtml(title)}</h3><button type="button" class="soft-btn" data-action="school-day-month" data-step="1" aria-label="Mes següent" ${draft.month >= year.endDate.slice(0, 7) ? 'disabled' : ''}>${icon('chevronRight', 18)}</button></div>
+ <div class="school-date-weekdays" aria-hidden="true">${weekdays.map(d => `<span>${d}</span>`).join('')}</div><div class="school-date-grid" role="group" aria-label="${escapeHtml(title)}">${cells.join('')}</div></div>`;
 }
 function schoolFormMarkup() {
     if (!sheet)
@@ -971,10 +992,15 @@ function schoolFormMarkup() {
     <p class="settings-note">Pots indicar, per exemple, «Setmana Santa» o «Vacances de Nadal». Tots els dies de l’interval, inclosos l’inici i el final, seran festius escolars.</p>${actions}</form>`;
     }
     if (sheet.type === 'schoolDayForm') {
-        const school = schoolById(sheet.schoolId), year = yearById(school, sheet.yearId);
+        const year = yearById(schoolById(sheet.schoolId), sheet.yearId);
         if (!year)
             return '';
-        return heading(sheet.kind === 'holiday' ? 'Afegeix dia festiu' : 'Afegeix dia d’horari reduït', `${schoolYearName(year)} · ${shortDate(year.startDate)} – ${shortDate(year.endDate)}`) + `<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}"><div class="school-form-fields"><div class="field"><label for="school-date">Data</label><input id="school-date" name="date" type="date" min="${year.startDate}" max="${year.endDate}" value="${year.startDate}" required /></div></div>${actions}</form>`;
+        return heading(sheet.kind === 'holiday' ? 'Tria dies festius' : 'Tria dies de jornada reduïda', schoolYearName(year)) + `<form data-school-form="day" data-kind="${sheet.kind}" data-school="${escapeHtml(sheet.schoolId)}" data-year="${escapeHtml(sheet.yearId)}">
+    <p class="settings-note">Toca els dies per marcar-los o desmarcar-los. Pots canviar de mes abans de desar.</p>
+    ${schoolDayCalendarMarkup(year, sheet)}
+    <p class="school-date-count" role="status">${sheet.dates.length} ${sheet.dates.length === 1 ? 'dia seleccionat' : 'dies seleccionats'}</p>
+    <p class="settings-note">${sheet.kind === 'holiday' ? 'Els dies amb jornada reduïda no es poden marcar com a festius.' : 'Els festius i les vacances escolars no es poden marcar com a jornada reduïda.'}</p>
+    <div class="action-row"><button class="primary-btn" type="submit">Desa els dies</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button></div></form>`;
     }
     if (sheet.type === 'reducedWindowForm') {
         const year = yearById(schoolById(sheet.schoolId), sheet.yearId);
@@ -1138,7 +1164,7 @@ function sheetMarkup() {
       <p class="settings-note">Per confirmar tots els canvis, prem «Desa el patró» a Rotacions.</p>
     </form>`;
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : ''}" data-sheet-key="${escapeHtml(JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
@@ -1201,7 +1227,10 @@ function render() {
     const minuteAtCenter = keepTimeline && previousMain && oldScale > 0
         ? Math.max(0, Math.min(1440, (previousMain.scrollTop + previousMain.clientHeight / 2 - oldTimelineOffset) / oldScale)) : NaN;
     const previousSheet = $app.querySelector('.sheet');
-    const sheetScroll = previousSheet?.dataset.sheetKey === JSON.stringify(sheet) ? previousSheet.scrollTop : 0;
+    const sheetKey = sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet);
+    const sheetScroll = previousSheet?.dataset.sheetKey === sheetKey ? previousSheet.scrollTop : 0;
+    const pickerFocus = sheet?.type === 'schoolDayForm' ? document.activeElement?.closest('.school-date-picker button') : null;
+    const pickerFocusKey = pickerFocus?.dataset.date ? `[data-action="school-day-toggle"][data-date="${pickerFocus.dataset.date}"]` : pickerFocus?.dataset.step ? `[data-action="school-day-month"][data-step="${pickerFocus.dataset.step}"]` : '';
     $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : settingsPage());
     const main = $app.querySelector('.main-area');
     if (main) {
@@ -1211,6 +1240,8 @@ function render() {
     const currentSheet = $app.querySelector('.sheet');
     if (currentSheet)
         currentSheet.scrollTop = sheetScroll;
+    if (pickerFocusKey)
+        currentSheet?.querySelector(pickerFocusKey)?.focus({ preventScroll: true });
     const timeline = $app.querySelector('.day-timeline-viewport');
     if (timeline) {
         const newScale = Number(timeline.dataset.pxPerMinute ?? 0);
@@ -1406,10 +1437,41 @@ function clickAction(button) {
             notify('Període de vacances eliminat');
             break;
         }
-        case 'school-day-add':
-            sheet = { type: 'schoolDayForm', schoolId: button.dataset.school, yearId: button.dataset.year, kind: button.dataset.kind === 'holiday' ? 'holiday' : 'reduced' };
+        case 'school-day-add': {
+            const school = schoolById(button.dataset.school), year = yearById(school, button.dataset.year);
+            if (!school || !year)
+                break;
+            const kind = button.dataset.kind === 'holiday' ? 'holiday' : 'reduced', today = localDate(new Date());
+            const initial = today < year.startDate ? year.startDate : today > year.endDate ? year.endDate : today;
+            sheet = { type: 'schoolDayForm', schoolId: school.id, yearId: year.id, kind, month: initial.slice(0, 7), dates: [...(kind === 'holiday' ? year.holidays : year.reducedDays)] };
             render();
             break;
+        }
+        case 'school-day-month': {
+            if (sheet?.type !== 'schoolDayForm')
+                break;
+            const year = yearById(schoolById(sheet.schoolId), sheet.yearId), step = Number(button.dataset.step);
+            if (!year || ![-1, 1].includes(step))
+                break;
+            const date = parseDate(sheet.month + '-01');
+            date.setMonth(date.getMonth() + step);
+            const month = localDate(date).slice(0, 7);
+            if (month < year.startDate.slice(0, 7) || month > year.endDate.slice(0, 7))
+                break;
+            sheet.month = month;
+            render();
+            break;
+        }
+        case 'school-day-toggle': {
+            if (sheet?.type !== 'schoolDayForm')
+                break;
+            const year = yearById(schoolById(sheet.schoolId), sheet.yearId), date = button.dataset.date ?? '';
+            if (!year || schoolDayUnavailableReason(year, sheet.kind, date))
+                break;
+            sheet.dates = sheet.dates.includes(date) ? sheet.dates.filter(d => d !== date) : [...sheet.dates, date].sort();
+            render();
+            break;
+        }
         case 'ordinary-window-edit': {
             const year = yearById(schoolById(button.dataset.school), button.dataset.year);
             if (!year)
@@ -2178,25 +2240,18 @@ document.addEventListener('submit', event => {
         return;
     }
     if (formKind === 'day') {
-        if (!year)
+        if (!year || sheet?.type !== 'schoolDayForm' || sheet.schoolId !== school?.id || sheet.yearId !== year.id || sheet.kind !== form.dataset.kind)
             return;
-        const date = get('date'), kind = form.dataset.kind;
-        if (!isValidDate(date) || date < year.startDate || date > year.endDate) {
-            notify('La data ha d’estar compresa dins del curs');
-            return;
-        }
-        if (year.holidays.includes(date) || year.reducedDays.includes(date)) {
-            notify('Aquest dia ja està marcat al curs');
+        const kind = sheet.kind, dates = [...new Set(sheet.dates)].sort();
+        if (dates.some(date => schoolDayUnavailableReason(year, kind, date))) {
+            notify('Revisa els dies seleccionats: hi ha dates fora del curs o incompatibles.');
             return;
         }
-        if (kind === 'reduced' && year.vacations?.some(p => date >= p.startDate && date <= p.endDate)) {
-            notify('Aquesta data és de vacances escolars');
-            return;
-        }
-        const days = kind === 'holiday' ? year.holidays : year.reducedDays;
-        days.push(date);
-        days.sort();
-        finish(kind === 'holiday' ? 'Festiu afegit' : 'Dia d’horari reduït afegit');
+        if (kind === 'holiday')
+            year.holidays = dates;
+        else
+            year.reducedDays = dates;
+        finish(kind === 'holiday' ? 'Dies festius desats' : 'Dies de jornada reduïda desats');
         return;
     }
     if (formKind === 'reducedWindow') {

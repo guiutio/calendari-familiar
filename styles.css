@@ -955,3 +955,21 @@ input[type="date"],input[type="time"],input[type="datetime-local"],input[type="m
 }
 input::-webkit-date-and-time-value {min-width:0;max-width:100%;text-align:left;}
 input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
+
+/* Calendari de selecció múltiple dels dies del curs. */
+.school-date-picker {min-width:0;margin-top:16px;}
+.school-date-nav {display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px;margin-bottom:14px;}
+.school-date-nav h3 {margin:0;text-align:center;text-transform:capitalize;font-size:calc(16px * var(--font-scale,1));overflow-wrap:anywhere;}
+.school-date-nav button {min-height:44px;padding:8px;display:grid;place-items:center;}
+.school-date-weekdays,.school-date-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
+.school-date-weekdays {text-align:center;font-size:calc(11px * var(--font-scale,1));font-weight:750;color:#64758c;margin-bottom:7px;}
+.school-date-cell {min-width:0;min-height:44px;padding:6px 0;border:1px solid #dfe5ec;border-radius:9px;background:#f5f7fa;color:#33465e;font-size:calc(14px * var(--font-scale,1));font-weight:700;}
+.school-date-cell.selected {background:#fff0e8;color:#864a25;border:2px solid #ad683c;}
+.school-date-picker.reduced .school-date-cell.selected {background:#fff5ce;color:#715919;border-color:#9a7b25;}
+.school-date-cell:disabled {opacity:.45;background:transparent;border-color:transparent;}
+.school-date-count {font-size:calc(13px * var(--font-scale,1));font-weight:750;margin:14px 0 6px;}
+:root[data-theme="dark"] .school-date-weekdays {color:#adbed4;}
+:root[data-theme="dark"] .school-date-cell {background:#22334b;border-color:#41536d;color:#dfebfa;}
+:root[data-theme="dark"] .school-date-cell.selected {background:#65442d;border-color:#edbb93;color:#fff2e6;}
+:root[data-theme="dark"] .school-date-picker.reduced .school-date-cell.selected {background:#57491f;border-color:#ead182;color:#fff4c2;}
+:root[data-theme="dark"] .school-date-cell:disabled {background:transparent;border-color:transparent;}

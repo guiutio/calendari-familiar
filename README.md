@@ -355,3 +355,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - Les franges puntuals i les rotacions amb tutor mantenen el color fins als dos extrems de la columna del fill, com la pernocta. Es retiren els contorns laterals que les feien semblar més estretes.
 - Es conserva la separació horitzontal entre franges i l’amplada reduïda de les rotacions sense tutor.
+
+
+## v0.10.0: selecció múltiple de dies del curs
+
+- Els botons «Tria dies» de festius i jornada reduïda obren un calendari mensual. Es poden marcar o desmarcar dies i navegar entre mesos sense perdre la selecció.
+- Els dies ja desats apareixen seleccionats. «Desa els dies» confirma el conjunt complet d’una vegada; «Cancel·la» conserva les dades anteriors.
+- Es bloquegen les dates fora del curs i les incompatibilitats amb l’altre tipus de jornada o les vacances. Es mantenen les vacances amb nom i l’horari reduït configurat.
