@@ -23,8 +23,10 @@ function controller(mobile=true){
  // Use a delimiter only between generated panels, including appends/prepends.
  sequence.insertAdjacentHTML=(where,html)=>{const next=html.split(',').filter(Boolean).map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];};
  vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
- ctx.mountCalendarScroll(null);frame();if(timer)timer();
- return {ctx,main,title,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();frame();if(timer)timer();},refresh(){frame();if(timer)timer();},base};
+ const flush=()=>{for(let i=0;frame&&i<10;i++){const next=frame;frame=undefined;next();}};
+ const idle=()=>{const next=timer;timer=undefined;next?.();flush();};
+ ctx.mountCalendarScroll(null);flush();idle();
+ return {ctx,main,title,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();flush();idle();},refresh(){flush();idle();},base};
 }
 
 test('mesos: la càrrega inicial enfoca el mes actual en mòbil i escriptori',()=>{
@@ -35,20 +37,20 @@ test('mesos: la càrrega inicial enfoca el mes actual en mòbil i escriptori',()
   assert.equal(c.ctx.selectedDate,'2026-10-31');
  }
 });
-test('mesos: recorre anys en ambdues direccions, carrega sense saltar i limita el DOM',()=>{
+test('mesos: recorre anys en ambdues direccions sense retirar els mesos visitats',()=>{
  const c=controller();
  for(let i=0;i<26;i++){
   c.scroll(700);
   assert.equal(c.ctx.monthPosition().index,c.base+i+1);
   assert.equal(c.ctx.monthPosition().top,100);
-  assert.ok(c.panels().length<=9);
+  assert.ok(c.panels().some(p=>Number(p.dataset.monthIndex)===c.base),'Els mesos ja visitats no es retiren');
  }
  assert.equal(c.ctx.viewYear,2028);assert.equal(c.ctx.viewMonth,11);
  for(let i=0;i<40;i++){
   c.scroll(-700);
   assert.equal(c.ctx.monthPosition().index,c.base+25-i);
   assert.equal(c.ctx.monthPosition().top,100);
-  assert.ok(c.panels().length<=9);
+  assert.ok(c.panels().some(p=>Number(p.dataset.monthIndex)===c.base),'Els mesos ja visitats no es retiren');
  }
  assert.equal(c.ctx.viewYear,2025);assert.equal(c.ctx.viewMonth,7);
  assert.equal(c.ctx.selectedDate,'2025-08-01');
@@ -101,7 +103,7 @@ function continuousRenderer(){
   escapeHtml:String,fullDate:String,monthTitle:(y,m)=>`${y}-${m+1}`,
   monthDayUI:{...uiContext.window.monthDayUI,hasChanges:()=>false,mini:()=>''}
  });
- vm.runInContext(dateHelpers+extract('function weekStart(', 'function fullAgenda(')+extract('function monthPanel(', '// Keep a small sliding window'),context);
+ vm.runInContext(dateHelpers+extract('function weekStart(', 'function fullAgenda(')+extract('function monthPanel(', '// Keep loaded months'),context);
  return context;
 }
 test('mesos consecutius: cada data apareix una vegada i les capçaleres separen els mesos',()=>{
@@ -148,7 +150,7 @@ test('octubre acaba al 31 i novembre comença a l’1 amb una capçalera al mig'
 
 // Layout realista: inserir/retirar panells mou físicament els altres i pot
 // limitar scrollTop; les escriptures programàtiques generen esdeveniments scroll.
-function inertialController(){
+function inertialController(nativeScrollEnd=false){
  const base=2026*12+9;
  let panels=[],rawTop=0,clock=0,serial=0,mutations=0,writes=0;
  const events=[],frames=new Map(),timers=new Map(),listeners=new Map();
@@ -159,6 +161,7 @@ function inertialController(){
  const main={get scrollTop(){return rawTop;},set scrollTop(value){writes++;nativeTop(value);},
   getBoundingClientRect:()=>({top:100,bottom:800}),
   addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
+ if(nativeScrollEnd)main.onscrollend=null;
  const panel=index=>({dataset:{monthIndex:String(index)},querySelectorAll:()=>[],
   getBoundingClientRect(){const y=300+panels.slice(0,panels.indexOf(this)).reduce((n,p)=>n+height(Number(p.dataset.monthIndex)),0)-rawTop;return {top:y,bottom:y+height(index)};},
   remove(){mutations++;panels=panels.filter(p=>p!==this);nativeTop(rawTop);}
@@ -193,10 +196,10 @@ function inertialController(){
    for(const [id,t] of ready){timers.delete(id);t.fn();}flush();
   }
  };
- ctx.mountCalendarScroll(null);flush();advance(200);
- return {ctx,advance,flush,touch:()=>dispatch('touchstart'),release:()=>dispatch('touchend'),
+ ctx.mountCalendarScroll(null);flush();advance(500);
+ return {ctx,advance,flush,touch:()=>dispatch('touchstart'),release:()=>dispatch('touchend'),end:()=>{dispatch('scrollend');flush();},signalEnd:()=>dispatch('scrollend'),
   scroll(delta){nativeTop(rawTop+delta);flush();},metrics:()=>({mutations,writes,count:panels.length}),
-  anchor:()=>({...ctx.monthPosition()}),stop:()=>ctx.stopCalendarScroll()};
+  indices:()=>panels.map(p=>Number(p.dataset.monthIndex)),anchor:()=>({...ctx.monthPosition()}),stop:()=>ctx.stopCalendarScroll()};
 }
 test('inèrcia: no carrega mesos ni escriu scrollTop durant el gest o la desacceleració',()=>{
  const c=inertialController();const before=c.metrics();
@@ -207,16 +210,16 @@ test('inèrcia: no carrega mesos ni escriu scrollTop durant el gest o la desacce
  c.release();
  for(let i=0;i<12;i++){c.scroll(20);c.advance(16);}
  assert.deepEqual(c.metrics(),before);
- const anchor=c.anchor();c.advance(200);
+ const anchor=c.anchor();c.advance(500);
  assert.deepEqual(c.anchor(),anchor,'La càrrega en repòs conserva exactament el mes i la posició');
 });
-test('scroll real: carregar i retirar panells no inicia salts ni nous cicles automàtics',()=>{
+test('scroll real: carregar panells conserva la posició i no inicia nous cicles automàtics',()=>{
  const c=inertialController();
  for(const direction of [1,-1])for(let step=0;step<40;step++){
   c.touch();c.scroll(direction*600);c.release();
-  const anchor=c.anchor();c.advance(200);
-  assert.deepEqual(c.anchor(),anchor,'El contingut visible no es mou quan es carrega o retira un mes');
-  assert.ok(c.metrics().count<=9);
+  const anchor=c.anchor();c.advance(500);
+  assert.deepEqual(c.anchor(),anchor,'El contingut visible no es mou quan es carrega un mes');
+  assert.ok(c.metrics().count>=7,'La càrrega conserva els mesos ja visitats');
   const stable={anchor:c.anchor(),metrics:c.metrics()};
   c.advance(10000);
   assert.deepEqual({anchor:c.anchor(),metrics:c.metrics()},stable,'Sense gest nou no hi ha cap salt ni càrrega addicional');
@@ -225,4 +228,34 @@ test('scroll real: carregar i retirar panells no inicia salts ni nous cicles aut
 test('sortir del calendari cancel·la la càrrega pendent',()=>{
  const c=inertialController();c.scroll(600);const before=c.metrics();c.stop();c.advance(1000);
  assert.deepEqual(c.metrics(),before);
+});
+
+test('scrollend: un silenci llarg entre esdeveniments no es confon amb el final de la inèrcia',()=>{
+ const c=inertialController(true),before=c.metrics();
+ c.touch();c.scroll(2300);c.release();
+ c.advance(2000);
+ assert.deepEqual(c.metrics(),before,'No es muta el calendari abans del final nadiu del desplaçament');
+ const anchor=c.anchor();c.end();
+ assert.deepEqual(c.anchor(),anchor);assert.ok(c.metrics().count>before.count);
+ assert.equal(c.metrics().writes,before.writes,'Afegir mesos al final no escriu scrollTop');
+});
+
+test('scrollend: tornar enrere conserva els mateixos panells i no reajusta el rang de scroll',()=>{
+ const c=inertialController(true),original=c.indices(),before=c.metrics();
+ for(let i=0;i<30;i++){c.touch();c.scroll(600);c.release();c.end();}
+ assert.ok(c.metrics().count>9);
+ for(const index of original)assert.ok(c.indices().includes(index));
+ assert.equal(c.metrics().writes,before.writes,'No hi ha compensacions en carregar mesos posteriors');
+ const loaded=c.indices();
+ for(let i=0;i<25;i++){c.touch();c.scroll(-600);c.release();c.end();}
+ assert.deepEqual(c.indices(),loaded,'Tornar pels mesos ja carregats no retira ni reinsereix panells');
+ assert.equal(c.metrics().writes,before.writes);
+});
+
+test('un nou gest o sortir de la vista cancel·la una estabilització ja programada',()=>{
+ for(const stop of [false,true]){
+  const c=inertialController(true);c.scroll(2300);const before=c.metrics();
+  c.signalEnd();if(stop)c.stop();else c.touch();
+  c.flush();c.advance(2000);assert.deepEqual(c.metrics(),before);
+ }
 });

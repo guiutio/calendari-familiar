@@ -368,3 +368,10 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - Dissabtes i diumenges es mantenen visibles al selector mensual, però no es poden marcar com a festius o jornada reduïda.
 - La validació del desament també rebutja caps de setmana. Si hi havia dates de cap de setmana desades, l’esborrany les exclou i només es retiren de les dades en confirmar «Desa els dies»; cancel·lar conserva les dades anteriors.
+
+
+## v0.10.2: estabilitat del desplaçament mensual
+
+- Els mesos carregats es conserven durant el desplaçament. No es retiren panells anteriors ni es reajusta scrollTop per navegar pels mesos ja visitats o afegir-ne al final. Una navegació explícita amb fletxes, Avui o canvi de vista recupera un interval inicial petit.
+- Es prioritza l’esdeveniment nadiu scrollend per esperar el final de la inèrcia. En navegadors anteriors s’espera una pausa de 400 ms; en tots dos casos es comproven dues pintades estables i es cancel·la la càrrega si comença un altre gest.
+- Afegir mesos anteriors conserva el mateix mes i posició visible. Sortir de la vista cancel·la temporitzadors i pintades pendents.

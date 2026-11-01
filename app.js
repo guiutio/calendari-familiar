@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.10.1';
+const APP_VERSION = '0.10.2';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -656,8 +656,8 @@ function monthPanel(index, children, today) {
     });
     return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year, month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year, month))}</h2><div class="month-grid">${cells.join('')}</div></section>`;
 }
-// Keep a small sliding window of months. Extending either end preserves the
-// visible month's pixel position, including when older panels are removed.
+// Keep loaded months in place: removing earlier panels rebases the scroll range
+// and can make Safari jump during momentum. Only prepend after scrolling stops.
 function monthPosition() {
     const sequence = $app.querySelector('.month-sequence');
     const bar = $app.querySelector('.calendar-sticky-bar');
@@ -698,11 +698,12 @@ function mountCalendarScroll(position, resetScroll = false) {
     else
         restore(position);
     monthScrollTarget = false;
-    let frame = 0, idleTimer, touching = false, correctedScroll;
+    let frame = 0, settleFrame = 0, idleTimer, touching = false, disposed = false, revision = 0, correctedScroll;
+    const nativeScrollEnd = 'onscrollend' in (mobile() ? main : window);
     const scrollTop = () => mobile() ? main.scrollTop : window.scrollY;
     const refresh = () => {
         frame = 0;
-        if (!sequence.isConnected)
+        if (disposed || !sequence.isConnected)
             return;
         const anchor = monthPosition();
         if (!anchor)
@@ -718,7 +719,7 @@ function mountCalendarScroll(position, resetScroll = false) {
     };
     const extendMonths = () => {
         idleTimer = undefined;
-        if (touching || !sequence.isConnected)
+        if (disposed || touching || !sequence.isConnected)
             return;
         const anchor = monthPosition();
         if (!anchor)
@@ -738,19 +739,9 @@ function mountCalendarScroll(position, resetScroll = false) {
             lastIndex += 2;
             changed = true;
         }
-        while (lastIndex - firstIndex >= 9 && firstIndex < anchor.index - 2) {
-            sequence.firstElementChild.remove();
-            firstIndex++;
-            changed = true;
-        }
-        while (lastIndex - firstIndex >= 9 && lastIndex > anchor.index + 2) {
-            sequence.lastElementChild.remove();
-            lastIndex--;
-            changed = true;
-        }
         monthRange = { first: firstIndex, last: lastIndex };
         // Safari pot accelerar o interrompre la inèrcia si escrivim scrollTop durant el gest.
-        // Només compensem una mutació real, quan ja no hi ha moviment ni cap dit premut.
+        // Només compensem els mesos nous afegits abans del punt visible, ja en repòs.
         if (changed) {
             const el = sequence.querySelector(`[data-month-index="${anchor.index}"]`);
             const delta = el ? el.getBoundingClientRect().top - anchor.top : 0;
@@ -760,12 +751,41 @@ function mountCalendarScroll(position, resetScroll = false) {
             }
         }
     };
-    const scheduleIdle = () => {
+    const cancelSettle = () => {
+        revision++;
         window.clearTimeout(idleTimer);
-        if (!touching)
-            idleTimer = window.setTimeout(extendMonths, 180);
+        window.cancelAnimationFrame(settleFrame);
+        settleFrame = 0;
+    };
+    const settle = () => {
+        cancelSettle();
+        if (disposed || touching || !sequence.isConnected)
+            return;
+        const version = revision, at = scrollTop();
+        // El scroll compositat d’iOS pot arribar tard al fil principal. Comprovem
+        // dues pintades sense moviment abans d’afegir contingut o compensar píxels.
+        settleFrame = window.requestAnimationFrame(() => {
+            settleFrame = 0;
+            if (disposed || touching || version !== revision || Math.abs(scrollTop() - at) > .5)
+                return;
+            settleFrame = window.requestAnimationFrame(() => {
+                settleFrame = 0;
+                if (disposed || touching || version !== revision || Math.abs(scrollTop() - at) > .5)
+                    return;
+                extendMonths();
+            });
+        });
+    };
+    const scheduleIdle = () => {
+        cancelSettle();
+        // Amb scrollend esperem el final nadiu de la inèrcia, no un silenci temporal
+        // entre esdeveniments. El temporitzador és només per a navegadors anteriors.
+        if (!nativeScrollEnd && !touching && !disposed)
+            idleTimer = window.setTimeout(settle, 400);
     };
     const schedule = () => {
+        if (disposed)
+            return;
         // La correcció de píxels produeix un altre esdeveniment scroll: no és un nou gest.
         if (correctedScroll !== undefined && Math.abs(scrollTop() - correctedScroll) < 1) {
             correctedScroll = undefined;
@@ -776,23 +796,28 @@ function mountCalendarScroll(position, resetScroll = false) {
             frame = window.requestAnimationFrame(refresh);
         scheduleIdle();
     };
-    const touchStart = () => { touching = true; window.clearTimeout(idleTimer); };
+    const touchStart = () => { touching = true; cancelSettle(); };
     const touchEnd = () => { touching = false; scheduleIdle(); };
     main.addEventListener('scroll', schedule, { passive: true });
+    main.addEventListener('scrollend', settle, { passive: true });
     main.addEventListener('touchstart', touchStart, { passive: true });
     main.addEventListener('touchend', touchEnd, { passive: true });
     main.addEventListener('touchcancel', touchEnd, { passive: true });
     window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('scrollend', settle, { passive: true });
     window.addEventListener('resize', schedule);
     stopCalendarScroll = () => {
+        disposed = true;
+        cancelSettle();
         main.removeEventListener('scroll', schedule);
+        main.removeEventListener('scrollend', settle);
         main.removeEventListener('touchstart', touchStart);
         main.removeEventListener('touchend', touchEnd);
         main.removeEventListener('touchcancel', touchEnd);
         window.removeEventListener('scroll', schedule);
+        window.removeEventListener('scrollend', settle);
         window.removeEventListener('resize', schedule);
         window.cancelAnimationFrame(frame);
-        window.clearTimeout(idleTimer);
     };
     schedule();
 }
@@ -811,7 +836,7 @@ function calendarPage() {
     let content = '';
     if (calendarView === 'month') {
         const index = viewYear * 12 + viewMonth;
-        if (!monthRange || index <= monthRange.first || index >= monthRange.last)
+        if (monthScrollTarget || !monthRange || index <= monthRange.first || index >= monthRange.last)
             monthRange = { first: index - 3, last: index + 3 };
         content = `${!state.children.length ? `<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="people">Afegeix un fill</button></div>` : ''}<div class="month-sequence">${Array.from({ length: monthRange.last - monthRange.first + 1 }, (_, i) => monthPanel(monthRange.first + i, children, today)).join('')}</div>`;
     }
