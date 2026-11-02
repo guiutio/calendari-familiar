@@ -396,3 +396,11 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 ## v0.12.1: vistes de dia i setmana més compactes
 
 - Es retira el bloc introductori «El teu calendari / Calendari Familiar» i el seu subtítol de les vistes Dia i Setmana. La navegació superior continua indicant la data i la vista activa.
+
+
+## v0.13.0: vista anual
+
+- Nou selector «Any» al costat de Mes, Setmana i Dia. Mostra els dotze mesos de l’any, amb dues columnes en mòbil i tres en escriptori.
+- Cada dia utilitza una miniatura de les mateixes pernoctes i franges que a Mes, respectant els filtres de fills, tutors i escoles. El dia actual queda ressaltat.
+- Tocar un mes obre Mes a l’any i mes triats. Les fletxes avancen o retrocedeixen anys i «Avui» torna a l’any actual. Els canvis d’any reinicien el desplaçament; modificar filtres conserva la posició.
+- El zoom horari continua sent propi de Dia i Setmana. La navegació anual tracta correctament el 29 de febrer.

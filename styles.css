@@ -979,3 +979,25 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 
 .extra-rotation-section>.panel-header {flex-wrap:wrap;}
 .extra-rotation-section>.panel-header .section-title {flex:1 1 100%;}
+
+/* Vista anual: dotze mesos compactes amb les mateixes miniatures de colors que Mes. */
+.calendar-sticky-bar .calendar-view-switch {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}
+.calendar-sticky-bar .calendar-view-switch button {min-width:0;padding:6px 2px;}
+:root[data-font-size="xlarge"] .calendar-sticky-bar .calendar-view-switch button {min-width:0;}
+.year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:16px;}
+.year-month {display:block;min-width:0;width:100%;padding:12px 10px;border:1px solid #dce5ef;border-radius:14px;background:#fff;color:#253851;text-align:left;}
+.year-month:hover {border-color:#92b0d4;background:#f7faff;}
+.year-month-title {display:block;margin-bottom:10px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:capitalize;}
+.year-weekdays,.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
+.year-weekdays {margin-bottom:5px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
+.year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px 0;}
+.year-day-number {align-self:center;min-width:17px;line-height:16px;text-align:center;border-radius:50%;font-size:calc(10px * var(--font-scale,1));font-weight:650;}
+.year-day.today .year-day-number {background:#2d5d8a;color:#fff;font-weight:800;}
+.year-month .month-mini {grid-template-rows:minmax(0,1fr);height:10px;gap:1px;}
+.year-month .month-mini-child {display:none;}
+.year-month .month-mini-column {border-radius:1px;}
+:root[data-theme="dark"] .year-month {background:#192436;border-color:#40536f;color:#dfebfa;}
+:root[data-theme="dark"] .year-month:hover {background:#22334b;border-color:#88baff;}
+:root[data-theme="dark"] .year-weekdays {color:#adbed4;}
+:root[data-theme="dark"] .year-day.today .year-day-number {background:#9bc8fc;color:#15304e;}
+@media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;}.year-month {padding:10px 7px;}}

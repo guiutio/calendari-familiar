@@ -18,7 +18,7 @@ type School = { id:string; name:string; address:string; phone:string; color:stri
 type ThemeMode = 'auto' | 'light' | 'dark';
 type FontSize = 'normal' | 'large' | 'xlarge';
 type TimeBand = 'mati' | 'dinar' | 'tarda' | 'sopar' | 'nit';
-type CalendarView = 'month' | 'week' | 'day';
+type CalendarView = 'year' | 'month' | 'week' | 'day';
 const BANDS:readonly TimeBand[]=['mati','dinar','tarda','sopar','nit'];
 const BAND_NAMES:Record<TimeBand,string>={mati:'Matí',dinar:'Dinar',tarda:'Tarda',sopar:'Sopar',nit:'Nit'};
 // Hores orientatives. No equivalen a un horari escolar real i no es mostren com a hores exactes.
@@ -92,7 +92,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.12.1';
+const APP_VERSION = '0.13.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -168,7 +168,7 @@ function timelineZoomForView(view:'day'|'week'=calendarView==='day'?'day':'week'
   return validTimelineZoom(state.preferences.timelineZooms?.[view]??state.preferences.timelineZoom);
 }
 function setTimelineZoomForView(value:number){
-  if(calendarView==='month')return;
+  if(calendarView!=='day'&&calendarView!=='week')return;
   const next=validTimelineZoom(value);
   if(next===timelineZoomForView())return;
   state.preferences.timelineZooms={day:timelineZoomForView('day'),week:timelineZoomForView('week'),[calendarView]:next};
@@ -529,12 +529,17 @@ function fullAgenda(date:string):string {
   }).join('')}`).join('')}</div>`;
 }
 function periodTitle(){
+  if(calendarView==='year')return String(viewYear);
   if(calendarView==='month')return monthTitle(viewYear,viewMonth);
   if(calendarView==='week'){const first=weekStart(selectedDate),last=addDays(first,6);return `${parseDate(first).getDate()} ${(months[parseDate(first).getMonth()]??'').slice(0,3)} – ${parseDate(last).getDate()} ${(months[parseDate(last).getMonth()]??'').slice(0,3)}`;}
   return `${parseDate(selectedDate).getDate()} de ${months[parseDate(selectedDate).getMonth()]}`;
 }
 function navigateCalendar(delta:number){
-  if(calendarView==='month'){const d=new Date(viewYear,viewMonth+delta,1,12);viewYear=d.getFullYear();viewMonth=d.getMonth();selectedDate=localDate(new Date(viewYear,viewMonth,1,12));}
+  if(calendarView==='year'){
+    const year=viewYear+delta,d=parseDate(selectedDate),month=d.getMonth();if(year<100||year>9999)return;
+    selectedDate=localDate(new Date(year,month,Math.min(d.getDate(),new Date(year,month+1,0).getDate()),12));
+  }
+  else if(calendarView==='month'){const d=new Date(viewYear,viewMonth+delta,1,12);viewYear=d.getFullYear();viewMonth=d.getMonth();selectedDate=localDate(new Date(viewYear,viewMonth,1,12));}
   else selectedDate=addDays(selectedDate,delta*(calendarView==='week'?7:1));
   viewYear=parseDate(selectedDate).getFullYear();viewMonth=parseDate(selectedDate).getMonth();monthScrollTarget=true;render();
 }
@@ -544,8 +549,8 @@ function navButton(target:Tab,label:string,name:string,kind:'side'|'mobile'){
 function calendarNavigation(){
   const children=activeChildren();
   const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0;
-  return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button>${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
-    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
+  return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button>${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='year'?'Any anterior':calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='year'?'Any següent':calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
+    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['year','Any'],['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
@@ -717,10 +722,23 @@ function zoomControls(){
       <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
     </div>`;
 }
+function yearOverview(year:number,children:Child[],today:string):string {
+  return `<div class="year-overview" aria-label="Calendari anual ${year}">${months.map((name,month)=>{
+    const firstDay=(new Date(year,month,1,12).getDay()+6)%7,count=new Date(year,month+1,0).getDate();
+    const cells=Array.from({length:42},(_,index)=>{
+      const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
+      const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
+      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra)}</span>`;
+    }).join('');
+    return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
+  }).join('')}</div>`;
+}
 function calendarPage(){
   const today=localDate(new Date()),children=activeChildren();
   let content='';
-  if(calendarView==='month'){
+  if(calendarView==='year'){
+    content=yearOverview(viewYear,children,today);
+  } else if(calendarView==='month'){
     const index=viewYear*12+viewMonth;
     if(monthScrollTarget||!monthRange||index<=monthRange.first||index>=monthRange.last)monthRange={first:index-3,last:index+3};
     content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="people">Afegeix un fill</button></div>`:''}<div class="month-sequence">${Array.from({length:monthRange.last-monthRange.first+1},(_,i)=>monthPanel(monthRange!.first+i,children,today)).join('')}</div>`;
@@ -734,7 +752,7 @@ function calendarPage(){
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
+    ${calendarView==='year'?'<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>':calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage(){
@@ -1053,7 +1071,7 @@ function render(){
   const timelineLeft=keepHorizontalScroll?previousTimeline!.scrollLeft:0;
   const oldScale=Number(previousTimeline?.dataset.pxPerMinute??0);
   const previousMain=$app.querySelector<HTMLElement>('.main-area');
-  const scrollKey=[tab,tab==='calendar'?calendarView:'',schoolNav.schoolId??'',schoolNav.yearId??'',schoolNav.groupId??''].join('|');
+  const scrollKey=[tab,tab==='calendar'?calendarView:'',schoolNav.schoolId??'',schoolNav.yearId??'',schoolNav.groupId??''].join('|')+(tab==='calendar'&&calendarView==='year'?'|'+viewYear:'');
   const mainScroll=previousMain?.dataset.scrollKey===scrollKey?previousMain.scrollTop:0;
   const oldTimelineOffset=previousMain&&previousTimeline
     ? previousMain.scrollTop+previousTimeline.getBoundingClientRect().top-previousMain.getBoundingClientRect().top:NaN;
@@ -1264,18 +1282,18 @@ function clickAction(button:HTMLElement){
     case 'set-theme':state.preferences.theme=validTheme(button.dataset.themeMode);update();break;
     case 'check-update':window.location.assign('./actualitza.html?comprovacio='+Date.now());break;
     case 'open-filters':sheet={type:'filters'};render();break;
-    case 'open-zoom':if(calendarView!=='month'){sheet={type:'zoom'};render();}break;
+    case 'open-zoom':if(calendarView==='day'||calendarView==='week'){sheet={type:'zoom'};render();}break;
     case 'close-sheet':sheet=null;render();break;
     case 'return-detail':sheet=returnFromDetail(button.dataset.date??detailReturnDate);render();break;
     case 'today':{selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();monthScrollTarget=true;render();break;}
     case 'timeline-zoom-step':{
-      if(calendarView==='month')break;
+      if(calendarView!=='day'&&calendarView!=='week')break;
       const index=TIMELINE_ZOOM_LEVELS.indexOf(timelineZoomForView());
       const next=TIMELINE_ZOOM_LEVELS[Math.max(0,Math.min(TIMELINE_ZOOM_LEVELS.length-1,index+(button.dataset.step==='-1'?-1:1)))];
       if(next!==undefined)setTimelineZoomForView(next);
       break;
     }
-    case 'calendar-view':{const v=button.dataset.view;if(v==='month'||v==='week'||v==='day'){
+    case 'calendar-view':{const v=button.dataset.view;if(v==='year'||v==='month'||v==='week'||v==='day'){
       if(v===calendarView)break;
       calendarView=v;const d=parseDate(selectedDate);viewYear=d.getFullYear();viewMonth=d.getMonth();monthScrollTarget=true;render();
     }break;}
@@ -1286,6 +1304,12 @@ function clickAction(button:HTMLElement){
       const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
       if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
       break;
+    }
+    case 'show-calendar-month':{
+      const year=Number(button.dataset.year),month=Number(button.dataset.month);
+      if(!Number.isInteger(year)||year<100||year>9999||!Number.isInteger(month)||month<0||month>11)break;
+      viewYear=year;viewMonth=month;selectedDate=localDate(new Date(year,month,1,12));
+      calendarView='month';monthScrollTarget=true;sheet=null;render();break;
     }
     case 'show-calendar-day':
     case 'open-day':{
@@ -1528,7 +1552,7 @@ document.addEventListener('change',event=>{
   const target=event.target;if(!(target instanceof HTMLInputElement||target instanceof HTMLSelectElement))return;
   const action=target.dataset.action;
   if(action==='timeline-zoom'){
-    if(calendarView!=='month'){
+    if(calendarView==='day'||calendarView==='week'){
       const next=TIMELINE_ZOOM_LEVELS[Number(target.value)];
       if(next!==undefined)setTimelineZoomForView(next);
     }

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.12.1';
+const APP_VERSION = '0.13.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -148,7 +148,7 @@ function timelineZoomForView(view = calendarView === 'day' ? 'day' : 'week') {
     return validTimelineZoom(state.preferences.timelineZooms?.[view] ?? state.preferences.timelineZoom);
 }
 function setTimelineZoomForView(value) {
-    if (calendarView === 'month')
+    if (calendarView !== 'day' && calendarView !== 'week')
         return;
     const next = validTimelineZoom(value);
     if (next === timelineZoomForView())
@@ -596,6 +596,8 @@ function fullAgenda(date) {
     }).join('')}`).join('')}</div>`;
 }
 function periodTitle() {
+    if (calendarView === 'year')
+        return String(viewYear);
     if (calendarView === 'month')
         return monthTitle(viewYear, viewMonth);
     if (calendarView === 'week') {
@@ -605,7 +607,13 @@ function periodTitle() {
     return `${parseDate(selectedDate).getDate()} de ${months[parseDate(selectedDate).getMonth()]}`;
 }
 function navigateCalendar(delta) {
-    if (calendarView === 'month') {
+    if (calendarView === 'year') {
+        const year = viewYear + delta, d = parseDate(selectedDate), month = d.getMonth();
+        if (year < 100 || year > 9999)
+            return;
+        selectedDate = localDate(new Date(year, month, Math.min(d.getDate(), new Date(year, month + 1, 0).getDate()), 12));
+    }
+    else if (calendarView === 'month') {
         const d = new Date(viewYear, viewMonth + delta, 1, 12);
         viewYear = d.getFullYear();
         viewMonth = d.getMonth();
@@ -624,8 +632,8 @@ function navButton(target, label, name, kind) {
 function calendarNavigation() {
     const children = activeChildren();
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0;
-    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button>${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
-    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
+    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button>${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
+    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}"><aside class="sidebar">
@@ -835,10 +843,26 @@ function zoomControls() {
       <output id="timeline-zoom-value" for="timeline-zoom" aria-live="polite">${zoom}%</output>
     </div>`;
 }
+function yearOverview(year, children, today) {
+    return `<div class="year-overview" aria-label="Calendari anual ${year}">${months.map((name, month) => {
+        const firstDay = (new Date(year, month, 1, 12).getDay() + 6) % 7, count = new Date(year, month + 1, 0).getDate();
+        const cells = Array.from({ length: 42 }, (_, index) => {
+            const day = index - firstDay + 1;
+            if (day < 1 || day > count)
+                return '<span class="year-empty-day"></span>';
+            const date = localDate(new Date(year, month, day, 12)), snapshot = monthData(date, children);
+            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}</span>`;
+        }).join('');
+        return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
+    }).join('')}</div>`;
+}
 function calendarPage() {
     const today = localDate(new Date()), children = activeChildren();
     let content = '';
-    if (calendarView === 'month') {
+    if (calendarView === 'year') {
+        content = yearOverview(viewYear, children, today);
+    }
+    else if (calendarView === 'month') {
         const index = viewYear * 12 + viewMonth;
         if (monthScrollTarget || !monthRange || index <= monthRange.first || index >= monthRange.last)
             monthRange = { first: index - 3, last: index + 3 };
@@ -855,7 +879,7 @@ function calendarPage() {
     ${content}
     <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
+    ${calendarView === 'year' ? '<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>' : calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage() {
@@ -1215,7 +1239,7 @@ function render() {
     const timelineLeft = keepHorizontalScroll ? previousTimeline.scrollLeft : 0;
     const oldScale = Number(previousTimeline?.dataset.pxPerMinute ?? 0);
     const previousMain = $app.querySelector('.main-area');
-    const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
+    const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|') + (tab === 'calendar' && calendarView === 'year' ? '|' + viewYear : '');
     const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
     const oldTimelineOffset = previousMain && previousTimeline
         ? previousMain.scrollTop + previousTimeline.getBoundingClientRect().top - previousMain.getBoundingClientRect().top : NaN;
@@ -1615,7 +1639,7 @@ function clickAction(button) {
             render();
             break;
         case 'open-zoom':
-            if (calendarView !== 'month') {
+            if (calendarView === 'day' || calendarView === 'week') {
                 sheet = { type: 'zoom' };
                 render();
             }
@@ -1638,7 +1662,7 @@ function clickAction(button) {
             break;
         }
         case 'timeline-zoom-step': {
-            if (calendarView === 'month')
+            if (calendarView !== 'day' && calendarView !== 'week')
                 break;
             const index = TIMELINE_ZOOM_LEVELS.indexOf(timelineZoomForView());
             const next = TIMELINE_ZOOM_LEVELS[Math.max(0, Math.min(TIMELINE_ZOOM_LEVELS.length - 1, index + (button.dataset.step === '-1' ? -1 : 1)))];
@@ -1648,7 +1672,7 @@ function clickAction(button) {
         }
         case 'calendar-view': {
             const v = button.dataset.view;
-            if (v === 'month' || v === 'week' || v === 'day') {
+            if (v === 'year' || v === 'month' || v === 'week' || v === 'day') {
                 if (v === calendarView)
                     break;
                 calendarView = v;
@@ -1677,6 +1701,19 @@ function clickAction(button) {
                 sheet = { type: 'schoolActivity', date, childId, schoolId, sessionId };
                 render();
             }
+            break;
+        }
+        case 'show-calendar-month': {
+            const year = Number(button.dataset.year), month = Number(button.dataset.month);
+            if (!Number.isInteger(year) || year < 100 || year > 9999 || !Number.isInteger(month) || month < 0 || month > 11)
+                break;
+            viewYear = year;
+            viewMonth = month;
+            selectedDate = localDate(new Date(year, month, 1, 12));
+            calendarView = 'month';
+            monthScrollTarget = true;
+            sheet = null;
+            render();
             break;
         }
         case 'show-calendar-day':
@@ -2271,7 +2308,7 @@ document.addEventListener('change', event => {
         return;
     const action = target.dataset.action;
     if (action === 'timeline-zoom') {
-        if (calendarView !== 'month') {
+        if (calendarView === 'day' || calendarView === 'week') {
             const next = TIMELINE_ZOOM_LEVELS[Number(target.value)];
             if (next !== undefined)
                 setTimelineZoomForView(next);
