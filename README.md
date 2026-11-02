@@ -441,3 +441,7 @@ L’editor treballa amb un esborrany fins a «Desa els canvis», permet copiar l
 La marca es calcula per persona: un festiu es mostra sempre; les vacances només es mostren si aquell dia no és festiu i hi havia feina prevista al patró laboral original. El càlcul de feina prevista no aplica les absències ni els filtres de visualització. Els dies de descans o fora de la vigència de les rotacions separen els trams de vacances.
 
 Quan coincideixen persones, els contorns són sòlids i niats: cada capa entra exactament un gruix de línia, de manera que les vores es toquen. Cada tram manté la seva capa i les cantonades contínues; amagar persones al filtre torna a aprofitar les capes exteriors disponibles. Any i Mes comparteixen aquestes regles.
+
+## v0.15.2: contorns anuals més fins
+
+Els contorns de festius i vacances d’Any passen a 1 px, incloses les cantonades i les capes niades. Mes conserva el gruix de 4 px.

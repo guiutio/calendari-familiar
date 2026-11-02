@@ -305,7 +305,8 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres n
  const css=read('styles.css');
  assert.match(css,/--pto-stroke:var\(--month-outline-width,4px\)/);
  assert.match(css,/--pto-inset:calc\(var\(--pto-layer,0\) \* var\(--pto-stroke\) - 1px\)/);
- assert.match(css,/\.personal-outline \{inset:-1px;/);assert.doesNotMatch(css,/--pto-stroke:1px|--pto-top-paint/);
+ assert.match(css,/\.personal-outline \{inset:-1px;/);assert.doesNotMatch(css,/--pto-top-paint/);
+ assert.match(css,/\.year-day \.personal-outline,\.year-day \.personal-corner \{--pto-stroke:1px;\}/);
 });
 
 test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panells i filtres existents',()=>{
