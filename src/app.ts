@@ -82,7 +82,7 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
  return sessions.every(a=>a.startTime>=window.startTime&&a.endTime<=window.endTime);
 }
 
-type PersonTimeOff = {holidays:string[];vacations:SchoolVacation[]};
+type PersonTimeOff = {holidayColor?:string;vacationColor?:string;holidays:string[];vacations:SchoolVacation[]};
 type Preferences = { mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
 type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>;schoolDaysOnly?:boolean;kind?:'night'|'activity';endDate?:string;nightTimes?:Record<string,string>};
@@ -93,7 +93,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = {type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.14.1';
+const APP_VERSION = '0.14.2';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -745,7 +745,7 @@ function yearOverview(year:number,children:Child[],today:string):string {
 }
 function calendarPage(){
   const today=localDate(new Date()),children=activeChildren();
-  const personalKinds=new Set<string>((state.personTimeOff&&(calendarView==='year'||calendarView==='month')?personalTimeOff.visibleEntries(state):[]).map((p:any)=>p.kind));
+  const personalLegend=state.personTimeOff&&(calendarView==='year'||calendarView==='month')?personalTimeOff.legendMarkup(state):'';
   let content='';
   if(calendarView==='year'){
     content=yearOverview(viewYear,children,today);
@@ -761,7 +761,7 @@ function calendarPage(){
   return `${calendarView==='month'?`<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>`:''}
     <section class="calendar-card" aria-label="Calendari familiar">
     ${content}
-    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalKinds.has('holiday')?'<span class="legend-entry"><span class="personal-legend holiday"></span>Festius personals</span>':''}${personalKinds.has('vacation')?'<span class="legend-entry"><span class="personal-legend vacation"></span>Vacances personals</span>':''}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
+    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
     ${calendarView==='year'?'<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>':calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
@@ -1644,6 +1644,7 @@ document.addEventListener('change',event=>{
  else if(action==='child-name') {const child=childById(target.dataset.child!);if(child){child.name=target.value.trim().slice(0,70)||child.name;update();}}
   else if(action==='child-birth') {const child=childById(target.dataset.child!);if(child){child.birthDate=target.value;update();}}
   else if(action==='guardian-name') {const g=guardian(target.dataset.guardian!);if(g){g.name=target.value.trim().slice(0,70)||g.name;update();}}
+  else if(action==='person-off-color') {if(personalTimeOff.setColor(state,target.dataset.person??'',target.dataset.kind??'',target.value))update();}
   else if(action==='guardian-color') {const g=guardian(target.dataset.guardian!);if(g&&/^#[0-9a-fA-F]{6}$/.test(target.value)){g.color=target.value;update();}}
   else if(target instanceof HTMLInputElement&&target.id==='import-file'&&target.files?.[0]){void importData(target.files[0]);target.value='';}
 });

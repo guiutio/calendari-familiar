@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.14.1';
+const APP_VERSION = '0.14.2';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -867,7 +867,7 @@ function yearOverview(year, children, today) {
 }
 function calendarPage() {
     const today = localDate(new Date()), children = activeChildren();
-    const personalKinds = new Set((state.personTimeOff && (calendarView === 'year' || calendarView === 'month') ? personalTimeOff.visibleEntries(state) : []).map((p) => p.kind));
+    const personalLegend = state.personTimeOff && (calendarView === 'year' || calendarView === 'month') ? personalTimeOff.legendMarkup(state) : '';
     let content = '';
     if (calendarView === 'year') {
         content = yearOverview(viewYear, children, today);
@@ -887,7 +887,7 @@ function calendarPage() {
     return `${calendarView === 'month' ? `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>` : ''}
     <section class="calendar-card" aria-label="Calendari familiar">
     ${content}
-    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalKinds.has('holiday') ? '<span class="legend-entry"><span class="personal-legend holiday"></span>Festius personals</span>' : ''}${personalKinds.has('vacation') ? '<span class="legend-entry"><span class="personal-legend vacation"></span>Vacances personals</span>' : ''}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
+    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
     ${calendarView === 'year' ? '<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>' : calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
@@ -2510,6 +2510,10 @@ document.addEventListener('change', event => {
             g.name = target.value.trim().slice(0, 70) || g.name;
             update();
         }
+    }
+    else if (action === 'person-off-color') {
+        if (personalTimeOff.setColor(state, target.dataset.person ?? '', target.dataset.kind ?? '', target.value))
+            update();
     }
     else if (action === 'guardian-color') {
         const g = guardian(target.dataset.guardian);

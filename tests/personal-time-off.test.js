@@ -118,13 +118,14 @@ test('dos dilluns separats no s’uneixen i els festius de persones diferents ta
  assert.equal(s.marks('2026-11-02').items[0].right,true);assert.equal(s.marks('2026-11-03').items[0].left,true);
 });
 
-test('les cantonades interiors d’una sèrie que travessa una setmana es connecten',()=>{
+test('el perímetre d’una sèrie que travessa una setmana tanca els dos esglaons',()=>{
  const s=setup();s.vacation({name:'Descans',startDate:'2026-11-04',endDate:'2026-11-11'});
- assert.equal(s.marks('2026-11-04').items[0].concaveBR,true);
- assert.equal(s.marks('2026-11-11').items[0].concaveTL,true);
- assert.ok(s.marks('2026-11-04').html.includes('personal-corner vacation pto-concave-br'));
- assert.ok(s.marks('2026-11-11').html.includes('personal-corner vacation pto-concave-tl'));
- assert.equal(s.marks('2026-11-11').items[0].bottom,true);
+ const first=s.marks('2026-11-04'),last=s.marks('2026-11-11');
+ assert.equal(first.items[0].left,true);assert.equal(first.items[0].bottom,false);
+ assert.equal(last.items[0].top,false);assert.equal(last.items[0].right,true);
+ assert.ok(first.html.includes('--pto-left-paint:linear-gradient(#168948,#168948)'));
+ assert.ok(last.html.includes('--pto-right-paint:linear-gradient(#168948,#168948)'));
+ assert.doesNotMatch(first.html+last.html,/personal-corner/);
 });
 
 test('les vacances superposades o adjacents es mostren com una sola sèrie per persona',()=>{
@@ -250,4 +251,47 @@ test('el mòdul personal es carrega abans de l’app i queda inclòs a la memòr
  const version=JSON.parse(read('package.json')).version,script='personal-time-off.js?v='+version,html=read('index.html');
  assert.ok(html.includes(script));assert.ok(read('sw.js').includes(script));
  assert.ok(html.indexOf(script)<html.indexOf('src="./app.js'));
+});
+
+test('colors independents per persona i tipus, desats sense alterar dates ni el color del tutor',()=>{
+ const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
+ s.click('person-off-filter');
+ assert.equal(s.api.setColor(s.state,'guardian:same','holiday','#123abc'),true);
+ assert.equal(s.api.setColor(s.state,'guardian:same','vacation','#FEDCBA'),true);
+ assert.equal(s.api.setColor(s.state,'guardian:other','holiday','#AA0000'),true);
+ assert.equal(s.api.color(s.state,'guardian:same','holiday'),'#123abc');
+ assert.equal(s.api.color(s.state,'guardian:same','vacation'),'#FEDCBA');
+ assert.equal(s.api.color(s.state,'guardian:other','vacation'),'#168948');
+ assert.equal(s.state.guardians[0].color,'#112233');
+ assert.equal(s.marks('2026-11-02').items.length,0);
+ const restored=s.api.clean(plain(s.state.personTimeOff),s.state.children,s.state.guardians);
+ assert.deepEqual(plain(restored),plain(s.state.personTimeOff));
+ assert.deepEqual(plain(restored['guardian:same'].holidays),['2026-11-02']);
+ const html=s.api.panel(s.state,'guardian:same');
+ assert.ok(html.includes('value="#123abc" data-action="person-off-color"'));
+ assert.ok(html.includes('value="#FEDCBA" data-action="person-off-color"'));
+ assert.doesNotMatch(html,/Contorn vermell/);
+ const before=JSON.stringify(s.state);
+ for(const [key,kind,color] of [['child:same','holiday','#112233'],['guardian:same','wrong','#112233'],['guardian:same','holiday','red'],['guardian:same','vacation','#fff;display:none']])assert.equal(s.api.setColor(s.state,key,kind,color),false);
+ assert.equal(JSON.stringify(s.state),before);
+ assert.throws(()=>s.api.clean({'guardian:same':{holidayColor:'bad'}},s.state.children,s.state.guardians),/Color/);
+});
+
+test('Any, Mes, filtres i llegenda utilitzen els colors personals també quan hi ha coincidències',()=>{
+ const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
+ s.holidays(['2026-11-02'],'guardian:other');
+ for(const [key,kind,color] of [['guardian:same','holiday','#123abc'],['guardian:same','vacation','#abcdef'],['guardian:other','holiday','#aa0011']])s.api.setColor(s.state,key,kind,color);
+ const mark=s.marks('2026-11-02');
+ assert.ok(mark.html.includes('--pto-top-paint:repeating-linear-gradient(45deg,#123abc 0px 4px,#abcdef 4px 8px,#aa0011 8px 12px)'));
+ assert.equal((mark.html.match(/data-personal-kind=/g)||[]).length,3);
+ for(const html of [s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),s.ctx.yearOverview(2026,s.state.children,'2026-11-02')]){
+  assert.ok(html.includes('#123abc'));assert.ok(html.includes('#abcdef'));assert.ok(html.includes('#aa0011'));
+ }
+ for(const html of [s.api.filterMarkup(s.state),s.api.legendMarkup(s.state)]){
+  assert.ok(html.includes('border-color:#123abc'));assert.ok(html.includes('border-color:#abcdef'));
+ }
+ s.click('person-off-type',{kind:'vacation'});assert.doesNotMatch(s.marks('2026-11-02').html,/#abcdef/);
+ const css=read('styles.css');
+ assert.match(css,/\.personal-outline \{position:absolute;inset:-1px;z-index:9;[^}]*--pto-stroke:var\(--month-outline-width,4px\)/);
+ assert.doesNotMatch(css,/--pto-inset|--pto-stroke:1px|personal-corner/);
 });

@@ -152,8 +152,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.14\.1/);
-  assert.match(sw,/calendari-familiar-v0\.14\.1/);
+  assert.match(html,/app\.js\?v=0\.14\.2/);
+  assert.match(sw,/calendari-familiar-v0\.14\.2/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -245,11 +245,13 @@ test('festius, vacances, identitat i filtres personals sobreviuen a exportar i r
  assert.equal(context.personalTimeOff.setHolidays(context.state,key,['2026-11-02','2026-11-03']),'');
  assert.equal(context.personalTimeOff.saveVacation(context.state,key,'',new Map([['name','Nadal'],['startDate','2026-12-22'],['endDate','2027-01-07']]),()=> 'vacation'),'');
  context.personalTimeOff.setMe(context.state,key);context.state.preferences.showPersonalHolidays=false;
+ context.personalTimeOff.setColor(context.state,key,'holiday','#be1234');context.personalTimeOff.setColor(context.state,key,'vacation','#3456ab');
  context.state.preferences.visibleTimeOffPeople=[];
  const stored=asJSON(context.state),restored=context.cleanState(JSON.parse(JSON.stringify(stored)));
  assert.deepEqual(asJSON(restored),stored);
  assert.equal(restored.preferences.mePerson,key);assert.equal(restored.preferences.showPersonalHolidays,false);
  assert.equal(restored.personTimeOff[key].vacations[0].endDate,'2027-01-07');
+ assert.equal(restored.personTimeOff[key].holidayColor,'#be1234');assert.equal(restored.personTimeOff[key].vacationColor,'#3456ab');
 });
 
 test('les còpies anteriors sense calendaris personals es carreguen amb valors buits i filtres activats',()=>{

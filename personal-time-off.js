@@ -6,6 +6,9 @@
  const day=d=>Date.parse(d+'T12:00:00Z')/86400000;
  const people=state=>state.guardians.map(p=>({...p,key:'guardian:'+p.id,category:'Tutor / responsable'}));
  const person=(state,key)=>people(state).find(p=>p.key===key);
+ const defaults={holiday:'#d32f2f',vacation:'#168948'};
+ const validColor=c=>typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c);
+ const color=(state,key,kind)=>{const c=get(state,key)[kind+'Color'];return validColor(c)?c:defaults[kind];};
  const get=(state,key)=>state.personTimeOff?.[key]??{holidays:[],vacations:[]};
  function clean(raw,children,guardians){
   if(raw===undefined)return {};
@@ -23,6 +26,7 @@
     ids.add(p.id);return {id:p.id,name:p.name.trim(),startDate:p.startDate,endDate:p.endDate};
    }).sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.endDate.localeCompare(b.endDate));
    out[key]={holidays:[...new Set(holidays)].sort(),vacations:periods};
+   for(const kind of ['holiday','vacation']){const field=kind+'Color';if(value[field]!==undefined){if(!validColor(value[field]))throw Error('Color de calendari personal incorrecte');out[key][field]=value[field];}}
   }
   return out;
  }
@@ -41,6 +45,10 @@
   if(!person(state,key))return 'Persona no disponible';
   if(!Array.isArray(dates)||dates.length>5000||dates.some(d=>!valid(d)))return 'Revisa les dates dels festius';
   firstSave(state,key);state.personTimeOff[key]={...get(state,key),holidays:[...new Set(dates)].sort()};return '';
+ }
+ function setColor(state,key,kind,value){
+  if(!person(state,key)||!['holiday','vacation'].includes(kind)||!validColor(value))return false;
+  firstSave(state,key);state.personTimeOff[key]={...get(state,key),[kind+'Color']:value};return true;
  }
  function saveVacation(state,key,id,fields,newId){
   if(!person(state,key))return 'Persona no disponible';
@@ -78,8 +86,8 @@
   for(const p of people(state)){
    if(!keys.includes(p.key))continue;const data=get(state,p.key);
    const clip=ranges=>ranges.filter(r=>r.endDate>=from&&r.startDate<=to).map(r=>({...r,startDay:day(r.startDate),endDay:day(r.endDate)}));
-   if(prefs.showPersonalHolidays!==false&&data.holidays.length){const ranges=clip(mergeRanges(data.holidays.map(d=>({startDate:d,endDate:d}))));if(ranges.length)out.push({key:p.key,name:p.name,kind:'holiday',ranges});}
-   if(prefs.showPersonalVacations!==false&&data.vacations.length){const ranges=clip(mergeRanges(data.vacations));if(ranges.length)out.push({key:p.key,name:p.name,kind:'vacation',ranges});}
+   if(prefs.showPersonalHolidays!==false&&data.holidays.length){const ranges=clip(mergeRanges(data.holidays.map(d=>({startDate:d,endDate:d}))));if(ranges.length)out.push({key:p.key,name:p.name,kind:'holiday',color:color(state,p.key,'holiday'),ranges});}
+   if(prefs.showPersonalVacations!==false&&data.vacations.length){const ranges=clip(mergeRanges(data.vacations));if(ranges.length)out.push({key:p.key,name:p.name,kind:'vacation',color:color(state,p.key,'vacation'),ranges});}
   }
   return out;
  }
@@ -90,23 +98,30 @@
    const start=Math.max(first,range.startDay??day(range.startDate)),end=Math.min(last,range.endDay??day(range.endDate));
    if(n<start||n>end)continue;
    const top=n-7<start,bottom=n+7>end,left=weekday===0||n-1<start,right=weekday===6||n+1>end;
-   const aboveLeft=weekday>0&&n-8>=start&&n-8<=end,belowRight=weekday<6&&n+8>=start&&n+8<=end;
-   items.push({...entry,startDate:range.startDate,endDate:range.endDate,top,bottom,left,right,concaveTL:!top&&!left&&!aboveLeft,concaveBR:!bottom&&!right&&!belowRight});
+   items.push({...entry,color:validColor(entry.color)?entry.color:defaults[entry.kind],startDate:range.startDate,endDate:range.endDate,top,bottom,left,right});
   }
   const label=[...new Set(items.map(p=>(p.kind==='holiday'?'Festiu de ':'Vacances de ')+p.name))].join('. ');
-  return {items,label,html:items.map(p=>`<span class="personal-outline ${p.kind} ${p.top?'pto-top':''} ${p.bottom?'pto-bottom':''} ${p.left?'pto-left':''} ${p.right?'pto-right':''}" data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner ${p.kind} pto-concave-tl" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner ${p.kind} pto-concave-br" aria-hidden="true"></span>`:''}`).join('')};
+  const paint=colors=>{const unique=[...new Set(colors)];return unique.length===1?`linear-gradient(${unique[0]},${unique[0]})`:`repeating-linear-gradient(45deg,${unique.map((c,i)=>`${c} ${i*4}px ${(i+1)*4}px`).join(',')})`;};
+  return {items,label,html:items.map(p=>{
+   const edges=['top','right','bottom','left'].filter(edge=>p[edge]);
+   const style=edges.map(edge=>`--pto-${edge}-paint:${paint(items.filter(q=>q[edge]).map(q=>q.color))}`).join(';');
+   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}" aria-hidden="true"></span>`;
+  }).join('')};
  }
  function filterMarkup(state){
   const prefs=state.preferences,available=people(state).filter(p=>hasData(state,p.key)),selected=prefs.visibleTimeOffPeople??available.map(p=>p.key);
-  return `<div class="sheet-section-label">Festius i vacances personals</div><p class="settings-note">Contorns a les vistes Any i Mes.</p>${[['holiday','Festius personals','showPersonalHolidays'],['vacation','Vacances personals','showPersonalVacations']].map(([kind,label,flag])=>`<button class="option ${prefs[flag]!==false?'selected':''}" data-action="person-off-type" data-kind="${kind}" aria-pressed="${prefs[flag]!==false}"><span class="option-left"><span class="personal-legend ${kind}" aria-hidden="true"></span>${label}</span>${prefs[flag]!==false?'✓':'Ocult'}</button>`).join('')}
-   ${available.length?`<p class="settings-note">Persones que vols veure amb aquests contorns:</p>${available.map(p=>`<button class="option ${selected.includes(p.key)?'selected':''}" data-action="person-off-filter" data-person="${esc(p.key)}" aria-pressed="${selected.includes(p.key)}"><span>${esc(p.name)}${prefs.mePerson===p.key?' · Jo':''}<small class="person-category">${p.category}</small></span>${selected.includes(p.key)?'✓':'Ocult'}</button>`).join('')}`:'<p class="settings-note">Afegeix festius o vacances des de Persones.</p>'}`;
+  return `<div class="sheet-section-label">Festius i vacances personals</div><p class="settings-note">Contorns a les vistes Any i Mes.</p>${[['holiday','Festius personals','showPersonalHolidays'],['vacation','Vacances personals','showPersonalVacations']].map(([kind,label,flag])=>`<button class="option ${prefs[flag]!==false?'selected':''}" data-action="person-off-type" data-kind="${kind}" aria-pressed="${prefs[flag]!==false}"><span class="option-left">${label}</span>${prefs[flag]!==false?'✓':'Ocult'}</button>`).join('')}
+   ${available.length?`<p class="settings-note">Persones que vols veure amb aquests contorns:</p>${available.map(p=>`<button class="option ${selected.includes(p.key)?'selected':''}" data-action="person-off-filter" data-person="${esc(p.key)}" aria-pressed="${selected.includes(p.key)}"><span>${esc(p.name)}${prefs.mePerson===p.key?' · Jo':''}<small class="person-category">${p.category}</small><span class="personal-person-colors"><span class="personal-legend" style="border-color:${color(state,p.key,'holiday')}" title="Festius"></span><span class="personal-legend" style="border-color:${color(state,p.key,'vacation')}" title="Vacances"></span></span></span>${selected.includes(p.key)?'✓':'Ocult'}</button>`).join('')}`:'<p class="settings-note">Afegeix festius o vacances des de Persones.</p>'}`;
+ }
+ function legendMarkup(state){
+  return visibleEntries(state).map(p=>`<span class="legend-entry"><span class="personal-legend" style="border-color:${p.color}"></span>${p.kind==='holiday'?'Festius personals':'Vacances personals'} · ${esc(p.name)}</span>`).join('');
  }
  const heading=(title,subtitle)=>`<div class="sheet-heading"><div><h2 class="sheet-title">${esc(title)}</h2><p class="sheet-subtitle">${esc(subtitle)}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">×</button></div>`;
  function panel(state,key){
   const p=person(state,key);if(!p)return '';const data=get(state,key);
-  return heading('Festius i vacances',p.name+(state.preferences.mePerson===key?' · Jo':''))+`<div class="school-period"><div class="panel-header"><strong>Festius (${data.holidays.length})</strong><button class="secondary-btn" data-action="person-holidays" data-person="${esc(key)}">Tria dies</button></div><div class="school-day-list">${data.holidays.map(d=>`<span class="school-day-pill personal-holiday-pill">${fmt(d)}<button type="button" data-action="person-holiday-delete" data-person="${esc(key)}" data-date="${d}" aria-label="Suprimeix el festiu del ${d}">×</button></span>`).join('')||'<p class="settings-note">Encara no hi ha festius.</p>'}</div></div>
+  return heading('Festius i vacances',p.name+(state.preferences.mePerson===key?' · Jo':''))+`<div class="personal-color-settings">${[['holiday','Color dels festius'],['vacation','Color de les vacances']].map(([kind,label])=>`<label>${label}<input class="color-input" type="color" value="${color(state,key,kind)}" data-action="person-off-color" data-person="${esc(key)}" data-kind="${kind}" aria-label="${label} de ${esc(p.name)}"></label>`).join('')}</div><div class="school-period"><div class="panel-header"><strong>Festius (${data.holidays.length})</strong><button class="secondary-btn" data-action="person-holidays" data-person="${esc(key)}">Tria dies</button></div><div class="school-day-list">${data.holidays.map(d=>`<span class="school-day-pill personal-holiday-pill">${fmt(d)}<button type="button" data-action="person-holiday-delete" data-person="${esc(key)}" data-date="${d}" aria-label="Suprimeix el festiu del ${d}">×</button></span>`).join('')||'<p class="settings-note">Encara no hi ha festius.</p>'}</div></div>
    <div class="school-period"><div class="panel-header"><strong>Vacances (${data.vacations.length})</strong><button class="secondary-btn" data-action="person-vacation-add" data-person="${esc(key)}">+ Període</button></div>
-   ${data.vacations.map(v=>`<div class="school-schedule-row"><div><strong>${esc(v.name)}</strong><span class="school-meta">${fmt(v.startDate)} – ${fmt(v.endDate)}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="person-vacation-edit" data-person="${esc(key)}" data-period="${esc(v.id)}">Edita</button><button class="delete-icon" data-action="person-vacation-delete" data-person="${esc(key)}" data-period="${esc(v.id)}" aria-label="Suprimeix ${esc(v.name)}">×</button></div></div>`).join('')||'<p class="settings-note">Afegeix un període amb nom, inici i final.</p>'}</div><p class="settings-note">Contorn vermell per als festius i verd per a les vacances a Any i Mes.</p>`;
+   ${data.vacations.map(v=>`<div class="school-schedule-row"><div><strong>${esc(v.name)}</strong><span class="school-meta">${fmt(v.startDate)} – ${fmt(v.endDate)}</span></div><div class="school-schedule-actions"><button class="school-schedule-edit" data-action="person-vacation-edit" data-person="${esc(key)}" data-period="${esc(v.id)}">Edita</button><button class="delete-icon" data-action="person-vacation-delete" data-person="${esc(key)}" data-period="${esc(v.id)}" aria-label="Suprimeix ${esc(v.name)}">×</button></div></div>`).join('')||'<p class="settings-note">Afegeix un període amb nom, inici i final.</p>'}</div><p class="settings-note">Els colors escollits s’apliquen als contorns de les vistes Any i Mes.</p>`;
  }
  const months=['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
  function holidayPicker(state,draft){
@@ -114,11 +129,11 @@
   const [year,month]=draft.month.split('-').map(Number),offset=(new Date(Date.UTC(year,month-1,1)).getUTCDay()+6)%7,count=new Date(Date.UTC(year,month,0)).getUTCDate();
   const selected=new Set(draft.dates),title=months[month-1]+' '+year,cells=Array.from({length:offset},()=>'<span aria-hidden="true"></span>');
   for(let d=1;d<=count;d++){const date=draft.month+'-'+String(d).padStart(2,'0');cells.push(`<button type="button" class="school-date-cell ${selected.has(date)?'selected':''}" data-action="person-holiday-toggle" data-date="${date}" aria-label="${date}" aria-pressed="${selected.has(date)}">${d}</button>`);}
-  return heading('Tria festius',p.name)+`<p class="settings-note">Marca o desmarca dies de diversos mesos. Pots incloure caps de setmana.</p><div class="school-date-picker personal-holidays"><div class="school-date-nav"><button type="button" class="soft-btn" data-action="person-holiday-month" data-step="-1" aria-label="Mes anterior" ${draft.month==='0100-01'?'disabled':''}>‹</button><h3>${title}</h3><button type="button" class="soft-btn" data-action="person-holiday-month" data-step="1" aria-label="Mes següent" ${draft.month==='9999-12'?'disabled':''}>›</button></div><div class="school-date-weekdays" aria-hidden="true">${['Dl','Dt','Dc','Dj','Dv','Ds','Dg'].map(d=>`<span>${d}</span>`).join('')}</div><div class="school-date-grid" role="group" aria-label="${title}">${cells.join('')}</div></div><p class="school-date-count" role="status">${draft.dates.length} ${draft.dates.length===1?'dia seleccionat':'dies seleccionats'}</p><div class="action-row"><button type="button" class="primary-btn" data-action="person-holidays-save">Desa els dies</button><button type="button" class="soft-btn" data-action="person-time-off" data-person="${esc(p.key)}">Cancel·la</button></div>`;
+  return heading('Tria festius',p.name)+`<p class="settings-note">Marca o desmarca dies de diversos mesos. Pots incloure caps de setmana.</p><div class="school-date-picker personal-holidays" style="--personal-holiday-color:${color(state,p.key,'holiday')}"><div class="school-date-nav"><button type="button" class="soft-btn" data-action="person-holiday-month" data-step="-1" aria-label="Mes anterior" ${draft.month==='0100-01'?'disabled':''}>‹</button><h3>${title}</h3><button type="button" class="soft-btn" data-action="person-holiday-month" data-step="1" aria-label="Mes següent" ${draft.month==='9999-12'?'disabled':''}>›</button></div><div class="school-date-weekdays" aria-hidden="true">${['Dl','Dt','Dc','Dj','Dv','Ds','Dg'].map(d=>`<span>${d}</span>`).join('')}</div><div class="school-date-grid" role="group" aria-label="${title}">${cells.join('')}</div></div><p class="school-date-count" role="status">${draft.dates.length} ${draft.dates.length===1?'dia seleccionat':'dies seleccionats'}</p><div class="action-row"><button type="button" class="primary-btn" data-action="person-holidays-save">Desa els dies</button><button type="button" class="soft-btn" data-action="person-time-off" data-person="${esc(p.key)}">Cancel·la</button></div>`;
  }
  function vacationForm(state,key,id,today){
   const p=person(state,key),v=get(state,key).vacations.find(v=>v.id===id);if(!p||(id&&!v))return '';
   return heading(v?'Edita vacances':'Afegeix vacances',p.name)+`<form data-person-vacation-form="true" data-person="${esc(key)}" data-period="${esc(v?.id??'')}"><div class="school-form-fields"><div class="field"><label>Nom del període<input type="text" name="name" maxlength="120" value="${esc(v?.name??'Vacances')}" required></label></div><div class="form-row"><div class="field"><label>Data d’inici<input type="date" name="startDate" value="${v?.startDate??today}" required></label></div><div class="field"><label>Data final<input type="date" name="endDate" value="${v?.endDate??today}" required></label></div></div></div><p class="settings-note">L’inici i el final estan inclosos.</p><div class="action-row"><button type="submit" class="primary-btn">Desa el període</button><button type="button" class="soft-btn" data-action="person-time-off" data-person="${esc(key)}">Cancel·la</button></div></form>`;
  }
- window.personalTimeOff={valid,people,person,get,clean,cleanPreferences,hasData,setHolidays,saveVacation,deleteVacation,removePerson,setMe,showAll,filtered,mergeRanges,visibleEntries,marks,filterMarkup,panel,holidayPicker,vacationForm};
+ window.personalTimeOff={valid,color,setColor,people,person,get,clean,cleanPreferences,hasData,setHolidays,saveVacation,deleteVacation,removePerson,setMe,showAll,filtered,mergeRanges,visibleEntries,marks,filterMarkup,legendMarkup,panel,holidayPicker,vacationForm};
 })();

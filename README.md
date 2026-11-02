@@ -423,3 +423,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 ## v0.14.1: calendaris personals només per a adults
 
 Festius, vacances i «Soc jo» només apareixen als tutors i responsables. Els fills mantenen la seva configuració escolar; els calendaris personals i la identificació de fills de la versió anterior s'exclouen en carregar les dades i als filtres.
+
+## v0.14.2: colors personals i contorns al perímetre
+
+Cada tutor o responsable pot triar el color dels festius i el de les vacances dins de «Festius i vacances». Es conserven a les còpies de seguretat i apareixen als filtres i a la llegenda. Els contorns d’Any i Mes segueixen el perímetre de les cel·les, amb el mateix gruix de 4 px que el requadre del mes. Les vores coincidents alternen els colors sense requadres interiors.
