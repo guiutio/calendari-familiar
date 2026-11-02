@@ -36,14 +36,21 @@ function setup(){
 }
 const leave={name:'Vacances de Nadal',startDate:'2026-12-22',endDate:'2027-01-07'};
 
-test('cada fill i tutor disposa d’un calendari, fins i tot amb el mateix identificador entre categories',()=>{
- const s=setup();s.holidays(['2026-11-02'],'child:same');s.holidays(['2026-11-03'],'guardian:same');
- assert.deepEqual(plain(s.state.personTimeOff['child:same'].holidays),['2026-11-02']);
- assert.deepEqual(plain(s.state.personTimeOff['guardian:same'].holidays),['2026-11-03']);
+test('només els tutors i responsables tenen calendari personal i l’opció Soc jo',()=>{
+ const s=setup();s.holidays(['2026-11-03']);
  const html=s.ctx.peoplePage();
- assert.equal((html.match(/data-action="person-time-off"/g)||[]).length,3);
- assert.equal((html.match(/data-action="person-me"/g)||[]).length,3);
- assert.ok(html.includes('data-person="child:same"'));assert.ok(html.includes('data-person="guardian:same"'));
+ assert.equal((html.match(/data-action="person-time-off"/g)||[]).length,2);
+ assert.equal((html.match(/data-action="person-me"/g)||[]).length,2);
+ assert.doesNotMatch(html,/data-person="child:same"/);
+ assert.equal(s.ctx.personActions('child:same'),'');
+ assert.equal(s.api.person(s.state,'child:same'),undefined);
+ const before=JSON.stringify(s.state);
+ assert.equal(s.api.setHolidays(s.state,'child:same',['2026-11-02']),'Persona no disponible');
+ s.vacation(leave,'child:same');s.click('person-me',{person:'child:same'});
+ for(const action of ['person-time-off','person-holidays','person-vacation-add'])s.click(action,{person:'child:same'});
+ assert.equal(JSON.stringify(s.state),before);assert.equal(s.ctx.sheet,null);
+ assert.equal(s.api.panel(s.state,'child:same'),'');
+ assert.equal(s.api.vacationForm(s.state,'child:same',undefined,'2026-11-02'),'');
 });
 
 test('multiselecció de festius entre mesos i anys, inclosos caps de setmana, sense desar fins a confirmar',()=>{
@@ -62,16 +69,16 @@ test('multiselecció de festius entre mesos i anys, inclosos caps de setmana, se
 test('afegir, editar i eliminar vacances valida tot el període i conserva els altres calendaris',()=>{
  const s=setup();s.vacation(leave);assert.equal(s.saves,1);
  const period=s.api.get(s.state,'guardian:same').vacations[0];assert.equal(period.name,leave.name);
- s.holidays(['2026-11-02'],'child:same');const before=JSON.stringify(s.state);
+ s.holidays(['2026-11-02'],'guardian:other');const before=JSON.stringify(s.state);
  s.vacation({...leave,endDate:'2026-12-01'},'guardian:same',period.id);assert.equal(JSON.stringify(s.state),before);assert.equal(s.saves,1);
  s.vacation({...leave,name:'Nadal actualitzat',endDate:'2027-01-08'},'guardian:same',period.id);
  assert.equal(s.api.get(s.state,'guardian:same').vacations.length,1);assert.equal(s.api.get(s.state,'guardian:same').vacations[0].name,'Nadal actualitzat');
  s.click('person-vacation-delete',{period:period.id});assert.equal(s.api.get(s.state,'guardian:same').vacations.length,0);
- assert.deepEqual(plain(s.api.get(s.state,'child:same').holidays),['2026-11-02']);
+ assert.deepEqual(plain(s.api.get(s.state,'guardian:other').holidays),['2026-11-02']);
 });
 
 test('Soc jo identifica una única persona, es pot retirar i es reflecteix als filtres',()=>{
- const s=setup();s.click('person-me',{person:'child:same'});assert.equal(s.state.preferences.mePerson,'child:same');
+ const s=setup();s.click('person-me',{person:'child:same'});assert.equal(s.state.preferences.mePerson,'');
  s.click('person-me');assert.equal(s.state.preferences.mePerson,'guardian:same');
  s.holidays(['2026-11-02']);assert.ok(s.api.filterMarkup(s.state).includes('Guiu · Jo'));
  assert.match(s.ctx.peoplePage(),/data-action="person-me" data-person="guardian:same" aria-pressed="true"/);
@@ -107,7 +114,7 @@ test('els dies consecutius es fusionen i dues setmanes formen només el perímet
 test('dos dilluns separats no s’uneixen i els festius de persones diferents tampoc es fusionen',()=>{
  const s=setup();s.holidays(['2026-11-02','2026-11-09']);
  assert.equal(s.marks('2026-11-02').items[0].bottom,true);assert.equal(s.marks('2026-11-09').items[0].top,true);
- s.holidays(['2026-11-03'],'child:same');
+ s.holidays(['2026-11-03'],'guardian:other');
  assert.equal(s.marks('2026-11-02').items[0].right,true);assert.equal(s.marks('2026-11-03').items[0].left,true);
 });
 
@@ -165,13 +172,25 @@ test('el panell de filtres identifica qui soc jo i el botó de filtres indica se
 });
 
 test('eliminar una persona neteja el seu calendari i la identitat, sense tocar persones amb el mateix id',()=>{
- const s=setup();s.holidays(['2026-11-02'],'child:same');s.holidays(['2026-11-03'],'guardian:same');
+ const s=setup();s.holidays(['2026-11-03'],'guardian:same');
  s.click('person-me',{person:'child:same'});s.ctx.removeChild('same');
  assert.equal(s.state.preferences.mePerson,'');assert.equal(s.state.personTimeOff['child:same'],undefined);
  assert.ok(s.state.personTimeOff['guardian:same']);assert.equal(s.state.guardians.length,2);
  s.click('person-me');s.ctx.removeGuardian('same');
  assert.equal(s.state.preferences.mePerson,'');assert.equal(s.state.personTimeOff['guardian:same'],undefined);
  assert.ok(!s.state.preferences.visibleTimeOffPeople.includes('guardian:same'));
+});
+
+test('les dades antigues dels fills no es mostren ni es recuperen com a calendaris personals',()=>{
+ const s=setup();const legacy={'child:same':{holidays:['2026-11-02'],vacations:[{id:'old',...leave}]},'guardian:same':{holidays:['2026-11-03'],vacations:[]}};
+ const data=s.api.clean(legacy,s.state.children,s.state.guardians);
+ assert.deepEqual(plain(data),{'guardian:same':{holidays:['2026-11-03'],vacations:[]}});
+ const prefs=s.api.cleanPreferences({mePerson:'child:same',visibleTimeOffPeople:['child:same','guardian:same']},s.state.children,s.state.guardians,data);
+ assert.equal(prefs.mePerson,'');assert.deepEqual(plain(prefs.visibleTimeOffPeople),['guardian:same']);
+ s.state.personTimeOff=legacy;s.state.preferences.visibleTimeOffPeople=['child:same','guardian:same'];
+ assert.equal(s.marks('2026-11-02').items.length,0);
+ assert.doesNotMatch(s.api.filterMarkup(s.state),/data-person="child:same"/);
+ assert.deepEqual(plain(legacy['child:same'].holidays),['2026-11-02']);
 });
 
 test('les còpies personals es netegen sense mutacions i validen dates, noms, ids i filtres',()=>{

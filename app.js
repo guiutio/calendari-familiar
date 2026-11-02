@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.14.0';
+const APP_VERSION = '0.14.1';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1115,6 +1115,8 @@ function schoolInfoForDay(date) {
     return lines.length ? `<div class="sheet-section-label">Informació escolar</div>${lines.join('')}` : '';
 }
 function personActions(key) {
+    if (!personalTimeOff.person(state, key))
+        return '';
     const me = state.preferences.mePerson === key;
     return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar', 15)} Festius i vacances</button><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
 }
@@ -1122,7 +1124,7 @@ function peoplePage() {
     return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Gestiona els fills, tutors i responsables.</p></div></header>
   <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
   ${!state.children.length ? '<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>' : ''}
-  ${state.children.map(c => `<div class="person-record"><div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash', 16)}</button></div>${personActions('child:' + c.id)}</div>`).join('')}</section>
+  ${state.children.map(c => `<div class="person-record"><div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash', 16)}</button></div></div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus', 14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
   ${!state.guardians.length ? '<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>' : ''}
   ${state.guardians.map(g => `<div class="person-record"><div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash', 16)}</button></div>${personActions('guardian:' + g.id)}</div>`).join('')}</section>`;

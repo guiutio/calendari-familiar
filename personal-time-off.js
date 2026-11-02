@@ -4,7 +4,7 @@
  const valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number(d.slice(0,4))>=100&&Number.isFinite(Date.parse(d+'T12:00:00Z'))&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
  const fmt=d=>Number(d.slice(8,10))+'/'+Number(d.slice(5,7))+'/'+d.slice(0,4);
  const day=d=>Date.parse(d+'T12:00:00Z')/86400000;
- const people=state=>[...state.children.map(p=>({...p,key:'child:'+p.id,category:'Fill'})),...state.guardians.map(p=>({...p,key:'guardian:'+p.id,category:'Tutor / responsable'}))];
+ const people=state=>state.guardians.map(p=>({...p,key:'guardian:'+p.id,category:'Tutor / responsable'}));
  const person=(state,key)=>people(state).find(p=>p.key===key);
  const get=(state,key)=>state.personTimeOff?.[key]??{holidays:[],vacations:[]};
  function clean(raw,children,guardians){

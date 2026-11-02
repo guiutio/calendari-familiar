@@ -419,3 +419,7 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - A Any i Mes, els dies consecutius de cada persona s’emmarquen amb un contorn vermell per als festius i verd per a les vacances. Els períodes contigus o superposats es fusionen visualment per persona, els contorns es tanquen als límits dels mesos i tots dos tipus es poden mostrar quan coincideixen.
 - El filtre permet activar cada tipus de contorn i triar les persones que es visualitzen, independentment de les franges de pernocta i escola. El calendari d’una persona oculta no es torna a activar quan se n’editen les dades.
 - Les dades i preferències personals s’inclouen a les còpies JSON; les còpies anteriors es carreguen sense calendaris personals. Eliminar una persona també neteja el seu calendari i la seva identificació.
+
+## v0.14.1: calendaris personals només per a adults
+
+Festius, vacances i «Soc jo» només apareixen als tutors i responsables. Els fills mantenen la seva configuració escolar; els calendaris personals i la identificació de fills de la versió anterior s'exclouen en carregar les dades i als filtres.
