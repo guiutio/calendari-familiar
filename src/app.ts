@@ -82,17 +82,18 @@ function inReducedWindow(sessions:WeeklySession[],window:ReducedWindow):boolean{
  return sessions.every(a=>a.startTime>=window.startTime&&a.endTime<=window.endTime);
 }
 
-type Preferences = { visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
+type PersonTimeOff = {holidays:string[];vacations:SchoolVacation[]};
+type Preferences = { mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
 type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>;schoolDaysOnly?:boolean;kind?:'night'|'activity';endDate?:string;nightTimes?:Record<string,string>};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
-type AppState = { version: number; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
+type AppState = { version: number; personTimeOff:Record<string,PersonTimeOff>; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
-type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = {type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.13.1';
+const APP_VERSION = '0.14.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -142,9 +143,9 @@ function newId() {return (typeof crypto !== 'undefined' && 'randomUUID' in crypt
 /** Estat inicial completament buit, sense dades familiars predefinides. */
 function emptyState():AppState {
   return {
-    version:2,children:[],guardians:[],
+    version:2,children:[],guardians:[],personTimeOff:{},
     overrides:{},bandOverrides:{},daySlots:{},schools:[],nightDateTimes:{},extraRotations:[],extraExceptions:{},
-    preferences:{visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
+    preferences:{mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
   };
 }
 const SCHOOL_PALETTE = ['#74c6a3','#f0be75','#afa4e6','#7bbcc9','#d3a1cd','#bbc773','#d4a68f','#87b8e1'];
@@ -293,6 +294,8 @@ function cleanState(raw:unknown):AppState {
   const children=obj.children.filter(c=>c&&typeof c.id==='string'&&typeof c.name==='string'&&typeof c.birthDate==='string').map(c=>({...c,name:c.name.slice(0,70),birthDate:isValidDate(c.birthDate)?c.birthDate:''}));
   const guardians=obj.guardians.filter(g=>g&&typeof g.id==='string'&&typeof g.name==='string'&&typeof g.color==='string'&&/^#[0-9a-fA-F]{6}$/.test(g.color)).map(g=>({...g,name:g.name.slice(0,70)}));
   if(children.length>30 || guardians.length>30 || new Set(children.map(x=>x.id)).size!==children.length || new Set(guardians.map(x=>x.id)).size!==guardians.length) throw Error('La còpia conté fills o tutors incorrectes');
+  const personTimeOff=personalTimeOff.clean(obj.personTimeOff,children,guardians) as Record<string,PersonTimeOff>;
+  const personalPrefs=personalTimeOff.cleanPreferences(obj.preferences,children,guardians,personTimeOff);
   const validGuardians=new Set(guardians.map(x=>x.id));
   const overrides:Record<string,string>={};
   for(const [key,value] of Object.entries(obj.overrides)) {const [date,childId]=key.split('|');if(date && childId && isValidDate(date)&&children.some(c=>c.id===childId)&&validGuardians.has(value))overrides[key]=value;}
@@ -319,7 +322,7 @@ function cleanState(raw:unknown):AppState {
   extraRotations.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.id.localeCompare(b.id));
   const nightDateTimes=rotationPatterns.cleanNightDateTimes(obj.nightDateTimes,children) as Record<string,string>;
   const extraExceptions=rotationPatterns.cleanExtraExceptions(obj.extraExceptions,extraRotations,children,guardians) as Record<string,ExtraException>;
-  return {version:2,children,guardians,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
+  return {version:2,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
 }
 let db:IDBDatabase|null=null;
 let storageMode:'indexeddb'|'localStorage'|'session'='session';
@@ -462,6 +465,7 @@ const dayTimelineUI=(window as Window & {dayTimelineUI?:DayTimelineUI}).dayTimel
 const monthDayUI=(window as Window & {monthDayUI?:any}).monthDayUI;
 const rotationPatterns=(window as Window & {rotationPatterns?:any}).rotationPatterns;
 const rotationEditor=(window as Window & {rotationEditor?:any}).rotationEditor;
+const personalTimeOff=(window as Window & {personalTimeOff?:any}).personalTimeOff;
 /** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
 function childHasSchool(date:string,childId:string):boolean {
  const weekday=(parseDate(date).getDay()+6)%7;
@@ -548,7 +552,7 @@ function navButton(target:Tab,label:string,name:string,kind:'side'|'mobile'){
 }
 function calendarNavigation(){
   const children=activeChildren();
-  const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0;
+  const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
   return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button>${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='year'?'Any anterior':calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='year'?'Any següent':calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${([['year','Any'],['month','Mes'],['week','Setmana'],['day','Dia']] as const).map(([value,label])=>`<button data-action="calendar-view" data-view="${value}" class="${calendarView===value?'active':''}" aria-pressed="${calendarView===value}">${label}</button>`).join('')}</div>${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
 }
@@ -562,6 +566,8 @@ function monthPanel(index:number,children:Child[],today:string):string {
     const year=Math.floor(index/12),month=index-year*12;
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
     const daysInMonth=new Date(year,month+1,0).getDate();
+    const monthStart=localDate(new Date(year,month,1,12)),monthEnd=localDate(new Date(year,month,daysInMonth,12));
+    const personalEntries=state.personTimeOff?personalTimeOff.visibleEntries(state,monthStart,monthEnd):[];
     const starting=localDate(new Date(year,month,1-firstDay,12));
     const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
     const cells=Array.from({length:totalCells},(_,offset)=>{
@@ -570,14 +576,15 @@ function monthPanel(index:number,children:Child[],today:string):string {
       const weekButton=iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:'';
       // Els espais dels altres mesos només alineen els dies: no repeteixen cap data ni assignació.
       if(offset<firstDay||offset>=firstDay+daysInMonth)return `${weekButton}<span class="month-empty-cell" aria-hidden="true"></span>`;
+      const personalMarks=personalEntries.length?personalTimeOff.marks(personalEntries,date,monthStart,monthEnd):{html:'',label:''};
       const monthEdges=monthDayUI.outline(date,year,month,i,totalCells,daysInMonth);
       const changed=monthDayUI.hasChanges(state,date);
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
       const snapshot=monthData(date,children),schoolCount=snapshot.activities.length;
-      return `${weekButton}<button type="button" class="day-cell ${date===today?'today':''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date===today?'aria-current="date"':''} aria-label="${escapeHtml(fullDate(date))}. ${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
+      return `${weekButton}<button type="button" class="day-cell ${date===today?'today':''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date===today?'aria-current="date"':''} aria-label="${escapeHtml(fullDate(date))}. ${personalMarks.label?escapeHtml(personalMarks.label)+'. ':''}${schoolCount?schoolCount+' activitats escolars. ':''}Obre la vista Dia.">
         <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed?'<span class="change-dot" title="Canvi puntual"></span>':''}</span>
         ${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra)}
-        ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}
+        ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}${personalMarks.html}
       </button>`;
     });
     return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year,month))}</h2><div class="month-grid">${cells.join('')}</div></section>`;
@@ -723,18 +730,22 @@ function zoomControls(){
     </div>`;
 }
 function yearOverview(year:number,children:Child[],today:string):string {
+  const personalEntries=state.personTimeOff?personalTimeOff.visibleEntries(state,localDate(new Date(year,0,1,12)),localDate(new Date(year,11,31,12))):[];
   return `<div class="year-overview" aria-label="Calendari anual ${year}">${months.map((name,month)=>{
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7,count=new Date(year,month+1,0).getDate();
+    const monthStart=localDate(new Date(year,month,1,12)),monthEnd=localDate(new Date(year,month,count,12));
     const cells=Array.from({length:42},(_,index)=>{
       const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
       const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
-      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}</span>`;
+      const marks=personalEntries.length?personalTimeOff.marks(personalEntries,date,monthStart,monthEnd):{html:'',label:''};
+      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
     }).join('');
     return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
   }).join('')}</div>`;
 }
 function calendarPage(){
   const today=localDate(new Date()),children=activeChildren();
+  const personalKinds=new Set<string>((state.personTimeOff&&(calendarView==='year'||calendarView==='month')?personalTimeOff.visibleEntries(state):[]).map((p:any)=>p.kind));
   let content='';
   if(calendarView==='year'){
     content=yearOverview(viewYear,children,today);
@@ -750,7 +761,7 @@ function calendarPage(){
   return `${calendarView==='month'?`<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>`:''}
     <section class="calendar-card" aria-label="Calendari familiar">
     ${content}
-    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
+    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalKinds.has('holiday')?'<span class="legend-entry"><span class="personal-legend holiday"></span>Festius personals</span>':''}${personalKinds.has('vacation')?'<span class="legend-entry"><span class="personal-legend vacation"></span>Vacances personals</span>':''}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
     <span class="legend-note">● canvi puntual</span></footer></section>
     ${calendarView==='year'?'<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>':calendarView==='day'||calendarView==='week'?`<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info',18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>`:`<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info',18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
@@ -953,14 +964,18 @@ function schoolInfoForDay(date:string):string {
  }
  return lines.length?`<div class="sheet-section-label">Informació escolar</div>${lines.join('')}`:'';
 }
+function personActions(key:string):string {
+ const me=state.preferences.mePerson===key;
+ return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar',15)} Festius i vacances</button><button class="soft-btn person-me ${me?'selected':''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me?icon('check',15):icon('person',15)} ${me?'Jo':'Soc jo'}</button></div>`;
+}
 function peoplePage(){
   return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Gestiona els fills, tutors i responsables.</p></div></header>
   <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus',14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
   ${!state.children.length?'<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>':''}
-  ${state.children.map(c=>`<div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>
+  ${state.children.map(c=>`<div class="person-record"><div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash',16)}</button></div>${personActions('child:'+c.id)}</div>`).join('')}</section>
   <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
   ${!state.guardians.length?'<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>':''}
-  ${state.guardians.map(g=>`<div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash',16)}</button></div>`).join('')}</section>`;
+  ${state.guardians.map(g=>`<div class="person-record"><div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash',16)}</button></div>${personActions('guardian:'+g.id)}</div>`).join('')}</section>`;
 }
 function settingsPage(){
   const storageDescription=storageMode==='indexeddb'?'IndexedDB · desat automàtic':storageMode==='localStorage'?'LocalStorage · mode alternatiu':'Sense persistència garantida';
@@ -981,7 +996,10 @@ function settingsPage(){
 function returnFromDetail(date:string):Sheet{return detailOrigin==='day'?{type:'day',date:detailReturnDate||date}:null;}
 function sheetMarkup(){
   let contents='';
-  if(sheet?.type==='zoom'){
+  if(sheet?.type==='personTimeOff'){contents=personalTimeOff.panel(state,sheet.personKey);
+  } else if(sheet?.type==='personHolidays'){contents=personalTimeOff.holidayPicker(state,sheet);
+  } else if(sheet?.type==='personVacation'){contents=personalTimeOff.vacationForm(state,sheet.personKey,sheet.periodId,localDate(new Date()));
+  } else if(sheet?.type==='zoom'){
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Zoom · ${calendarView==='day'?'Dia':'Setmana'}</h2><p class="sheet-subtitle">El nivell de zoom es desa per a aquesta vista.</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${zoomControls()}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
@@ -990,6 +1008,7 @@ function sheetMarkup(){
     <div class="sheet-section-label">Fills</div>${state.children.map(c=>filterOption(c.id,c.name,state.preferences.visibleChildren.includes(c.id),'child')).join('')}
     <div class="sheet-section-label">Tutors</div>${state.guardians.map(g=>filterOption(g.id,g.name,state.preferences.visibleGuardians.includes(g.id),'guardian',g.color)).join('')}
     <div class="sheet-section-label">Escoles <span class="filter-section-hint">(ocultes per defecte)</span></div>${state.schools.length?state.schools.map(s=>filterOption(s.id,s.name,state.preferences.visibleSchools.includes(s.id),'school',s.color)).join(''):'<p class="settings-note">Afegeix escoles a la pestanya Escoles.</p>'}
+    ${personalTimeOff.filterMarkup(state)}
     <div class="action-row"><button class="secondary-btn" data-action="filter-all">Mostra-ho tot</button><button class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='day'){
     const date=sheet.date,bdays=birthdays(date).filter(c=>state.preferences.visibleChildren.includes(c.id));
@@ -1024,7 +1043,7 @@ function sheetMarkup(){
   } else if(sheet && ['schoolForm','yearForm','groupForm','schoolDayForm','schoolVacationForm','reducedWindowForm','ordinaryWindowForm','scheduleForm'].includes(sheet.type)){
     contents=schoolFormMarkup();
   }
-  return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type==='day'?'month-day-sheet':''}" data-sheet-key="${escapeHtml(sheet?.type==='schoolDayForm'?JSON.stringify([sheet.type,sheet.schoolId,sheet.yearId,sheet.kind]):JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type==='filters'?'Filtres':sheet?.type==='zoom'?'Zoom':'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+  return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type==='day'?'month-day-sheet':sheet?.type.startsWith('person')?'personal-sheet':''}" data-sheet-key="${escapeHtml(sheet?.type==='personHolidays'?JSON.stringify([sheet.type,sheet.personKey]):sheet?.type==='schoolDayForm'?JSON.stringify([sheet.type,sheet.schoolId,sheet.yearId,sheet.kind]):JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type==='filters'?'Filtres':sheet?.type==='zoom'?'Zoom':sheet?.type.startsWith('person')?'Festius i vacances personals':'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id:string,name:string,selected:boolean,kind:'child'|'guardian'|'school',color?:string){
   const symbol=kind==='child'?'person':kind==='school'?'school':'home';
@@ -1078,10 +1097,10 @@ function render(){
   const minuteAtCenter=keepTimeline&&previousMain&&oldScale>0
     ? Math.max(0,Math.min(1440,(previousMain.scrollTop+previousMain.clientHeight/2-oldTimelineOffset)/oldScale)):NaN;
   const previousSheet=$app.querySelector<HTMLElement>('.sheet');
-  const sheetKey=sheet?.type==='schoolDayForm'?JSON.stringify([sheet.type,sheet.schoolId,sheet.yearId,sheet.kind]):JSON.stringify(sheet);
+  const sheetKey=sheet?.type==='personHolidays'?JSON.stringify([sheet.type,sheet.personKey]):sheet?.type==='schoolDayForm'?JSON.stringify([sheet.type,sheet.schoolId,sheet.yearId,sheet.kind]):JSON.stringify(sheet);
   const sheetScroll=previousSheet?.dataset.sheetKey===sheetKey?previousSheet.scrollTop:0;
-  const pickerFocus=sheet?.type==='schoolDayForm'?document.activeElement?.closest<HTMLButtonElement>('.school-date-picker button'):null;
-  const pickerFocusKey=pickerFocus?.dataset.date?`[data-action="school-day-toggle"][data-date="${pickerFocus.dataset.date}"]`:pickerFocus?.dataset.step?`[data-action="school-day-month"][data-step="${pickerFocus.dataset.step}"]`:'';
+  const pickerFocus=sheet&&(sheet.type==='schoolDayForm'||sheet.type==='personHolidays')?document.activeElement?.closest<HTMLButtonElement>('.school-date-picker button'):null;
+  const pickerFocusKey=pickerFocus?.dataset.date?`[data-action="${pickerFocus.dataset.action}"][data-date="${pickerFocus.dataset.date}"]`:pickerFocus?.dataset.step?`[data-action="${pickerFocus.dataset.action}"][data-step="${pickerFocus.dataset.step}"]`:'';
   $app.innerHTML=layout(tab==='calendar'?calendarPage():tab==='rotation'?rotationPage():tab==='schools'?schoolsPage():tab==='people'?peoplePage():settingsPage());
   const main=$app.querySelector<HTMLElement>('.main-area');
   if(main){main.dataset.scrollKey=scrollKey;main.scrollTop=mainScroll;}
@@ -1128,6 +1147,7 @@ function removeGuardian(id:string){
   const g=guardian(id);if(!g||!confirm(state.guardians.length===1
     ?`Vols suprimir «${g.name}»? Et quedaràs sense tutors, i les nits passaran a «Sense assignar».`
     :`Vols suprimir «${g.name}»? Les seves nits passaran al primer tutor disponible.`))return;
+  if(state.personTimeOff)personalTimeOff.removePerson(state,'guardian:'+id);
   state.guardians=state.guardians.filter(x=>x.id!==id);const alternate=defaultGuardian();
   Object.keys(state.overrides).forEach(key=>{if(state.overrides[key]===id)state.overrides[key]=alternate;});
   Object.keys(state.bandOverrides).forEach(key=>{if(state.bandOverrides[key]===id)state.bandOverrides[key]=alternate;});
@@ -1136,6 +1156,7 @@ function removeGuardian(id:string){
 }
 function removeChild(id:string){
   const c=childById(id);if(!c||!confirm(`Vols suprimir «${c.name}» i totes les seves assignacions?`))return;
+  if(state.personTimeOff)personalTimeOff.removePerson(state,'child:'+id);
   state.children=state.children.filter(x=>x.id!==id);
   for(const key of Object.keys(state.nightDateTimes))if(key.endsWith('|'+id))delete state.nightDateTimes[key];
   state.schools.forEach(s=>{s.childIds=s.childIds.filter(x=>x!==id);s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];}));});
@@ -1167,6 +1188,55 @@ function clearAllData(){
 function clickAction(button:HTMLElement){
   const action=button.dataset.action;
   switch(action){
+    case 'person-me':{
+      if(personalTimeOff.setMe(state,button.dataset.person??'')){update();notify(state.preferences.mePerson?'Identitat actualitzada':'Identificació retirada');}break;
+    }
+    case 'person-time-off':{
+      const key=button.dataset.person??'';if(!personalTimeOff.person(state,key))break;
+      sheet={type:'personTimeOff',personKey:key};render();break;
+    }
+    case 'person-holidays':{
+      const key=button.dataset.person??'';if(!personalTimeOff.person(state,key))break;
+      sheet={type:'personHolidays',personKey:key,month:localDate(new Date()).slice(0,7),dates:[...personalTimeOff.get(state,key).holidays]};render();break;
+    }
+    case 'person-holiday-month':{
+      if(sheet?.type!=='personHolidays')break;
+      const step=Number(button.dataset.step);if(![-1,1].includes(step))break;
+      const [year,month]=sheet.month.split('-').map(Number),next=new Date(Date.UTC(year!,month!-1+step,1,12));
+      if(next.getUTCFullYear()<100||next.getUTCFullYear()>9999)break;
+      sheet.month=next.toISOString().slice(0,7);render();break;
+    }
+    case 'person-holiday-toggle':{
+      if(sheet?.type!=='personHolidays')break;
+      const date=button.dataset.date??'';if(!personalTimeOff.valid(date))break;
+      sheet.dates=sheet.dates.includes(date)?sheet.dates.filter(d=>d!==date):[...sheet.dates,date].sort();render();break;
+    }
+    case 'person-holidays-save':{
+      if(sheet?.type!=='personHolidays')break;const key=sheet.personKey,error=personalTimeOff.setHolidays(state,key,sheet.dates);
+      if(error){notify(error);break;}sheet={type:'personTimeOff',personKey:key};update();notify('Festius desats');break;
+    }
+    case 'person-holiday-delete':{
+      const key=button.dataset.person??'',data=personalTimeOff.get(state,key),error=personalTimeOff.setHolidays(state,key,data.holidays.filter((d:string)=>d!==button.dataset.date));
+      if(error){notify(error);break;}update();notify('Festiu eliminat');break;
+    }
+    case 'person-vacation-add':case 'person-vacation-edit':{
+      const key=button.dataset.person??'',id=button.dataset.period;if(!personalTimeOff.person(state,key))break;
+      if(button.dataset.action==='person-vacation-edit'&&!personalTimeOff.get(state,key).vacations.some((v:SchoolVacation)=>v.id===id))break;
+      sheet={type:'personVacation',personKey:key,periodId:button.dataset.action==='person-vacation-edit'?id:undefined};render();break;
+    }
+    case 'person-vacation-delete':{
+      const key=button.dataset.person??'',id=button.dataset.period??'',period=personalTimeOff.get(state,key).vacations.find((v:SchoolVacation)=>v.id===id);
+      if(!period||!confirm(`Vols suprimir «${period.name}»?`))break;
+      if(personalTimeOff.deleteVacation(state,key,id)){update();notify('Vacances eliminades');}break;
+    }
+    case 'person-off-type':{
+      const kind=button.dataset.kind;if(kind!=='holiday'&&kind!=='vacation')break;
+      const flag=kind==='holiday'?'showPersonalHolidays':'showPersonalVacations';state.preferences[flag]=state.preferences[flag]===false;update();break;
+    }
+    case 'person-off-filter':{
+      const key=button.dataset.person??'';if(!personalTimeOff.person(state,key))break;
+      const selected=state.preferences.visibleTimeOffPeople;state.preferences.visibleTimeOffPeople=selected.includes(key)?selected.filter(k=>k!==key):[...selected,key];update();break;
+    }
     case 'school-nav': schoolNav={schoolId:button.dataset.school||undefined,yearId:button.dataset.year||undefined,groupId:button.dataset.group||undefined};render();window.scrollTo({top:0,behavior:'instant'});break;
     case 'school-add':sheet={type:'schoolForm'};render();break;
     case 'school-edit':sheet={type:'schoolForm',schoolId:button.dataset.school!};render();break;
@@ -1336,7 +1406,7 @@ function clickAction(button:HTMLElement){
       const kind=button.dataset.filterKind==='child'?'visibleChildren':button.dataset.filterKind==='school'?'visibleSchools':'visibleGuardians',id=button.dataset.id!;
       const selected=state.preferences[kind];state.preferences[kind]=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];update();break;
     }
-    case 'filter-all':state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);update();break;
+    case 'filter-all':state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);if(state.personTimeOff)personalTimeOff.showAll(state);update();break;
     case 'assign-night':{const date=button.dataset.date!,childId=button.dataset.child!,gId=button.dataset.guardian!;if(!childById(childId)||!guardian(gId))break;sheet=returnFromDetail(date);chooseGuardian(date,childId,gId);break;}
     case 'clear-night':delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];sheet=returnFromDetail(button.dataset.date!);update();notify('Patró habitual restaurat');break;
     case 'night-date-time-clear':{const date=button.dataset.date??'';delete state.nightDateTimes[date+'|'+button.dataset.child];sheet=returnFromDetail(date);update();notify('Hora habitual restaurada');break;}
@@ -1403,6 +1473,10 @@ document.addEventListener('submit',event=>{
  const form=event.target;
  if(!(form instanceof HTMLFormElement))return;
  finishNativePickerEdit();
+  if(form.dataset.personVacationForm){
+    event.preventDefault();const key=form.dataset.person??'',error=personalTimeOff.saveVacation(state,key,form.dataset.period??'',new FormData(form),newId);
+    if(error){notify(error);return;}sheet={type:'personTimeOff',personKey:key};update();notify('Vacances desades');return;
+  }
   if(form.dataset.extraPatternDayForm){
     event.preventDefault();
     const error=rotationEditor.savePatternDay(rotationEditor.draftState(state,extraRotationDrafts,form.dataset.rotation),form.dataset.rotation??'',form.dataset.child??'',Number(form.dataset.index),new FormData(form));

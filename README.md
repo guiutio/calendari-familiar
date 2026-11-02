@@ -410,3 +410,12 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 
 - Any utilitza una escala pròpia: cada hora entre les 22:00 i les 06:00 rep quatre vegades l’espai d’una hora diürna. Així, una jornada escolar de 09:00 a 17:00 ocupa aproximadament una sisena part de la miniatura.
 - Es retiren els contorns de les franges a les miniatures anuals per deixar llegibles els colors de pernocta. La resta de vistes conserven la seva escala.
+
+
+## v0.14.0: festius i vacances personals
+
+- A Persones, cada fill i tutor disposa de «Festius i vacances». Els festius es marquen amb multiselecció mensual, incloent caps de setmana; les vacances s’afegeixen com a períodes amb nom, inici i final inclusius. Es poden editar i eliminar.
+- «Soc jo» identifica una única persona i es pot retirar. La identitat es conserva en reobrir i es mostra als filtres personals.
+- A Any i Mes, els dies consecutius de cada persona s’emmarquen amb un contorn vermell per als festius i verd per a les vacances. Els períodes contigus o superposats es fusionen visualment per persona, els contorns es tanquen als límits dels mesos i tots dos tipus es poden mostrar quan coincideixen.
+- El filtre permet activar cada tipus de contorn i triar les persones que es visualitzen, independentment de les franges de pernocta i escola. El calendari d’una persona oculta no es torna a activar quan se n’editen les dades.
+- Les dades i preferències personals s’inclouen a les còpies JSON; les còpies anteriors es carreguen sense calendaris personals. Eliminar una persona també neteja el seu calendari i la seva identificació.

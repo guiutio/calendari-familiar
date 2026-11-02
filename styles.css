@@ -1005,3 +1005,36 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */
 .year-month .month-mini-school {border-left:0;box-shadow:none;}
 .year-month .month-mini-custom,.year-month .month-mini-extra {box-shadow:none;}
+
+/* Festius i vacances de persones: contorns independents de les franges horàries. */
+.person-record + .person-record {border-top:1px solid #e2e8ef;padding-top:14px;margin-top:18px;}
+.person-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 14px;}
+.person-actions button {display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.person-me.selected {border:1px solid #6595c8;background:#e6f1ff;color:#264f7d;}
+.person-category {display:block;margin-top:3px;font-size:calc(10px * var(--font-scale,1));font-weight:500;opacity:.8;}
+.personal-sheet .panel-header,.personal-sheet .school-schedule-actions {flex-wrap:wrap;}
+.personal-holiday-pill {background:#fff0ee;color:#a52d2d;}
+.personal-holidays .school-date-cell.selected {background:#fff0ee;border-color:#d13939;color:#a52d2d;}
+.personal-legend {display:inline-block;flex:0 0 12px;width:12px;height:12px;border:2px solid #d32f2f;border-radius:2px;}
+.personal-legend.vacation {border-color:#168948;}
+.personal-outline,.personal-corner {position:absolute;z-index:6;pointer-events:none;box-sizing:border-box;border:0 solid #d32f2f;--pto-inset:5px;--pto-stroke:2px;--pto-gap:1px;}
+.personal-outline {top:-1px;bottom:-1px;left:-1px;right:-1px;}
+.personal-outline.vacation,.personal-corner.vacation {border-color:#168948;--pto-inset:8px;}
+.personal-outline.pto-top {top:var(--pto-inset);border-top-width:var(--pto-stroke);}
+.personal-outline.pto-bottom {bottom:var(--pto-inset);border-bottom-width:var(--pto-stroke);}
+.personal-outline.pto-left {left:var(--pto-inset);border-left-width:var(--pto-stroke);}
+.personal-outline.pto-right {right:var(--pto-inset);border-right-width:var(--pto-stroke);}
+.year-day {position:relative;}
+.year-day .personal-outline,.year-day .personal-corner {--pto-inset:0px;--pto-stroke:1px;--pto-gap:2px;}
+.year-day .personal-outline.vacation,.year-day .personal-corner.vacation {--pto-inset:2px;}
+.year-day-number,.day-top {position:relative;z-index:7;}
+:root[data-theme="dark"] .personal-outline,:root[data-theme="dark"] .personal-corner,:root[data-theme="dark"] .personal-legend {border-color:#ff7777;}
+:root[data-theme="dark"] .personal-outline.vacation,:root[data-theme="dark"] .personal-corner.vacation,:root[data-theme="dark"] .personal-legend.vacation {border-color:#61d49a;}
+:root[data-theme="dark"] .person-record + .person-record {border-color:#40536f;}
+:root[data-theme="dark"] .person-me.selected {background:#2d4f76;border-color:#8ab9ec;color:#e5f0ff;}
+:root[data-theme="dark"] .personal-holiday-pill,:root[data-theme="dark"] .personal-holidays .school-date-cell.selected {background:#542f34;border-color:#ff7777;color:#ffd9da;}
+
+/* Els angles interiors es dibuixen dins la cel·la, per damunt del seu fons. */
+.personal-corner {width:calc(var(--pto-inset) + var(--pto-gap) + var(--pto-stroke));height:calc(var(--pto-inset) + var(--pto-gap) + var(--pto-stroke));}
+.personal-corner.pto-concave-tl {top:calc(0px - var(--pto-gap));left:calc(0px - var(--pto-gap));border-right-width:var(--pto-stroke);border-bottom-width:var(--pto-stroke);}
+.personal-corner.pto-concave-br {bottom:calc(0px - var(--pto-gap));right:calc(0px - var(--pto-gap));border-left-width:var(--pto-stroke);border-top-width:var(--pto-stroke);}
