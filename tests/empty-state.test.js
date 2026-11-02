@@ -16,6 +16,7 @@ const extract=(from,to)=>{
 const monthContext={window:{}};
 vm.runInNewContext(monthSource,monthContext);
 const rotationContext={window:{}};vm.runInNewContext(readFileSync(new URL('../rotation-patterns.js',import.meta.url),'utf8'),rotationContext);
+vm.runInNewContext(readFileSync(new URL('../work-schedule.js',import.meta.url),'utf8'),rotationContext);
 vm.runInNewContext(readFileSync(new URL('../personal-time-off.js',import.meta.url),'utf8'),rotationContext);
 const functions=[
   extract('function emptyState()','const SCHOOL_PALETTE'),
@@ -29,7 +30,7 @@ const makeContext=()=>{
   const context=vm.createContext({
     monthDayUI:monthContext.window.monthDayUI,
     rotationPatterns:rotationContext.window.rotationPatterns,
-    personalTimeOff:rotationContext.window.personalTimeOff,
+    personalTimeOff:rotationContext.window.personalTimeOff,workSchedule:rotationContext.window.workSchedule,
     DEFAULT_CHANGE_TIME:'19:00',MAX_ROTATION_DAYS:3640,
     BANDS:['mati','dinar','tarda','sopar','nit'],
     localDate:d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'),
@@ -152,8 +153,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.14\.2/);
-  assert.match(sw,/calendari-familiar-v0\.14\.2/);
+  assert.match(html,/app\.js\?v=0\.15\.0/);
+  assert.match(sw,/calendari-familiar-v0\.15\.0/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -246,21 +247,25 @@ test('festius, vacances, identitat i filtres personals sobreviuen a exportar i r
  assert.equal(context.personalTimeOff.saveVacation(context.state,key,'',new Map([['name','Nadal'],['startDate','2026-12-22'],['endDate','2027-01-07']]),()=> 'vacation'),'');
  context.personalTimeOff.setMe(context.state,key);context.state.preferences.showPersonalHolidays=false;
  context.personalTimeOff.setColor(context.state,key,'holiday','#be1234');context.personalTimeOff.setColor(context.state,key,'vacation','#3456ab');
+ const work=context.workSchedule.draft(context.state,key,undefined,'2026-11-02');
+ context.workSchedule.change(work,'weeks','2');work.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];work.endDate='2027-06-30';
+ assert.equal(context.workSchedule.save(context.state,key,work,()=> 'job'),'');context.state.preferences.showWorkSchedules=false;
  context.state.preferences.visibleTimeOffPeople=[];
  const stored=asJSON(context.state),restored=context.cleanState(JSON.parse(JSON.stringify(stored)));
  assert.deepEqual(asJSON(restored),stored);
  assert.equal(restored.preferences.mePerson,key);assert.equal(restored.preferences.showPersonalHolidays,false);
  assert.equal(restored.personTimeOff[key].vacations[0].endDate,'2027-01-07');
  assert.equal(restored.personTimeOff[key].holidayColor,'#be1234');assert.equal(restored.personTimeOff[key].vacationColor,'#3456ab');
+ assert.equal(restored.preferences.showWorkSchedules,false);assert.equal(restored.personTimeOff[key].workRotations[0].days[0].length,2);assert.equal(restored.personTimeOff[key].workRotations[0].endDate,'2027-06-30');
 });
 
 test('les còpies anteriors sense calendaris personals es carreguen amb valors buits i filtres activats',()=>{
  const {context}=makeContext(),raw=asJSON(context.state);delete raw.personTimeOff;
- for(const key of ['mePerson','visibleTimeOffPeople','showPersonalHolidays','showPersonalVacations'])delete raw.preferences[key];
+ for(const key of ['mePerson','visibleTimeOffPeople','showPersonalHolidays','showPersonalVacations','showWorkSchedules'])delete raw.preferences[key];
  const restored=context.cleanState(raw);
  assert.deepEqual(asJSON(restored.personTimeOff),{});assert.equal(restored.preferences.mePerson,'');
  assert.deepEqual(asJSON(restored.preferences.visibleTimeOffPeople),[]);
- assert.equal(restored.preferences.showPersonalHolidays,true);assert.equal(restored.preferences.showPersonalVacations,true);
+ assert.equal(restored.preferences.showPersonalHolidays,true);assert.equal(restored.preferences.showPersonalVacations,true);assert.equal(restored.preferences.showWorkSchedules,true);
  assert.deepEqual(asJSON(restored.extraRotations),[]);
 });
 

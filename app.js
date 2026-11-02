@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.14.2';
+const APP_VERSION = '0.15.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -121,7 +121,7 @@ function emptyState() {
     return {
         version: 2, children: [], guardians: [], personTimeOff: {},
         overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], nightDateTimes: {}, extraRotations: [], extraExceptions: {},
-        preferences: { mePerson: '', visibleTimeOffPeople: [], showPersonalHolidays: true, showPersonalVacations: true, visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50, timelineZooms: { day: 50, week: 50 } }
+        preferences: { showWorkSchedules: true, mePerson: '', visibleTimeOffPeople: [], showPersonalHolidays: true, showPersonalVacations: true, visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50, timelineZooms: { day: 50, week: 50 } }
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -516,6 +516,7 @@ const dayTimelineUI = window.dayTimelineUI;
 const monthDayUI = window.monthDayUI;
 const rotationPatterns = window.rotationPatterns;
 const rotationEditor = window.rotationEditor;
+const workSchedule = window.workSchedule;
 const personalTimeOff = window.personalTimeOff;
 /** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
 function childHasSchool(date, childId) {
@@ -879,10 +880,10 @@ function calendarPage() {
         content = `${!state.children.length ? `<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="people">Afegeix un fill</button></div>` : ''}<div class="month-sequence">${Array.from({ length: monthRange.last - monthRange.first + 1 }, (_, i) => monthPanel(monthRange.first + i, children, today)).join('')}</div>`;
     }
     else if (calendarView === 'week') {
-        content = weekTimeline(weekStart(selectedDate), children);
+        content = weekTimeline(weekStart(selectedDate), children) + (state.personTimeOff ? workSchedule.agenda(state, Array.from({ length: 7 }, (_, i) => addDays(weekStart(selectedDate), i))) : '');
     }
     else {
-        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>` : ''}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, selectedDate)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${selectedDate}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>`;
+        content = `<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>` : ''}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, selectedDate)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${selectedDate}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, selectedDate) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>` : ''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate, children)}</section>${state.personTimeOff ? workSchedule.agenda(state, [selectedDate]) : ''}`;
     }
     return `${calendarView === 'month' ? `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>` : ''}
     <section class="calendar-card" aria-label="Calendari familiar">
@@ -1118,7 +1119,7 @@ function personActions(key) {
     if (!personalTimeOff.person(state, key))
         return '';
     const me = state.preferences.mePerson === key;
-    return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar', 15)} Festius i vacances</button><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
+    return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar', 15)} Horari laboral</button><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
 }
 function peoplePage() {
     return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Gestiona els fills, tutors i responsables.</p></div></header>
@@ -1151,6 +1152,9 @@ function sheetMarkup() {
     if (sheet?.type === 'personTimeOff') {
         contents = personalTimeOff.panel(state, sheet.personKey);
     }
+    else if (sheet?.type === 'personWork') {
+        contents = workSchedule.form(state, sheet.personKey, sheet.draft);
+    }
     else if (sheet?.type === 'personHolidays') {
         contents = personalTimeOff.holidayPicker(state, sheet);
     }
@@ -1174,7 +1178,7 @@ function sheetMarkup() {
         const date = sheet.date, bdays = birthdays(date).filter(c => state.preferences.visibleChildren.includes(c.id));
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${bdays.length ? `<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c => `${c.name} fa ${birthdayAge(date, c)} anys`).join(' · '))}</div>` : ''}
-    ${schoolInfoForDay(date)}${monthDayUI.detail(date, fullDate(date), activeChildren(), monthData(date, activeChildren()).nights, monthData(date, activeChildren()).activities, monthData(date, activeChildren()).slots, state)}`;
+    ${schoolInfoForDay(date)}${monthDayUI.detail(date, fullDate(date), activeChildren(), monthData(date, activeChildren()).nights, monthData(date, activeChildren()).activities, monthData(date, activeChildren()).slots, state)}${state.personTimeOff ? workSchedule.agenda(state, [date]) : ''}`;
     }
     else if (sheet?.type === 'daySlotForm') {
         contents = monthDayUI.form(sheet.date, sheet.childId, sheet.slotId, state.children, state.guardians, state);
@@ -1209,7 +1213,7 @@ function sheetMarkup() {
     else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'schoolVacationForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type.startsWith('person') ? 'Festius i vacances personals' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type.startsWith('person') ? 'Horari laboral' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
@@ -1272,7 +1276,7 @@ function render() {
     const minuteAtCenter = keepTimeline && previousMain && oldScale > 0
         ? Math.max(0, Math.min(1440, (previousMain.scrollTop + previousMain.clientHeight / 2 - oldTimelineOffset) / oldScale)) : NaN;
     const previousSheet = $app.querySelector('.sheet');
-    const sheetKey = sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet);
+    const sheetKey = sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet);
     const sheetScroll = previousSheet?.dataset.sheetKey === sheetKey ? previousSheet.scrollTop : 0;
     const pickerFocus = sheet && (sheet.type === 'schoolDayForm' || sheet.type === 'personHolidays') ? document.activeElement?.closest('.school-date-picker button') : null;
     const pickerFocusKey = pickerFocus?.dataset.date ? `[data-action="${pickerFocus.dataset.action}"][data-date="${pickerFocus.dataset.date}"]` : pickerFocus?.dataset.step ? `[data-action="${pickerFocus.dataset.action}"][data-step="${pickerFocus.dataset.step}"]` : '';
@@ -1428,6 +1432,42 @@ function clearAllData() {
 function clickAction(button) {
     const action = button.dataset.action;
     switch (action) {
+        case 'work-add':
+        case 'work-edit': {
+            const key = button.dataset.person ?? '', draft = workSchedule.draft(state, key, action === 'work-edit' ? button.dataset.rotation : undefined, localDate(new Date()));
+            if (draft) {
+                sheet = { type: 'personWork', personKey: key, draft };
+                render();
+            }
+            break;
+        }
+        case 'work-cancel': {
+            const key = sheet?.type === 'personWork' ? sheet.personKey : button.dataset.person ?? '';
+            if (personalTimeOff.person(state, key)) {
+                sheet = { type: 'personTimeOff', personKey: key };
+                render();
+            }
+            break;
+        }
+        case 'work-week':
+        case 'work-shift-add':
+        case 'work-shift-remove':
+        case 'work-copy': {
+            if (sheet?.type !== 'personWork')
+                break;
+            const kind = action === 'work-week' ? 'week' : action === 'work-shift-add' ? 'add' : action === 'work-copy' ? 'copy' : 'remove';
+            if (workSchedule.edit(sheet.draft, kind, Number(action === 'work-week' ? button.dataset.week : button.dataset.day), Number(button.dataset.slot)))
+                render();
+            break;
+        }
+        case 'work-delete': {
+            const key = button.dataset.person ?? '', id = button.dataset.rotation ?? '', rotation = workSchedule.rotations(state, key).find((r) => r.id === id);
+            if (rotation && confirm(`Vols suprimir «${rotation.name}»?`) && workSchedule.remove(state, key, id)) {
+                update();
+                notify('Rotació de feina eliminada');
+            }
+            break;
+        }
         case 'person-me': {
             if (personalTimeOff.setMe(state, button.dataset.person ?? '')) {
                 update();
@@ -1520,9 +1560,9 @@ function clickAction(button) {
         }
         case 'person-off-type': {
             const kind = button.dataset.kind;
-            if (kind !== 'holiday' && kind !== 'vacation')
+            if (kind !== 'holiday' && kind !== 'vacation' && kind !== 'work')
                 break;
-            const flag = kind === 'holiday' ? 'showPersonalHolidays' : 'showPersonalVacations';
+            const flag = kind === 'holiday' ? 'showPersonalHolidays' : kind === 'vacation' ? 'showPersonalVacations' : 'showWorkSchedules';
             state.preferences[flag] = state.preferences[flag] === false;
             update();
             break;
@@ -2142,6 +2182,21 @@ document.addEventListener('submit', event => {
     if (!(form instanceof HTMLFormElement))
         return;
     finishNativePickerEdit();
+    if (form.dataset.workRotationForm) {
+        event.preventDefault();
+        if (sheet?.type !== 'personWork')
+            return;
+        workSchedule.readForm(sheet.draft, new FormData(form));
+        const key = sheet.personKey, error = workSchedule.save(state, key, sheet.draft, newId);
+        if (error) {
+            notify(error);
+            return;
+        }
+        sheet = { type: 'personTimeOff', personKey: key };
+        update();
+        notify('Rotació de feina desada');
+        return;
+    }
     if (form.dataset.personVacationForm) {
         event.preventDefault();
         const key = form.dataset.person ?? '', error = personalTimeOff.saveVacation(state, key, form.dataset.period ?? '', new FormData(form), newId);
@@ -2459,6 +2514,11 @@ document.addEventListener('change', event => {
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement))
         return;
     const action = target.dataset.action;
+    if (target.dataset.workField && sheet?.type === 'personWork') {
+        if (workSchedule.change(sheet.draft, target.dataset.workField, target.value, Number(target.dataset.day), Number(target.dataset.slot), target.dataset.edge) && target.dataset.workField === 'weeks')
+            render();
+        return;
+    }
     if (action === 'timeline-zoom') {
         if (calendarView === 'day' || calendarView === 'week') {
             const next = TIMELINE_ZOOM_LEVELS[Number(target.value)];

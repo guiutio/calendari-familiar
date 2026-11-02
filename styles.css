@@ -93,7 +93,7 @@ svg { flex-shrink:0; }
 .rotation-cell:hover { border-color:#a6bbd8; }
 .settings-item { display:grid;grid-template-columns:minmax(0,1fr) 165px auto;align-items:end;gap:12px;margin:12px 0; }
 .settings-item.guardian { grid-template-columns:32px minmax(0,1fr) auto; }
-.settings-item .color-input { border:none;border-radius:11px;width:32px;height:40px;background:transparent;padding:2px; }
+.color-input { border:none;border-radius:11px;width:32px;height:40px;background:transparent;padding:2px; }
 .settings-item .delete-icon { display:grid;place-items:center;width:39px;height:39px;border:1px solid #f0dcdc;border-radius:11px;background:#fffafa;color:#bc7373; }
 .settings-item .delete-icon svg { width:16px; }
 .settings-note { color:#96a0ac;font-size:calc(11px * var(--font-scale, 1));line-height:1.5;margin-top:9px; }
@@ -1020,9 +1020,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .personal-outline {position:absolute;inset:-1px;z-index:9;pointer-events:none;box-sizing:border-box;--pto-stroke:var(--month-outline-width,4px);background-image:var(--pto-top-paint,linear-gradient(transparent,transparent)),var(--pto-right-paint,linear-gradient(transparent,transparent)),var(--pto-bottom-paint,linear-gradient(transparent,transparent)),var(--pto-left-paint,linear-gradient(transparent,transparent));background-size:100% var(--pto-stroke),var(--pto-stroke) 100%,100% var(--pto-stroke),var(--pto-stroke) 100%;background-position:top right,top right,bottom left,bottom left;background-repeat:no-repeat;}
 .year-day {position:relative;}
 .year-day-number,.day-top {position:relative;z-index:7;}
-.personal-color-settings {display:flex;flex-wrap:wrap;gap:16px;margin:0 0 20px;}
-.personal-color-settings label {display:flex;align-items:center;gap:10px;color:inherit;font-size:calc(12px * var(--font-scale,1));font-weight:650;}
-.personal-color-settings .color-input {flex:0 0 38px;width:38px;height:38px;}
 .personal-person-colors {display:inline-flex;gap:5px;margin-top:5px;}
 .personal-holidays .school-date-cell.selected {border-color:var(--personal-holiday-color);box-shadow:inset 0 0 0 1px var(--personal-holiday-color);}
 :root[data-theme="dark"] .person-record + .person-record {border-color:#40536f;}
@@ -1030,3 +1027,31 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 :root[data-theme="dark"] .personal-holiday-pill,:root[data-theme="dark"] .personal-holidays .school-date-cell.selected {background:#542f34;border-color:#ff7777;color:#ffd9da;}
 .year-day {padding:4px 1px;min-height:34px;}
 :root[data-theme="dark"] .personal-holidays .school-date-cell.selected {border-color:var(--personal-holiday-color);}
+
+/* Horari laboral: selectors com els de persones i patrons de jornada partida. */
+.color-input {appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;}
+.color-input::-webkit-color-swatch-wrapper {padding:0;}
+.color-input::-webkit-color-swatch {border:0;border-radius:9px;}
+.color-input::-moz-color-swatch {border:0;border-radius:9px;}
+.personal-section-title {display:flex;align-items:center;gap:10px;min-width:0;}
+.work-week-tabs {display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 10px;}
+.work-week-tabs .selected {background:#dcecff;border:1px solid #729ac5;color:#284f7e;}
+.work-pattern-days {display:grid;gap:12px;}
+.work-pattern-day {padding:14px 0;border-top:1px solid #e1e8f1;min-width:0;}
+.work-pattern-day h3,.work-agenda-day h3 {margin:0;font-size:calc(13px * var(--font-scale,1));}
+.work-shift-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px;align-items:end;gap:8px;margin:9px 0;}
+.work-shift-row label {display:grid;gap:5px;min-width:0;font-size:calc(11px * var(--font-scale,1));}
+.work-shift-row input {width:100%;min-width:0;max-width:100%;box-sizing:border-box;font-size:calc(16px * var(--font-scale,1));}
+.work-shift-row .delete-icon {width:36px;height:40px;padding:0;}
+.work-copy {margin-top:5px;font-size:calc(10px * var(--font-scale,1));}
+.work-agenda {padding:20px;border-top:1px solid #e1e8f1;}
+.work-agenda-day {margin-top:14px;}
+.work-agenda-person {display:grid;grid-template-columns:minmax(90px,.35fr) minmax(0,1fr);align-items:start;gap:12px;padding:8px 0;font-size:calc(12px * var(--font-scale,1));}
+.work-person-link {color:inherit;font:inherit;font-weight:700;text-align:left;padding:0;border:0;background:transparent;}
+.work-slot-name {font-size:.9em;opacity:.75;}
+:root[data-theme="dark"] .work-pattern-day,:root[data-theme="dark"] .work-agenda {border-color:#40536f;}
+:root[data-theme="dark"] .work-week-tabs .selected {background:#315981;border-color:#8ab9ec;color:#eef5ff;}
+@media(max-width:420px){.work-agenda {padding:16px 10px;}.work-agenda-person {grid-template-columns:minmax(65px,.3fr) minmax(0,1fr);gap:8px;}}
+
+.personal-sheet .school-schedule-row>div:first-child {min-width:0;overflow-wrap:anywhere;}
+.work-person-link,.work-agenda-person>span {overflow-wrap:anywhere;min-width:0;}

@@ -11,7 +11,7 @@ function setup(){
  class Clock extends Date {constructor(...args){super(...(args.length?args:['2026-11-02T12:00:00Z']));}}
  const state={version:2,children:[{id:'same',name:'Fill',birthDate:''}],guardians:[{id:'same',name:'Guiu',color:'#112233'},{id:'other',name:'Rebeca',color:'#445566'}],schools:[],personTimeOff:{},
   extraRotations:[],extraExceptions:{},overrides:{},bandOverrides:{},daySlots:{},nightDateTimes:{},
-  preferences:{mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,visibleChildren:['same'],visibleGuardians:['same','other'],visibleSchools:[]}};
+  preferences:{mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,showWorkSchedules:true,visibleChildren:['same'],visibleGuardians:['same','other'],visibleSchools:[]}};
  const ctx=vm.createContext({window:{},Date:Clock,state,sheet:null,schoolNav:{},tab:'people',calendarView:'month',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',monthRange:null,monthScrollTarget:true,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
   icon:()=>'',activeChildren:()=>state.children.filter(c=>state.preferences.visibleChildren.includes(c.id)),
@@ -19,8 +19,8 @@ function setup(){
   monthData:()=>({nights:{},activities:[],slots:{},extra:[]}),birthdays:()=>[],weekStart:d=>d,
   render:()=>paints++,update:()=>saves++,notify:m=>messages.push(m),confirm:()=>true,
   FormData:class {constructor(form){return new Map(Object.entries(form.fields));}}});
- for(const file of ['personal-time-off.js','rotation-patterns.js','month-day-ui.js'])vm.runInContext(read(file),ctx);
- Object.assign(ctx,{personalTimeOff:ctx.window.personalTimeOff,rotationPatterns:ctx.window.rotationPatterns,monthDayUI:ctx.window.monthDayUI,isValidDate:ctx.window.personalTimeOff.valid});
+ for(const file of ['work-schedule.js','personal-time-off.js','rotation-patterns.js','month-day-ui.js'])vm.runInContext(read(file),ctx);
+ Object.assign(ctx,{workSchedule:ctx.window.workSchedule,personalTimeOff:ctx.window.personalTimeOff,rotationPatterns:ctx.window.rotationPatterns,monthDayUI:ctx.window.monthDayUI,isValidDate:ctx.window.personalTimeOff.valid});
  vm.runInContext(section('function escapeHtml(', 'function emptyState(')+section('function periodTitle()', 'function navButton(')+section('function calendarNavigation()', 'function layout(')+
   section('function monthPanel(', '// Keep loaded months')+section('function yearOverview(', 'function rotationPage(')+section('function personActions(', 'function settingsPage(')+
   section('function sheetMarkup()', 'let nativePickerRenderPending')+section('function removeGuardian(id)', 'async function exportData()')+
@@ -168,7 +168,7 @@ test('el panell de filtres identifica qui soc jo i el botó de filtres indica se
  assert.equal(s.api.filtered(s.state),false);s.click('person-off-type',{kind:'holiday'});assert.equal(s.api.filtered(s.state),true);
  assert.ok(s.ctx.calendarNavigation().includes('filter-dot'));
  s.ctx.sheet={type:'filters'};const html=s.ctx.sheetMarkup();
- assert.match(html,/Festius i vacances personals/);assert.match(html,/Guiu · Jo/);
+ assert.match(html,/Horari laboral/);assert.match(html,/Guiu · Jo/);
  assert.match(html,/data-action="person-off-type" data-kind="holiday" aria-pressed="false"/);
 });
 
@@ -294,4 +294,17 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals també quan hi
  const css=read('styles.css');
  assert.match(css,/\.personal-outline \{position:absolute;inset:-1px;z-index:9;[^}]*--pto-stroke:var\(--month-outline-width,4px\)/);
  assert.doesNotMatch(css,/--pto-inset|--pto-stroke:1px|personal-corner/);
+});
+
+test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panells i filtres existents',()=>{
+ const s=setup();s.click('work-add');s.click('work-shift-add',{day:'0'});
+ let html=s.ctx.sheetMarkup();assert.match(html,/data-work-rotation-form="true"/);assert.match(html,/Horari laboral/);assert.match(html,/name="work-0-0-startTime"/);
+ const draft=s.ctx.sheet.draft;draft.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];
+ assert.equal(s.ctx.workSchedule.save(s.state,'guardian:same',draft,()=> 'job'),'');s.ctx.sheet=null;
+ Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>''});
+ for(const view of ['week','day']){
+  s.ctx.calendarView=view;html=s.ctx.calendarPage();assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);
+ }
+ s.click('person-off-type',{kind:'work'});assert.doesNotMatch(s.ctx.calendarPage(),/09:00–13:00/);
+ s.click('filter-all');assert.match(s.ctx.calendarPage(),/09:00–13:00/);
 });
