@@ -404,3 +404,9 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Cada dia utilitza una miniatura de les mateixes pernoctes i franges que a Mes, respectant els filtres de fills, tutors i escoles. El dia actual queda ressaltat.
 - Tocar un mes obre Mes a l’any i mes triats. Les fletxes avancen o retrocedeixen anys i «Avui» torna a l’any actual. Els canvis d’any reinicien el desplaçament; modificar filtres conserva la posició.
 - El zoom horari continua sent propi de Dia i Setmana. La navegació anual tracta correctament el 29 de febrer.
+
+
+## v0.13.1: pernoctes més clares a la vista anual
+
+- Any utilitza una escala pròpia: cada hora entre les 22:00 i les 06:00 rep quatre vegades l’espai d’una hora diürna. Així, una jornada escolar de 09:00 a 17:00 ocupa aproximadament una sisena part de la miniatura.
+- Es retiren els contorns de les franges a les miniatures anuals per deixar llegibles els colors de pernocta. La resta de vistes conserven la seva escala.

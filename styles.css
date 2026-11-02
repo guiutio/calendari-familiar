@@ -1001,3 +1001,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 :root[data-theme="dark"] .year-weekdays {color:#adbed4;}
 :root[data-theme="dark"] .year-day.today .year-day-number {background:#9bc8fc;color:#15304e;}
 @media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;}.year-month {padding:10px 7px;}}
+
+/* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */
+.year-month .month-mini-school {border-left:0;box-shadow:none;}
+.year-month .month-mini-custom,.year-month .month-mini-extra {box-shadow:none;}

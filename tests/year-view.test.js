@@ -62,6 +62,33 @@ test('la vista anual comparteix les miniatures i respecta fills i tutors ocults'
  assert.match(html,/--month-children:1/);assert.doesNotMatch(html,/#112233|#445566/);
 });
 
+test('l’escola ocupa menys espai a Any i les hores nocturnes guanyen visibilitat sense alterar Mes',()=>{
+ const s=setup();s.ctx.schoolActivities=()=>[{childId:'a',start:540,end:1020,color:'#998877',schoolName:'Escola'}];
+ const snapshot=s.ctx.monthData('2026-11-02',s.children);
+ const monthly=s.ctx.monthDayUI.mini(s.children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra);
+ const annual=s.ctx.yearOverview(2026,s.children,'2026-11-02');
+ const schoolHeight=html=>Number(html.match(/class="month-mini-school" style="top:[^;]+;height:([\d.]+)%/)[1]);
+ assert.ok(schoolHeight(monthly)>40,'Mes conserva la seva escala diürna');
+ assert.ok(Math.abs(schoolHeight(annual)-100/6)<0.001,'Una escola de 09 a 17 ocupa només una sisena part de la barra anual');
+ assert.ok(schoolHeight(annual)<schoolHeight(monthly)/2);
+ assert.ok(annual.includes('month-mini year-scale'));
+ assert.equal(s.ctx.monthDayUI.miniGeometry(0,360,false,4).height,50,'Les primeres sis hores nocturnes ocupen mitja barra anual');
+ assert.ok(s.ctx.monthDayUI.miniGeometry(0,360).height<10,'L’escala mensual de nit continua comprimida');
+});
+
+test('les franges nocturnes especials no tornen a ampliar l’escola a Any i mantenen la regla de Mes',()=>{
+ const s=setup();s.ctx.schoolActivities=()=>[{childId:'a',start:540,end:1020,color:'#998877',schoolName:'Escola'}];
+ s.state.daySlots['2026-11-02|a']=[{id:'late',startTime:'00:00',endTime:'02:00',guardianId:'g1'}];
+ const snapshot=s.ctx.monthData('2026-11-02',s.children);
+ const monthly=s.ctx.monthDayUI.mini(s.children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra);
+ const annual=s.ctx.monthDayUI.mini(s.children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year');
+ assert.ok(monthly.includes('month-mini night-expanded'));
+ assert.ok(annual.includes('month-mini year-scale'));
+ const height=Number(annual.match(/class="month-mini-school" style="top:[^;]+;height:([\d.]+)%/)[1]);
+ assert.ok(Math.abs(height-100/6)<0.001);
+ assert.ok(annual.includes('month-mini-custom'),'La franja especial es conserva a la miniatura');
+});
+
 test('la barra inclou Any, indica l’any i navega per anys sense oferir zoom horari',()=>{
  const s=setup(),html=s.ctx.calendarNavigation();
  assert.equal(s.ctx.periodTitle(),'2026');assert.match(html,/data-view="year" class="active" aria-pressed="true">Any/);

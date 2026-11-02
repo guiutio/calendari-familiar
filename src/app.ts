@@ -92,7 +92,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = { type:'filters' } | { type:'zoom' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.13.1';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -728,7 +728,7 @@ function yearOverview(year:number,children:Child[],today:string):string {
     const cells=Array.from({length:42},(_,index)=>{
       const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
       const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
-      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra)}</span>`;
+      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}</span>`;
     }).join('');
     return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
   }).join('')}</div>`;

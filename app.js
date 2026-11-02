@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.13.1';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -851,7 +851,7 @@ function yearOverview(year, children, today) {
             if (day < 1 || day > count)
                 return '<span class="year-empty-day"></span>';
             const date = localDate(new Date(year, month, day, 12)), snapshot = monthData(date, children);
-            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}</span>`;
+            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}"><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}</span>`;
         }).join('');
         return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
     }).join('')}</div>`;

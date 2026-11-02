@@ -94,16 +94,18 @@
   // visual. Una franja especial nocturna restaura l'escala real de 24 hores
   // en aquella casella; la pernocta habitual NO compta com a franja especial.
   const NIGHT_WEIGHT=0.18, MORNING_END=360, EVENING_START=1320;
-  function miniGeometry(from,to,expanded=false){
+  // Any: quatre vegades més espai per hora nocturna; l’escola de 09–17 ocupa 1/6 de la barra.
+  function miniGeometry(from,to,expanded=false,nightWeight=NIGHT_WEIGHT){
     const clamp=n=>Math.max(0,Math.min(DAY,Number(n)||0));
     const visual=n=>expanded?clamp(n):
-      n<=MORNING_END?clamp(n)*NIGHT_WEIGHT:
-      n<=EVENING_START?MORNING_END*NIGHT_WEIGHT+(clamp(n)-MORNING_END):
-      MORNING_END*NIGHT_WEIGHT+(EVENING_START-MORNING_END)+(clamp(n)-EVENING_START)*NIGHT_WEIGHT;
+      n<=MORNING_END?clamp(n)*nightWeight:
+      n<=EVENING_START?MORNING_END*nightWeight+(clamp(n)-MORNING_END):
+      MORNING_END*nightWeight+(EVENING_START-MORNING_END)+(clamp(n)-EVENING_START)*nightWeight;
     const total=visual(DAY),a=visual(clamp(from)),b=visual(clamp(to));
     return {top:100*a/total,height:100*Math.max(0,b-a)/total};
   }
-  function mini(children,nights,activities,customSlots,rotatingSlots=[]){
+  function mini(children,nights,activities,customSlots,rotatingSlots=[],view='month'){
+    const annual=view==='year';
     if(!children.length)return '';
     const special=children.some(c=>
       [...(customSlots[c.id]??[]),
@@ -112,10 +114,10 @@
       ].some(a=>a.from<MORNING_END||a.to>EVENING_START)
     );
     const rect=(from,to,color,klass,label)=>{
-      const {top,height}=miniGeometry(from,to,special);
+      const {top,height}=miniGeometry(from,to,annual?false:special,annual?4:NIGHT_WEIGHT);
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
-    return `<span class="month-mini ${special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
+    return `<span class="month-mini ${annual?'year-scale':special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
       ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape([...c.name][0]??'?')}</span>`).join('')}
       ${children.map(c=>`<span class="month-mini-column">
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
