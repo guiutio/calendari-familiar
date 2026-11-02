@@ -88,25 +88,56 @@
    if(!keys.includes(p.key))continue;const data=get(state,p.key);
    const clip=ranges=>ranges.filter(r=>r.endDate>=from&&r.startDate<=to).map(r=>({...r,startDay:day(r.startDate),endDay:day(r.endDate)}));
    if(prefs.showPersonalHolidays!==false&&data.holidays.length){const ranges=clip(mergeRanges(data.holidays.map(d=>({startDate:d,endDate:d}))));if(ranges.length)out.push({key:p.key,name:p.name,kind:'holiday',color:color(state,p.key,'holiday'),ranges});}
-   if(prefs.showPersonalVacations!==false&&data.vacations.length){const ranges=clip(mergeRanges(data.vacations));if(ranges.length)out.push({key:p.key,name:p.name,kind:'vacation',color:color(state,p.key,'vacation'),ranges});}
+   if(prefs.showPersonalVacations!==false&&data.vacations.length&&window.workSchedule.rotations(state,p.key).length){
+    const holidays=new Set(data.holidays),ranges=clip(mergeRanges(data.vacations));
+    const eligible=date=>!holidays.has(date)&&window.workSchedule.scheduledSlots(state,p.key,date).length>0;
+    if(ranges.length)out.push({key:p.key,name:p.name,kind:'vacation',color:color(state,p.key,'vacation'),ranges,eligible});
+   }
   }
   return out;
  }
+ const monthFrames=new WeakMap();
+ const dateOf=n=>new Date(n*86400000).toISOString().slice(0,10);
+ // Resolem una sola vegada cada mes. Les absències de dies de descans separen
+ // els trams, i cada tram conserva la mateixa capa al llarg del seu perímetre.
+ function framesForMonth(entries,monthStart,monthEnd){
+  let cache=monthFrames.get(entries);if(!cache){cache=new Map();monthFrames.set(entries,cache);}
+  const key=monthStart+'|'+monthEnd;if(cache.has(key))return cache.get(key);
+  const first=day(monthStart),last=day(monthEnd),frames=[];
+  for(const entry of entries){
+   const days=[];
+   for(const range of entry.ranges){
+    const start=Math.max(first,range.startDay??day(range.startDate)),end=Math.min(last,range.endDay??day(range.endDate));
+    for(let n=start;n<=end;n++)if(!entry.eligible||entry.eligible(dateOf(n)))days.push(n);
+   }
+   let run;
+   for(const n of [...new Set(days)].sort((a,b)=>a-b)){
+    if(run&&run.endDay+1===n){run.endDay=n;run.endDate=dateOf(n);}
+    else {run={...entry,color:validColor(entry.color)?entry.color:defaults[entry.kind],startDay:n,endDay:n,startDate:dateOf(n),endDate:dateOf(n)};frames.push(run);}
+   }
+  }
+  // Només els trams amb dates coincidents ocupen una capa interior. Reutilitzem
+  // les capes lliures i mantenim l’ordre de les persones del filtre.
+  const assigned=[];
+  for(const frame of frames){
+   const occupied=new Set(assigned.filter(p=>p.startDay<=frame.endDay&&p.endDay>=frame.startDay).map(p=>p.layer));
+   let layer=0;while(occupied.has(layer))layer++;frame.layer=layer;assigned.push(frame);
+  }
+  cache.set(key,frames);return frames;
+ }
  function marks(entries,date,monthStart,monthEnd){
-  if(!valid(date)||!valid(monthStart)||!valid(monthEnd))return {items:[],label:'',html:''};
-  const n=day(date),first=day(monthStart),last=day(monthEnd),weekday=(new Date(date+'T12:00:00Z').getUTCDay()+6)%7,items=[];
-  for(const entry of entries)for(const range of entry.ranges){
-   const start=Math.max(first,range.startDay??day(range.startDate)),end=Math.min(last,range.endDay??day(range.endDate));
-   if(n<start||n>end)continue;
+  if(!valid(date)||!valid(monthStart)||!valid(monthEnd)||date<monthStart||date>monthEnd)return {items:[],label:'',html:''};
+  const n=day(date),weekday=(new Date(date+'T12:00:00Z').getUTCDay()+6)%7,items=[];
+  for(const frame of framesForMonth(entries,monthStart,monthEnd)){
+   const start=frame.startDay,end=frame.endDay;if(n<start||n>end)continue;
    const top=n-7<start,bottom=n+7>end,left=weekday===0||n-1<start,right=weekday===6||n+1>end;
-   items.push({...entry,color:validColor(entry.color)?entry.color:defaults[entry.kind],startDate:range.startDate,endDate:range.endDate,top,bottom,left,right});
+   const aboveLeft=weekday>0&&n-8>=start&&n-8<=end,belowRight=weekday<6&&n+8>=start&&n+8<=end;
+   items.push({...frame,top,bottom,left,right,concaveTL:!top&&!left&&!aboveLeft,concaveBR:!bottom&&!right&&!belowRight});
   }
   const label=[...new Set(items.map(p=>(p.kind==='holiday'?'Festiu de ':'Vacances de ')+p.name))].join('. ');
-  const paint=colors=>{const unique=[...new Set(colors)];return unique.length===1?`linear-gradient(${unique[0]},${unique[0]})`:`repeating-linear-gradient(45deg,${unique.map((c,i)=>`${c} ${i*4}px ${(i+1)*4}px`).join(',')})`;};
   return {items,label,html:items.map(p=>{
-   const edges=['top','right','bottom','left'].filter(edge=>p[edge]);
-   const style=edges.map(edge=>`--pto-${edge}-paint:${paint(items.filter(q=>q[edge]).map(q=>q.color))}`).join(';');
-   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}" aria-hidden="true"></span>`;
+   const edges=['top','right','bottom','left'].filter(edge=>p[edge]),style=`--pto-color:${p.color};--pto-layer:${p.layer}`;
+   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}" data-outline-layer="${p.layer}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner pto-concave-tl" style="${style}" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner pto-concave-br" style="${style}" aria-hidden="true"></span>`:''}`;
   }).join('')};
  }
  function filterMarkup(state){

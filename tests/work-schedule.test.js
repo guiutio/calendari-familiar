@@ -158,3 +158,13 @@ test('el nou mòdul es carrega abans dels calendaris personals i queda disponibl
  const version=JSON.parse(read('package.json')).version,script='work-schedule.js?v='+version,html=read('index.html');
  assert.ok(html.includes(script));assert.ok(read('sw.js').includes(script));assert.ok(html.indexOf(script)<html.indexOf('personal-time-off.js'));
 });
+
+
+test('el patró laboral original permet valorar vacances sense tornar a aplicar les absències',()=>{
+ const s=setup(),d=s.draft();d.days[0]=[s.shift('22:00','06:00')];assert.equal(s.save(d),'');
+ s.personal.setHolidays(s.state,s.key,['2026-11-02']);s.personal.saveVacation(s.state,s.key,'',new Map([['name','Descans'],['startDate','2026-11-02'],['endDate','2026-11-03']]),()=> 'leave');
+ assert.equal(s.api.absence(s.state,s.key,'2026-11-02'),'Festiu');
+ assert.equal(s.api.slots(s.state,s.key,'2026-11-02').length,0);assert.equal(s.api.scheduledSlots(s.state,s.key,'2026-11-02')[0].startTime,'22:00');
+ assert.equal(s.api.slots(s.state,s.key,'2026-11-03').length,0);assert.equal(s.api.scheduledSlots(s.state,s.key,'2026-11-03')[0].endTime,'06:00');
+ assert.equal(s.api.scheduledSlots(s.state,s.key,'2026-11-04').length,0);
+});

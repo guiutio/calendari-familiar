@@ -88,24 +88,27 @@
   current.workRotations=current.workRotations.filter(r=>r.id!==id);return true;
  }
  function absence(state,key,d){
-  const calendar=data(state,key),vacations=calendar.vacations.filter(v=>v.startDate<=d&&v.endDate>=d);
+  const calendar=data(state,key);if(calendar.holidays.includes(d))return 'Festiu';
+  const vacations=calendar.vacations.filter(v=>v.startDate<=d&&v.endDate>=d);
   if(vacations.length)return vacations.map(v=>v.name).join(' · ');
-  return calendar.holidays.includes(d)?'Festiu':'';
+  return '';
  }
  function pattern(r,d){
   if(d<r.startDate||(r.endDate&&d>r.endDate))return [];
   const index=((day(d)-day(monday(r.startDate)))%(r.weeks*7)+r.weeks*7)%(r.weeks*7);return r.days[index]??[];
  }
- function slots(state,key,d){
-  if(!owner(state,key)||!validDate(d)||absence(state,key,d))return [];
+ function calculateSlots(state,key,d,respectAbsences){
+  if(!owner(state,key)||!validDate(d)||(respectAbsences&&absence(state,key,d)))return [];
   const previous=addDays(d,-1),out=[];
   for(const r of rotations(state,key)){
    if(d<r.startDate||(r.endDate&&d>r.endDate))continue;
    for(const s of pattern(r,d))out.push({rotationId:r.id,rotationName:r.name,from:minutes(s.startTime),to:s.endTime<s.startTime?1440:minutes(s.endTime)});
-   if(!absence(state,key,previous))for(const s of pattern(r,previous))if(s.endTime<s.startTime&&minutes(s.endTime)>0)out.push({rotationId:r.id,rotationName:r.name,from:0,to:minutes(s.endTime)});
+   if(!respectAbsences||!absence(state,key,previous))for(const s of pattern(r,previous))if(s.endTime<s.startTime&&minutes(s.endTime)>0)out.push({rotationId:r.id,rotationName:r.name,from:0,to:minutes(s.endTime)});
   }
   return out.sort((a,b)=>a.from-b.from||a.to-b.to).map(s=>({...s,startTime:time(s.from),endTime:time(s.to)}));
  }
+ const slots=(state,key,d)=>calculateSlots(state,key,d,true);
+ const scheduledSlots=(state,key,d)=>calculateSlots(state,key,d,false);
  function listMarkup(state,key){
   const list=rotations(state,key);
   return `<div class="school-period work-rotation-list"><div class="panel-header"><strong>Rotacions de feina (${list.length})</strong><button type="button" class="secondary-btn" data-action="work-add" data-person="${esc(key)}">+ Rotació</button></div>${list.length?list.map(r=>`<div class="school-schedule-row"><div><strong>${esc(r.name)}</strong><span class="school-meta">${fmt(r.startDate)}${r.endDate?' – '+fmt(r.endDate):' · sense data final'} · ${r.weeks===1?'cada setmana':'cicle de '+r.weeks+' setmanes'}</span></div><div class="school-schedule-actions"><button type="button" class="school-schedule-edit" data-action="work-edit" data-person="${esc(key)}" data-rotation="${esc(r.id)}">Edita</button><button type="button" class="delete-icon" data-action="work-delete" data-person="${esc(key)}" data-rotation="${esc(r.id)}" aria-label="Suprimeix ${esc(r.name)}">×</button></div></div>`).join(''):'<p class="settings-note">Afegeix els dies i les hores que treballa aquesta persona, amb tantes franges com necessitis per a una jornada partida.</p>'}</div>`;
@@ -134,5 +137,5 @@
   }).join('');
   return `<section class="work-agenda" aria-label="Horari laboral"><h2 class="section-title">Horari laboral</h2>${rows||'<p class="settings-note">Sense feina programada aquests dies.</p>'}</section>`;
  }
- window.workSchedule={validDate,addDays,monday,clean,normalize,draft,change,edit,readForm,save,remove,rotations,absence,slots,listMarkup,form,agenda};
+ window.workSchedule={validDate,addDays,monday,clean,normalize,draft,change,edit,readForm,save,remove,rotations,absence,slots,scheduledSlots,listMarkup,form,agenda};
 })();

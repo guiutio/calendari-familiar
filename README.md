@@ -435,3 +435,9 @@ L’àrea dels tutors i responsables passa a dir-se «Horari laboral». Cada sel
 S’hi poden afegir diverses rotacions de feina, ordenades per inici, amb nom, data d’inici, final opcional i un cicle d’1 a 12 setmanes. Cada dia admet diverses franges, incloses jornades partides i torns que passen de mitjanit. Les setmanes s’alineen amb el dilluns de la setmana inicial; les dates d’inici i final limiten els dies en què s’aplica el patró.
 
 L’editor treballa amb un esborrany fins a «Desa els canvis», permet copiar les franges d’un dia de dilluns a divendres i valida que no se superposin dins del patró. Els festius i les vacances personals anul·len les hores de feina d’aquelles dates. L’agenda de Dia i Setmana mostra l’horari resultant, amb filtre per persona i per franges de feina. Les dades i preferències es conserven a les còpies de seguretat i fora de línia.
+
+## v0.15.1: prioritat de festius i requadres niats
+
+La marca es calcula per persona: un festiu es mostra sempre; les vacances només es mostren si aquell dia no és festiu i hi havia feina prevista al patró laboral original. El càlcul de feina prevista no aplica les absències ni els filtres de visualització. Els dies de descans o fora de la vigència de les rotacions separen els trams de vacances.
+
+Quan coincideixen persones, els contorns són sòlids i niats: cada capa entra exactament un gruix de línia, de manera que les vores es toquen. Cada tram manté la seva capa i les cantonades contínues; amagar persones al filtre torna a aprofitar les capes exteriors disponibles. Any i Mes comparteixen aquestes regles.

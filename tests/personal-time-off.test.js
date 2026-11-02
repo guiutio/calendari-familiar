@@ -35,6 +35,12 @@ function setup(){
  return {ctx,state,api,click,vacation,holidays,marks,messages,get saves(){return saves;},get paints(){return paints;}};
 }
 const leave={name:'Vacances de Nadal',startDate:'2026-12-22',endDate:'2027-01-07'};
+function working(s,key='guardian:same',days=[0,1,2,3,4,5,6]){
+ const draft=s.ctx.workSchedule.draft(s.state,key,undefined,'2026-01-01');
+ for(const index of days)draft.days[index]=[{startTime:'09:00',endTime:'17:00'}];
+ assert.equal(s.ctx.workSchedule.save(s.state,key,draft,()=> 'work-for-contours'),'');
+}
+
 
 test('només els tutors i responsables tenen calendari personal i l’opció Soc jo',()=>{
  const s=setup();s.holidays(['2026-11-03']);
@@ -87,12 +93,12 @@ test('Soc jo identifica una única persona, es pot retirar i es reflecteix als f
 });
 
 test('els filtres de persones i tipus són independents dels colors de tutors i fills de les franges',()=>{
- const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
+ const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-03',endDate:'2026-11-04'});
  s.state.preferences.visibleChildren=[];s.state.preferences.visibleGuardians=[];
- assert.equal(s.marks('2026-11-02').items.length,2);
- s.click('person-off-type',{kind:'holiday'});assert.deepEqual(plain(s.marks('2026-11-02').items.map(p=>p.kind)),['vacation']);
- s.click('person-off-filter');assert.equal(s.marks('2026-11-02').items.length,0);
- s.click('filter-all');assert.equal(s.marks('2026-11-02').items.length,2);
+ assert.equal(s.marks('2026-11-02').items[0].kind,'holiday');
+ s.click('person-off-type',{kind:'holiday'});assert.deepEqual(plain(s.marks('2026-11-03').items.map(p=>p.kind)),['vacation']);
+ s.click('person-off-filter');assert.equal(s.marks('2026-11-03').items.length,0);
+ s.click('filter-all');assert.equal(s.marks('2026-11-02').items.length,1);assert.equal(s.marks('2026-11-03').items.length,1);
  assert.equal(s.state.preferences.showPersonalHolidays,true);assert.equal(s.state.preferences.showPersonalVacations,true);
 });
 
@@ -103,7 +109,7 @@ test('editar un calendari ocult no torna a activar-lo automàticament',()=>{
 });
 
 test('els dies consecutius es fusionen i dues setmanes formen només el perímetre exterior',()=>{
- const s=setup();s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-15'});
+ const s=setup();working(s);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-15'});
  let p=s.marks('2026-11-02').items[0];assert.equal(p.top,true);assert.equal(p.left,true);assert.equal(p.bottom,false);assert.equal(p.right,false);
  p=s.marks('2026-11-03').items[0];assert.equal(p.left,false);assert.equal(p.right,false);assert.equal(p.bottom,false);
  p=s.marks('2026-11-09').items[0];assert.equal(p.top,false);assert.equal(p.bottom,true);assert.equal(p.left,true);
@@ -119,31 +125,33 @@ test('dos dilluns separats no s’uneixen i els festius de persones diferents ta
 });
 
 test('el perímetre d’una sèrie que travessa una setmana tanca els dos esglaons',()=>{
- const s=setup();s.vacation({name:'Descans',startDate:'2026-11-04',endDate:'2026-11-11'});
+ const s=setup();working(s);s.vacation({name:'Descans',startDate:'2026-11-04',endDate:'2026-11-11'});
  const first=s.marks('2026-11-04'),last=s.marks('2026-11-11');
  assert.equal(first.items[0].left,true);assert.equal(first.items[0].bottom,false);
  assert.equal(last.items[0].top,false);assert.equal(last.items[0].right,true);
- assert.ok(first.html.includes('--pto-left-paint:linear-gradient(#168948,#168948)'));
- assert.ok(last.html.includes('--pto-right-paint:linear-gradient(#168948,#168948)'));
- assert.doesNotMatch(first.html+last.html,/personal-corner/);
+ assert.ok(first.html.includes('--pto-color:#168948;--pto-layer:0'));assert.ok(first.html.includes('pto-left'));
+ assert.ok(last.html.includes('--pto-color:#168948;--pto-layer:0'));assert.ok(last.html.includes('pto-right'));
+ assert.match(first.html,/pto-concave-br/);assert.match(last.html,/pto-concave-tl/);
 });
 
 test('les vacances superposades o adjacents es mostren com una sola sèrie per persona',()=>{
- const s=setup();s.vacation({name:'A',startDate:'2026-11-02',endDate:'2026-11-04'});
+ const s=setup();working(s);s.vacation({name:'A',startDate:'2026-11-02',endDate:'2026-11-04'});
  s.vacation({name:'B',startDate:'2026-11-04',endDate:'2026-11-05'});s.vacation({name:'C',startDate:'2026-11-06',endDate:'2026-11-08'});
  assert.equal(s.marks('2026-11-04').items.length,1);assert.equal(s.marks('2026-11-05').items[0].right,false);
  assert.equal(s.marks('2026-11-08').items[0].right,true);assert.equal(s.api.get(s.state,'guardian:same').vacations.length,3);
 });
 
-test('festius i vacances coincidents conserven tots dos contorns',()=>{
- const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-04'});
- const mark=s.marks('2026-11-02');assert.equal(mark.items.length,2);
- assert.match(mark.html,/personal-outline holiday/);assert.match(mark.html,/personal-outline vacation/);
- assert.match(mark.label,/Festiu de Guiu/);assert.match(mark.label,/Vacances de Guiu/);
+test('un festiu guanya a les vacances de la mateixa persona, encara que el filtre de festius estigui desactivat',()=>{
+ const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-04'});
+ const mark=s.marks('2026-11-02');assert.equal(mark.items.length,1);assert.equal(mark.items[0].kind,'holiday');
+ assert.match(mark.html,/personal-outline holiday/);assert.doesNotMatch(mark.html,/personal-outline vacation/);
+ assert.match(mark.label,/Festiu de Guiu/);assert.doesNotMatch(mark.label,/Vacances de Guiu/);
+ s.click('person-off-type',{kind:'holiday'});assert.equal(s.marks('2026-11-02').items.length,0);
+ assert.equal(s.marks('2026-11-03').items[0].kind,'vacation');
 });
 
 test('els contorns es tanquen al canvi de mes i d’any, amb extrems inclusius',()=>{
- const s=setup();s.vacation({name:'Nadal',startDate:'2026-12-29',endDate:'2027-01-04'});
+ const s=setup();working(s);s.vacation({name:'Nadal',startDate:'2026-12-29',endDate:'2027-01-04'});
  const dec=s.marks('2026-12-31','2026-12-01','2026-12-31').items[0];assert.equal(dec.right,true);assert.equal(dec.bottom,true);
  const jan=s.marks('2027-01-01','2027-01-01','2027-01-31').items[0];assert.equal(jan.left,true);assert.equal(jan.top,true);
  assert.equal(s.marks('2027-01-04','2027-01-01','2027-01-31').items.length,1);
@@ -151,12 +159,12 @@ test('els contorns es tanquen al canvi de mes i d’any, amb extrems inclusius',
 });
 
 test('Mes i Any generen els contorns només als dies afectats i responen als filtres',()=>{
- const s=setup();s.holidays(['2026-11-02','2026-11-03','2026-11-04']);
+ const s=setup();working(s);s.holidays(['2026-11-02','2026-11-03','2026-11-04']);
  s.vacation({name:'Descans',startDate:'2026-11-03',endDate:'2026-11-05'});
  const render=()=>[s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),s.ctx.yearOverview(2026,s.state.children,'2026-11-02')];
  for(const html of render()){
   assert.equal((html.match(/data-personal-kind="holiday"/g)||[]).length,3);
-  assert.equal((html.match(/data-personal-kind="vacation"/g)||[]).length,3);
+  assert.equal((html.match(/data-personal-kind="vacation"/g)||[]).length,1);
  }
  s.click('person-off-type',{kind:'vacation'});
  for(const html of render())assert.doesNotMatch(html,/data-personal-kind="vacation"/);
@@ -239,7 +247,7 @@ test('marcar festius conserva el desplaçament i el focus del selector personal'
 });
 
 test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
- const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
+ const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
  Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>''});
  for(const view of ['week','day']){
   s.ctx.calendarView=view;assert.doesNotMatch(s.ctx.calendarPage(),/personal-outline|Festius personals|Vacances personals/);
@@ -277,12 +285,15 @@ test('colors independents per persona i tipus, desats sense alterar dates ni el 
  assert.throws(()=>s.api.clean({'guardian:same':{holidayColor:'bad'}},s.state.children,s.state.guardians),/Color/);
 });
 
-test('Any, Mes, filtres i llegenda utilitzen els colors personals també quan hi ha coincidències',()=>{
- const s=setup();s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
+test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres niats i contigus',()=>{
+ const s=setup();s.state.guardians.push({id:'third',name:'Àvia',color:'#555555'});working(s,'guardian:third');
+ s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'},'guardian:third');
  s.holidays(['2026-11-02'],'guardian:other');
- for(const [key,kind,color] of [['guardian:same','holiday','#123abc'],['guardian:same','vacation','#abcdef'],['guardian:other','holiday','#aa0011']])s.api.setColor(s.state,key,kind,color);
- const mark=s.marks('2026-11-02');
- assert.ok(mark.html.includes('--pto-top-paint:repeating-linear-gradient(45deg,#123abc 0px 4px,#abcdef 4px 8px,#aa0011 8px 12px)'));
+ for(const [key,kind,color] of [['guardian:same','holiday','#123abc'],['guardian:third','vacation','#abcdef'],['guardian:other','holiday','#aa0011']])s.api.setColor(s.state,key,kind,color);
+ const mark=s.marks('2026-11-02');assert.equal(mark.items.length,3);
+ assert.deepEqual(plain(mark.items.map(p=>p.layer)),[0,1,2]);
+ assert.ok(mark.html.includes('--pto-color:#123abc;--pto-layer:0'));assert.ok(mark.html.includes('--pto-color:#aa0011;--pto-layer:1'));assert.ok(mark.html.includes('--pto-color:#abcdef;--pto-layer:2'));
+ assert.doesNotMatch(mark.html,/gradient/);
  assert.equal((mark.html.match(/data-personal-kind=/g)||[]).length,3);
  for(const html of [s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),s.ctx.yearOverview(2026,s.state.children,'2026-11-02')]){
   assert.ok(html.includes('#123abc'));assert.ok(html.includes('#abcdef'));assert.ok(html.includes('#aa0011'));
@@ -292,8 +303,9 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals també quan hi
  }
  s.click('person-off-type',{kind:'vacation'});assert.doesNotMatch(s.marks('2026-11-02').html,/#abcdef/);
  const css=read('styles.css');
- assert.match(css,/\.personal-outline \{position:absolute;inset:-1px;z-index:9;[^}]*--pto-stroke:var\(--month-outline-width,4px\)/);
- assert.doesNotMatch(css,/--pto-inset|--pto-stroke:1px|personal-corner/);
+ assert.match(css,/--pto-stroke:var\(--month-outline-width,4px\)/);
+ assert.match(css,/--pto-inset:calc\(var\(--pto-layer,0\) \* var\(--pto-stroke\) - 1px\)/);
+ assert.match(css,/\.personal-outline \{inset:-1px;/);assert.doesNotMatch(css,/--pto-stroke:1px|--pto-top-paint/);
 });
 
 test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panells i filtres existents',()=>{
@@ -307,4 +319,41 @@ test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panell
  }
  s.click('person-off-type',{kind:'work'});assert.doesNotMatch(s.ctx.calendarPage(),/09:00–13:00/);
  s.click('filter-all');assert.match(s.ctx.calendarPage(),/09:00–13:00/);
+});
+
+test('les vacances només es marquen els dies previstos de feina i separen els dies de descans',()=>{
+ const s=setup();working(s,'guardian:same',[0,1,2,3,4]);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-15'});
+ for(const date of ['2026-11-02','2026-11-06','2026-11-09','2026-11-13'])assert.equal(s.marks(date).items[0].kind,'vacation');
+ for(const date of ['2026-11-07','2026-11-08','2026-11-14','2026-11-15'])assert.equal(s.marks(date).items.length,0);
+ assert.equal(s.marks('2026-11-06').items[0].right,true);assert.equal(s.marks('2026-11-06').items[0].bottom,true);
+ assert.equal(s.marks('2026-11-09').items[0].left,true);assert.equal(s.marks('2026-11-09').items[0].top,true);
+ assert.equal(s.ctx.workSchedule.slots(s.state,'guardian:same','2026-11-02').length,0);
+ assert.equal(s.ctx.workSchedule.scheduledSlots(s.state,'guardian:same','2026-11-02').length,1);
+ s.click('person-off-type',{kind:'work'});assert.equal(s.marks('2026-11-02').items.length,1);
+});
+
+test('sense rotació laboral no es marquen vacances, però els festius es marquen també en dies de descans',()=>{
+ const s=setup();s.vacation({name:'Descans',startDate:'2026-11-01',endDate:'2026-11-30'});s.holidays(['2026-11-07']);
+ assert.equal(s.marks('2026-11-02').items.length,0);assert.equal(s.marks('2026-11-07').items[0].kind,'holiday');
+ working(s,'guardian:same',[0,1,2,3,4]);const rotation=s.api.get(s.state,'guardian:same').workRotations[0];rotation.startDate='2026-11-09';rotation.endDate='2026-11-16';
+ assert.equal(s.marks('2026-11-02').items.length,0);assert.equal(s.marks('2026-11-09').items[0].kind,'vacation');
+ assert.equal(s.marks('2026-11-16').items.length,1);assert.equal(s.marks('2026-11-17').items.length,0);
+});
+
+test('la prioritat és per persona: el festiu d’un tutor pot coincidir amb les vacances d’un altre',()=>{
+ const s=setup();working(s,'guardian:other');s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'},'guardian:other');
+ const marks=s.marks('2026-11-02').items;assert.deepEqual(plain(marks.map(p=>[p.key,p.kind,p.layer])),[['guardian:same','holiday',0],['guardian:other','vacation',1]]);
+ s.click('person-off-filter');const single=s.marks('2026-11-02').items;assert.equal(single.length,1);assert.equal(single[0].layer,0);
+});
+
+test('cada tram conserva la capa i les cantonades quan coincideixen vacances de diverses persones',()=>{
+ const s=setup();working(s);working(s,'guardian:other');
+ s.vacation({name:'Descans',startDate:'2026-11-04',endDate:'2026-11-11'});s.vacation({name:'Descans',startDate:'2026-11-04',endDate:'2026-11-11'},'guardian:other');
+ const entries=s.api.visibleEntries(s.state);
+ for(const date of ['2026-11-04','2026-11-05','2026-11-08','2026-11-09','2026-11-11']){
+  const mark=s.api.marks(entries,date,'2026-11-01','2026-11-30');assert.deepEqual(plain(mark.items.map(p=>p.layer)),[0,1]);
+ }
+ const first=s.api.marks(entries,'2026-11-04','2026-11-01','2026-11-30'),last=s.api.marks(entries,'2026-11-11','2026-11-01','2026-11-30');
+ assert.ok(first.items.every(p=>p.concaveBR));assert.ok(last.items.every(p=>p.concaveTL));assert.match(first.html,/personal-corner pto-concave-br/);
+ assert.equal(s.api.marks(entries,'2026-11-12','2026-11-01','2026-11-30').items.length,0);
 });
