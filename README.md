@@ -391,3 +391,8 @@ La visualització detallada dels horaris escolars al calendari queda reservada p
 - Les altres rotacions també incorporen final opcional i només s’apliquen entre l’inici i el final indicats. La durada del patró determina el cicle, independentment del període d’aplicació.
 - El tutor i l’hora de canvi de cada dia es continuen editant conjuntament. Els calendaris resolen la pernocta aplicable a cada fill, amb la seva hora de canvi; l’última nit d’un període es conserva fins al canvi de l’endemà.
 - Les dades passen al format 2: la pernocta única de les còpies anteriors es converteix automàticament en una rotació, conservant assignacions, hores del patró i excepcions. Les hores puntuals passen a ser per fill. Les còpies noves permeten no tenir cap pernocta i no en recreen una després d’eliminar-la.
+
+
+## v0.12.1: vistes de dia i setmana més compactes
+
+- Es retira el bloc introductori «El teu calendari / Calendari Familiar» i el seu subtítol de les vistes Dia i Setmana. La navegació superior continua indicant la data i la vista activa.
