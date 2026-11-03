@@ -487,3 +487,8 @@ Es retiren de Setmana el resum plegable en format de llista i l’horari laboral
 ## v0.16.2: setmana a tota la zona disponible
 
 La graella setmanal ocupa tota l’amplada entre les barres superior i inferior, sense marges ni marc arrodonit. Si les 24 hores són més curtes que l’espai visible, l’escala s’amplia proporcionalment fins a omplir-lo, descomptant la capçalera de dies i fills. Un zoom més gran conserva el desplaçament vertical de la pàgina. L’ajust es recalcula en redimensionar o girar el dispositiu.
+
+
+## v0.16.3: Any i Mes sense marges laterals
+
+Les vistes Any i Mes aprofiten tota l’amplada disponible, sense espais buits als costats. La capçalera dels dies de Mes s’alinea amb la graella ampliada.
