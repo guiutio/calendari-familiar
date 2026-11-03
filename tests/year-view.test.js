@@ -39,6 +39,9 @@ test('l’any mostra dotze mesos, totes les dates una sola vegada i sis files pe
  assert.equal(dates[0],'2026-01-01');assert.equal(dates.at(-1),'2026-12-31');
  assert.equal((html.match(/class="year-empty-day"/g)||[]).length,12*42-365);
  assert.equal((html.match(/class="year-day today"/g)||[]).length,1);
+ assert.equal((html.match(/class="year-month current-month"/g)||[]).length,1);
+ assert.match(html,/class="year-month current-month"[^>]+data-year="2026" data-month="10"/);
+ assert.match(html,/class="year-day today" data-year-date="2026-11-02" aria-current="date"/);
  assert.match(html,/aria-label="Obre novembre de 2026"/);
  assert.match(html,/class="year-days" aria-hidden="true"><span class="year-empty-day"><\/span><span class="year-empty-day"><\/span><span class="year-empty-day"><\/span><span class="year-day [^"]*" data-year-date="2026-01-01"/);
 });
@@ -47,6 +50,7 @@ test('febrer de traspàs apareix correctament i la vista funciona sense fills',(
  const s=setup(),html=s.ctx.yearOverview(2028,[],'2026-11-02');
  assert.equal((html.match(/data-year-date=/g)||[]).length,366);
  assert.match(html,/data-year-date="2028-02-29"/);
+ assert.doesNotMatch(html,/current-month|aria-current="date"/);
  assert.equal((html.match(/data-action="show-calendar-month"/g)||[]).length,12);
  assert.doesNotMatch(html,/class="month-mini/);
 });
@@ -112,7 +116,8 @@ test('tocar un mes obre Mes en l’any i mes correctes i Avui torna a l’any ac
  assert.equal(s.ctx.calendarView,'month');assert.equal(s.ctx.viewYear,2028);assert.equal(s.ctx.viewMonth,1);
  assert.equal(s.ctx.selectedDate,'2028-02-01');assert.equal(s.ctx.monthScrollTarget,true);
  s.click('calendar-view',{view:'year'});assert.equal(s.ctx.calendarView,'year');assert.equal(s.ctx.viewYear,2028);
- s.click('today');assert.equal(s.ctx.calendarView,'year');assert.equal(s.ctx.viewYear,2026);assert.equal(s.ctx.selectedDate,'2026-11-02');
+ s.ctx.monthScrollTarget=false;
+ s.click('today');assert.equal(s.ctx.monthScrollTarget,true);assert.equal(s.ctx.calendarView,'year');assert.equal(s.ctx.viewYear,2026);assert.equal(s.ctx.selectedDate,'2026-11-02');
  const before=s.paints;
  for(const data of [{year:'bad',month:'2'},{year:'2026',month:'12'},{year:'2026',month:'-1'}])s.click('show-calendar-month',data);
  assert.equal(s.paints,before);
@@ -132,4 +137,33 @@ test('els filtres conserven el desplaçament anual i canviar d’any el reinicia
  vm.runInContext(section('function render()', 'function notify('),s.ctx);
  s.ctx.render();main.scrollTop=300;s.ctx.render();assert.equal(main.scrollTop,300);
  s.ctx.viewYear=2027;s.ctx.render();assert.equal(main.scrollTop,0);
+});
+
+
+test('Any enfoca el mes actual en entrar i amb Avui, i conserva el scroll als repintats',()=>{
+ for(const mobile of [true,false]){
+  const s=setup();let scroll=0;
+  const main={get scrollTop(){return scroll;},set scrollTop(value){scroll=value;}};
+  const target={getBoundingClientRect:()=>({top:1600-scroll})};
+  const bar={getBoundingClientRect:()=>({bottom:100})};
+  Object.assign(s.ctx,{$app:{querySelector:selector=>selector==='.year-month.current-month'?target:selector==='.main-area'?main:selector==='.calendar-sticky-bar'?bar:null},
+   window:{matchMedia:()=>({matches:mobile}),scrollTo:(_,top)=>{scroll=top;},scrollBy:(_,delta)=>{scroll+=delta;}}});
+  vm.runInContext(section('function mountCalendarScroll(', 'function zoomControls('),s.ctx);
+  s.ctx.mountCalendarScroll(null,true);
+  assert.equal(scroll,1500);assert.equal(s.ctx.monthScrollTarget,false);
+  scroll=250;s.ctx.mountCalendarScroll(null,false);
+  assert.equal(scroll,250,'Filtres i llegenda conserven el desplaçament manual');
+  s.click('today');s.ctx.mountCalendarScroll(null,false);
+  assert.equal(scroll,1500,'Avui funciona també dins del mateix any');
+  scroll=50;s.ctx.monthScrollTarget=false;s.ctx.mountCalendarScroll(null,true);
+  assert.equal(scroll,1500,'Tornar a entrar a Any torna a enfocar el mes actual');
+ }
+});
+
+test('en navegar a un altre any no es força el mes actual ni s’arrossega la petició d’Avui',()=>{
+ const s=setup();let scroll=500;
+ Object.assign(s.ctx,{$app:{querySelector:()=>null},window:{matchMedia:()=>({matches:false}),scrollTo:(_,top)=>{scroll=top;},scrollBy:assert.fail}});
+ vm.runInContext(section('function mountCalendarScroll(', 'function zoomControls('),s.ctx);
+ s.ctx.navigateCalendar(1);s.ctx.mountCalendarScroll(null,true);
+ assert.equal(scroll,0);assert.equal(s.ctx.monthScrollTarget,false);
 });

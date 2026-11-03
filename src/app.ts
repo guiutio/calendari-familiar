@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.15.3';
+const APP_VERSION = '0.15.4';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -607,6 +607,22 @@ function monthPosition():MonthPosition|null {
 }
 function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   if(resetScroll&&!window.matchMedia('(max-width:900px)').matches)window.scrollTo(0,0);
+  if(tab==='calendar'&&calendarView==='year'){
+    // En entrar o prémer Avui, situa el mes actual sota la barra fixa.
+    // Els repintats de filtres i diàlegs conserven el desplaçament manual.
+    if(resetScroll||monthScrollTarget){
+      const target=$app.querySelector<HTMLElement>('.year-month.current-month');
+      const main=$app.querySelector<HTMLElement>('.main-area');
+      const bar=$app.querySelector<HTMLElement>('.calendar-sticky-bar');
+      if(target&&main&&bar){
+        const delta=target.getBoundingClientRect().top-bar.getBoundingClientRect().bottom;
+        if(window.matchMedia('(max-width:900px)').matches)main.scrollTop+=delta;
+        else window.scrollBy(0,delta);
+      }
+    }
+    monthScrollTarget=false;
+    return;
+  }
   if(tab!=='calendar'||calendarView!=='month')return;
   const main=$app.querySelector<HTMLElement>('.main-area')!;
   const sequence=$app.querySelector<HTMLElement>('.month-sequence')!;
@@ -742,9 +758,9 @@ function yearOverview(year:number,children:Child[],today:string):string {
       const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
       const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
       const marks=personalEntries.length?personalTimeOff.marks(personalEntries,date,monthStart,monthEnd):{html:'',label:''};
-      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
+      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${date===today?'aria-current="date"':''} ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
     }).join('');
-    return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
+    return `<button type="button" class="year-month${today>=monthStart&&today<=monthEnd?' current-month':''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
   }).join('')}</div>`;
 }
 function calendarLegend():string {
@@ -1150,7 +1166,7 @@ function notify(message:string){
   toastTimer=window.setTimeout(()=>{const target=document.getElementById('toast-region');if(target)target.innerHTML='';},2900);
 }
 function goToMonth(delta:number){const d=new Date(viewYear,viewMonth+delta,1,12);viewYear=d.getFullYear();viewMonth=d.getMonth();render();}
-function changeTab(value:Tab){tab=value;sheet=null;render();window.scrollTo({top:0,behavior:'instant'});}
+function changeTab(value:Tab){tab=value;sheet=null;window.scrollTo({top:0,behavior:'instant'});render();}
 function chooseGuardian(date:string,childId:string,guardianId:string){
   if(guardianId===rotationAssignment(date,childId))delete state.overrides[`${date}|${childId}`];else state.overrides[`${date}|${childId}`]=guardianId;
   update();notify('Nit actualitzada');

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.15.3';
+const APP_VERSION = '0.15.4';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -691,6 +691,24 @@ function monthPosition() {
 function mountCalendarScroll(position, resetScroll = false) {
     if (resetScroll && !window.matchMedia('(max-width:900px)').matches)
         window.scrollTo(0, 0);
+    if (tab === 'calendar' && calendarView === 'year') {
+        // En entrar o prémer Avui, situa el mes actual sota la barra fixa.
+        // Els repintats de filtres i diàlegs conserven el desplaçament manual.
+        if (resetScroll || monthScrollTarget) {
+            const target = $app.querySelector('.year-month.current-month');
+            const main = $app.querySelector('.main-area');
+            const bar = $app.querySelector('.calendar-sticky-bar');
+            if (target && main && bar) {
+                const delta = target.getBoundingClientRect().top - bar.getBoundingClientRect().bottom;
+                if (window.matchMedia('(max-width:900px)').matches)
+                    main.scrollTop += delta;
+                else
+                    window.scrollBy(0, delta);
+            }
+        }
+        monthScrollTarget = false;
+        return;
+    }
     if (tab !== 'calendar' || calendarView !== 'month')
         return;
     const main = $app.querySelector('.main-area');
@@ -861,9 +879,9 @@ function yearOverview(year, children, today) {
                 return '<span class="year-empty-day"></span>';
             const date = localDate(new Date(year, month, day, 12)), snapshot = monthData(date, children);
             const marks = personalEntries.length ? personalTimeOff.marks(personalEntries, date, monthStart, monthEnd) : { html: '', label: '' };
-            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}" ${marks.label ? `title="${escapeHtml(fullDate(date) + '. ' + marks.label)}"` : ''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}${marks.html}</span>`;
+            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}" ${date === today ? 'aria-current="date"' : ''} ${marks.label ? `title="${escapeHtml(fullDate(date) + '. ' + marks.label)}"` : ''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}${marks.html}</span>`;
         }).join('');
-        return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
+        return `<button type="button" class="year-month${today >= monthStart && today <= monthEnd ? ' current-month' : ''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
     }).join('')}</div>`;
 }
 function calendarLegend() {
@@ -1331,7 +1349,7 @@ function notify(message) {
         target.innerHTML = ''; }, 2900);
 }
 function goToMonth(delta) { const d = new Date(viewYear, viewMonth + delta, 1, 12); viewYear = d.getFullYear(); viewMonth = d.getMonth(); render(); }
-function changeTab(value) { tab = value; sheet = null; render(); window.scrollTo({ top: 0, behavior: 'instant' }); }
+function changeTab(value) { tab = value; sheet = null; window.scrollTo({ top: 0, behavior: 'instant' }); render(); }
 function chooseGuardian(date, childId, guardianId) {
     if (guardianId === rotationAssignment(date, childId))
         delete state.overrides[`${date}|${childId}`];

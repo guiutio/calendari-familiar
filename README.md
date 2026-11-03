@@ -450,3 +450,8 @@ Els contorns de festius i vacances d’Any passen a 1 px, incloses les cantonade
 ## v0.15.3: vista anual més ampla i compacta
 
 Els mesos queden alineats a dalt i aprofiten l’amplada sense el requadre exterior ni el seu marge interior. La llegenda anual s’obre des d’un botó petit d’informació al costat dels filtres. Es retiren el text d’ajuda anual i el peu informatiu de l’app.
+
+
+## v0.15.4: mes i dia actuals a la vista anual
+
+En obrir Any o prémer Avui, el calendari es desplaça fins al mes actual, que es distingeix amb un perímetre més gruixut. El dia actual ressalta tota la cel·la amb els mateixos colors de Mes, sense el cercle del número. Els filtres i diàlegs conserven el desplaçament manual, i els altres anys no ressalten cap mes com a actual.
