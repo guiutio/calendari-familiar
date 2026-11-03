@@ -110,8 +110,8 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.15\.5/);
- assert.match(sw,/month-day-ui\.js\?v=0\.15\.5/);
+ assert.match(html,/month-day-ui\.js\?v=0\.15\.6/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.15\.6/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
@@ -165,8 +165,8 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-restore" data-date="\$\{selectedDate\}"/);
  assert.match(ts,/monthDayUI\.restore\(state,date\);rotationPatterns\.clearDate\(state,date\);sheet=null;update\(\)/);
  assert.match(app,/monthDayUI\.restore\(state, date\);\s*rotationPatterns\.clearDate\(state, date\);\s*sheet = null;/);
- assert.match(html,/app\.js\?v=0\.15\.5/);
- assert.match(sw,/calendari-familiar-v0\.15\.5/);
+ assert.match(html,/app\.js\?v=0\.15\.6/);
+ assert.match(sw,/calendari-familiar-v0\.15\.6/);
 });
 
 test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',()=>{
@@ -177,8 +177,8 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
  assert.match(css,/@media\(max-width:360px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:24px;\s*height:24px;\s*font-size:calc\(15px/);
  assert.doesNotMatch(ts,/school-month-count/);
  assert.doesNotMatch(app,/school-month-count/);
- assert.match(html,/styles\.css\?v=0\.15\.5/);
- assert.match(sw,/calendari-familiar-v0\.15\.5/);
+ assert.match(html,/styles\.css\?v=0\.15\.6/);
+ assert.match(sw,/calendari-familiar-v0\.15\.6/);
 });
 
 test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
@@ -197,18 +197,13 @@ test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
  // Febrer 2026: el primer dia és diumenge, amb tres vores.
  assert.deepEqual(classes('2026-02-01',2026,1,6,35,28),['month-current','month-edge-top','month-edge-left','month-edge-right']);
 });
-test('el mes no mostra cap comptador escolar i destaca el límit amb una línia gruixuda',()=>{
+test('el mes no mostra cap comptador escolar ni perímetre ressaltat',()=>{
  assert.doesNotMatch(ts,/class="school-month-count"/);
  assert.doesNotMatch(app,/class="school-month-count"/);
- assert.match(ts,/monthDayUI\.outline\(date,year,month,i/);
- assert.match(app,/monthDayUI\.outline\(date, year, month, i/);
- assert.match(ts,/\$\{monthEdges\}" data-action="show-calendar-day"/);
-  assert.match(css,/\.month-grid\s*\{--month-outline:#205b99;--month-outline-width:4px;\}/);
-  assert.match(css,/\.month-grid \.day-cell\.month-current::after\s*\{[\s\S]*?content:"";[\s\S]*?position:absolute;[\s\S]*?inset:-1px;[\s\S]*?z-index:8;[\s\S]*?pointer-events:none;[\s\S]*?border-style:solid;[\s\S]*?border-color:var\(--month-outline\)/);
-  for(const edge of ['top','bottom','left','right'])assert.ok(css.includes('.month-grid .day-cell.month-edge-'+edge+' {--month-'+edge+'-w:var(--month-outline-width);}'));
- assert.match(css,/:root\[data-theme="dark"\] \.month-grid\s*\{--month-outline:#88baff;\}/);
- assert.match(html,/styles\.css\?v=0\.15\.5/);
- assert.match(sw,/calendari-familiar-v0\.15\.5/);
+ assert.doesNotMatch(css,/\.month-grid \.day-cell\.month-current::after/);
+ assert.match(css,/\.month-grid\s*\{--month-outline-width:4px;\}/);
+ assert.match(html,/styles\.css\?v=0\.15\.6/);
+ assert.match(sw,/calendari-familiar-v0\.15\.6/);
 });
 
 test('mes: comprimeix 22:00–06:00 però manté les hores diürnes proporcionals',()=>{
@@ -301,16 +296,9 @@ test('el perímetre no deixa buits quan els mesos comencen o acaben a mitja setm
   for(const d of [24,29,30])assert.match(november(d,6+d-1),/month-edge-bottom/);
   assert.match(november(30,35),/month-edge-right/);
 });
-test('el marc de 4 px es dibuixa per sobre de la graella a tots els costats, sense interceptar tocs',()=>{
-  const overlay=css.match(/\.month-grid \.day-cell\.month-current::after\s*\{([^}]*)\}/)?.[1];
-  assert.ok(overlay);
-  assert.match(overlay,/pointer-events:none/);
-  assert.match(overlay,/z-index:8/);
-  assert.match(overlay,/inset:-1px/);
-  assert.ok(overlay.includes('border-width:'));
-  for(const edge of ['top','right','bottom','left'])assert.ok(overlay.includes('var(--month-'+edge+'-w,0px)'));
-  assert.ok(css.includes('--month-outline-width:4px;'));
-  assert.match(css,/\.month-grid \.day-cell\.month-current\.month-edge-top,[\s\S]*?month-edge-right \{z-index:2;\}/);
-  assert.doesNotMatch(css,/inset 0 4px 0 var\(--month-top/);
-  assert.match(ts,/data-action="show-calendar-day"/);
+test('retirar el perímetre mensual conserva els contorns personals i els accessos de dia',()=>{
+ assert.doesNotMatch(css,/border-color:var\(--month-outline\)/);
+ assert.match(css,/--month-outline-width:4px;/);
+ assert.match(css,/\.personal-outline\.pto-top[^}]+border-top-width:var\(--pto-stroke\)/);
+ assert.match(ts,/data-action="show-calendar-day"/);
 });

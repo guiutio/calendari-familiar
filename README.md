@@ -460,3 +460,8 @@ En obrir Any o prémer Avui, el calendari es desplaça fins al mes actual, que e
 ## v0.15.5: sis setmanes visibles a Mes
 
 Seleccionar un mes, navegar amb fletxes o prémer Avui alinea la graella sota la barra fixa i deixa amagat el títol repetit. L’alçada de les setmanes s’ajusta a l’espai visible, descomptant la navegació superior i inferior, perquè hi càpiguen sis setmanes completes. Les miniatures s’adapten a aquesta alçada, també amb franges nocturnes especials. En redimensionar la finestra es recalcula la mida mantenint la posició del mes.
+
+
+## v0.15.6: vista mensual sense perímetre ressaltat
+
+Es retira el contorn gruixut que resseguia els dies de cada mes. Es conserven les línies de la graella, els contorns personals de festius i vacances i el ressaltat del dia actual.
