@@ -492,3 +492,10 @@ La graella setmanal ocupa tota l’amplada entre les barres superior i inferior,
 ## v0.16.3: Any i Mes sense marges laterals
 
 Les vistes Any i Mes aprofiten tota l’amplada disponible, sense espais buits als costats. La capçalera dels dies de Mes s’alinea amb la graella ampliada.
+
+
+## v0.16.4: Dia a tota la zona disponible i edició en un diàleg
+
+Dia mostra la graella directament sota la barra superior, sense els dos marcs ni marges. Les columnes dels fills omplen l’amplada disponible i mantenen un mínim de 98 px amb desplaçament horitzontal quan cal. Les 24 hores aprofiten tota l’alçada visible i un zoom més gran conserva el desplaçament vertical de la pàgina.
+
+El botó del llapis de la barra obre un diàleg amb les opcions d’afegir franges, editar rotacions i restaurar el dia. La informació escolar i laboral es conserva en aquest diàleg. Tocar pernoctes, franges i activitats manté els editors i els detalls existents.

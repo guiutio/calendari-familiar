@@ -322,7 +322,7 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres n
  assert.match(css,/\.year-day \.personal-outline,\.year-day \.personal-corner \{--pto-stroke:1px;\}/);
 });
 
-test('l’editor laboral i l’agenda de Dia s’integren amb els filtres i Setmana no inclou l’agenda inferior',()=>{
+test('l’agenda laboral es conserva al diàleg de Dia i respecta els filtres',()=>{
  const s=setup();s.click('work-add');s.click('work-shift-add',{day:'0'});
  let html=s.ctx.sheetMarkup();assert.match(html,/data-work-rotation-form="true"/);assert.match(html,/Horari laboral/);assert.match(html,/name="work-0-0-startTime"/);
  const draft=s.ctx.sheet.draft;draft.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];
@@ -330,11 +330,36 @@ test('l’editor laboral i l’agenda de Dia s’integren amb els filtres i Setm
  Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
  for(const view of ['week','day']){
   s.ctx.calendarView=view;html=s.ctx.calendarPage();
-  if(view==='week')assert.doesNotMatch(html,/Horari laboral|09:00–13:00|15:00–18:00/);
-  else {assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);}
+  assert.doesNotMatch(html,/Horari laboral|09:00–13:00|15:00–18:00/);
  }
- s.click('person-off-type',{kind:'work'});assert.doesNotMatch(s.ctx.calendarPage(),/09:00–13:00/);
- s.click('filter-all');assert.match(s.ctx.calendarPage(),/09:00–13:00/);
+ s.click('open-day-edit');html=s.ctx.sheetMarkup();
+ assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);
+ s.click('person-off-type',{kind:'work'});assert.doesNotMatch(s.ctx.sheetMarkup(),/09:00–13:00/);
+ s.click('filter-all');assert.match(s.ctx.sheetMarkup(),/09:00–13:00/);
+});
+
+test('el llapis obre les accions del dia i conserva els editors, la data i la restauració',()=>{
+ const s=setup(),date=s.ctx.selectedDate;
+ Object.assign(s.ctx,{tab:'calendar',calendarView:'day',dayTimeline:()=>'<div class="day-timeline">Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50,detailOrigin:'calendar',detailReturnDate:date});
+ assert.doesNotMatch(s.ctx.calendarPage(),/calendar-card|daily-agenda|day-edit-actions|day-slot-add/);
+ assert.match(s.ctx.calendarNavigation(),/data-action="open-day-edit"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/);
+ s.click('open-day-edit');let html=s.ctx.sheetMarkup();
+ assert.match(html,/role="dialog" aria-modal="true" aria-label="Edita el dia"/);
+ assert.match(html,new RegExp('data-action="day-slot-add" data-date="'+date+'"'));
+ assert.doesNotMatch(html,/data-action="day-restore"|data-action="extra-date-choose"/);
+ assert.match(s.ctx.calendarNavigation(),/data-action="open-day-edit"[^>]*aria-expanded="true"/);
+ s.ctx.clickAction({dataset:{action:'day-slot-add',date},closest:()=>null});
+ assert.equal(s.ctx.sheet.type,'daySlotForm');assert.equal(s.ctx.sheet.childId,'same');
+ assert.equal(s.ctx.calendarView,'day');assert.equal(s.ctx.selectedDate,date);
+ assert.equal(s.ctx.monthDayUI.save(s.state,date,'same','',new Map([['startTime','16:30'],['endTime','18:00'],['guardianId','same']]),()=> 'slot'),'');
+ s.state.extraRotations.push({id:'pickup',name:'Recollida',startDate:date,length:1,startTime:'16:30',endTime:'19:00',childIds:['same'],assignments:{same:['same']},activeDays:[true]});
+ s.click('open-day-edit');html=s.ctx.sheetMarkup();
+ assert.match(html,/data-action="day-restore"/);assert.match(html,/data-action="extra-date-choose"/);
+ s.click('extra-date-choose',{date});assert.equal(s.ctx.sheet.type,'extraDate');assert.equal(s.ctx.sheet.date,date);
+ s.click('open-day-edit');s.click('day-restore',{date});
+ assert.equal(s.ctx.monthDayUI.hasChanges(s.state,date),false);assert.equal(s.ctx.sheet,null);
+ assert.equal(s.ctx.calendarView,'day');assert.equal(s.ctx.selectedDate,date);
+ s.ctx.calendarView='month';s.click('open-day-edit');assert.equal(s.ctx.sheet,null);
 });
 
 test('les vacances només es marquen els dies previstos de feina i separen els dies de descans',()=>{

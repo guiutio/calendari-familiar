@@ -48,14 +48,23 @@ test('la línia temporal conté 24 hores, la nit i l’escola en columnes per fi
  assert.doesNotMatch(htmlOutput,/class="agenda"/);
 });
 test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
- assert.match(ts,/schoolInfoForDay\(selectedDate\)\}\$\{dayTimeline\(selectedDate,children\)/);
+ assert.match(ts,/return dayTimeline\(selectedDate,children\)/);
  assert.match(ts,/monthDayUI\.detail\(/); // detall mensual editable
  assert.match(ts,/monthDayUI\.mini\(/); // miniatura de 24 h
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
  assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.16\.3/);
- assert.match(sw,/day-timeline\.js\?v=0\.16\.3/);
+ assert.match(html,/day-timeline\.js\?v=0\.16\.4/);
+ assert.match(sw,/day-timeline\.js\?v=0\.16\.4/);
+});
+test('Dia omple l’alçada útil amb la mateixa proporció per a pernoctes i activitats',()=>{
+ const segments=ui.overnightSegments('2026-10-28','elna','19:00',nights,prev,guardian,['mare','pare']);
+ const render=zoom=>ui.render('2026-10-28','Dimecres',kids,[{childId:'elna',schoolId:'school',schoolName:'Escola',id:'class',kind:'Classe',color:'#77c455',start:540,end:600,startTime:'09:00',endTime:'10:00'}],{elna:segments},'19:00',zoom,{},[],720);
+ const html=render(50);
+ assert.match(html,/data-px-per-minute="0.5"/);assert.match(html,/--hour-height:30px/);
+ assert.match(html,/top:270px;height:30px/);assert.match(html,/top:570px;height:150px/);
+ assert.match(html,/top:720px">24:00/);assert.doesNotMatch(html,/<details|day-timeline-summary/);
+ assert.match(render(100),/height:1152px/);
 });
 test('les pernoctes utilitzen l’hora de la rotació aplicable per fill',()=>{
  assert.match(ts,/rotationPatterns\.nightTimeFor\(state\.extraRotations,date,childId,state\.nightDateTimes\)/);

@@ -87,18 +87,14 @@
       </div>
     </section>`;
   }
-  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,customSlots={},rotatingSlots=[]) {
+  function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,customSlots={},rotatingSlots=[],minimumHeight=0) {
     const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
-    const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
+    const height=Math.max(DAY_MINUTES*PX_PER_MINUTE*safeZoom/100,Number.isFinite(minimumHeight)?minimumHeight:0);
+    const pxPerMinute=height/DAY_MINUTES;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
-    const height=DAY_MINUTES*pxPerMinute;
     const tickStep=safeZoom===25?120:60;
     const tickMarks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>`<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
     const columns=buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots,rotatingSlots);
-    const list=children.map(child=>{
-      const nights=nightSegments[child.id]??[];
-      return `<li><strong>${escape(child.name)}</strong>: ${nights.filter(s=>s.visible).map(s=>`${fmt(s.from)}–${fmt(s.to)} ${escape(s.guardianName)}`).join('; ')||'Sense responsable visible'}${activities.filter(a=>a.childId===child.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
-    }).join('');
     return `<section class="day-timeline" aria-label="Calendari de 24 hores de ${escape(dateLabel)}">
       <div class="day-timeline-viewport" role="region" tabindex="0" aria-label="Línia temporal de 24 hores, amb desplaçament vertical i horitzontal" data-timeline-key="day:${escape(date)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-day-timeline="${escape(date)}" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
         <div class="day-timeline-inner" style="--day-child-count:${children.length};min-width:${52+children.length*98}px">
@@ -106,7 +102,6 @@
           <div class="day-timeline-grid"><div class="day-time-axis" style="height:${height}px">${tickMarks}</div>${columns}</div>
         </div>
       </div>
-      <details class="day-timeline-summary"><summary>Consultar les assignacions i les activitats en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
   window.dayTimelineUI={overnightSegments,render,renderWeek,PX_PER_MINUTE,FOCUS_MINUTE};

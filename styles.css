@@ -1073,3 +1073,18 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 @media(min-width:901px) {
   .calendar-week-layout {height:100vh;height:100dvh;min-height:0;grid-template-rows:auto minmax(0,1fr);overflow:hidden;}
 }
+
+/* Dia: graella sense marcs ni marges i columnes que aprofiten tota l’amplada. */
+.calendar-day-layout .main-area {padding:0;min-height:0;overflow-x:hidden;overflow-y:auto;}
+.calendar-day-layout .content {max-width:none;width:100%;min-height:100%;margin:0;}
+.calendar-day-layout .day-timeline {margin:0;padding:0;}
+.calendar-day-layout .day-timeline-viewport {width:100%;max-width:100%;margin:0;border:0;border-radius:0;}
+.calendar-day-layout .day-timeline-inner {width:100%;}
+.calendar-day-layout .day-timeline-headers,.calendar-day-layout .day-timeline-grid {grid-template-columns:52px repeat(var(--day-child-count),minmax(98px,1fr));}
+.calendar-day-layout .day-time-tick:first-child {transform:none;}
+.calendar-day-layout .day-time-tick:last-child {transform:translateY(-100%);}
+.calendar-sticky-bar .edit-panel-button {width:32px;min-width:32px;padding:0;justify-content:center;}
+.sheet .day-edit-actions {margin:14px 0;flex-direction:column;align-items:stretch;}
+@media(min-width:901px) {
+  .calendar-day-layout {height:100vh;height:100dvh;min-height:0;grid-template-rows:auto minmax(0,1fr);overflow:hidden;}
+}
