@@ -136,7 +136,7 @@ test('esborrar-ho tot requereix confirmació i conserva un estat buit importable
   assert.deepEqual(asJSON(context.state.guardians),[]);
   assert.deepEqual(asJSON(context.state.schools),[]);
   assert.deepEqual(asJSON(context.state.extraRotations),[]);
-  assert.equal(context.tab,'settings');
+  assert.equal(context.tab,'general');
   assert.equal(context.calendarView,'month');
   assert.equal(control.saves,saves+1);
   context.raw=asJSON(context.state);
@@ -153,8 +153,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.16\.4/);
-  assert.match(sw,/calendari-familiar-v0\.16\.4/);
+  assert.match(html,/app\.js\?v=0\.16\.5/);
+  assert.match(sw,/calendari-familiar-v0\.16\.5/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{

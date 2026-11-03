@@ -499,3 +499,10 @@ Les vistes Any i Mes aprofiten tota l’amplada disponible, sense espais buits a
 Dia mostra la graella directament sota la barra superior, sense els dos marcs ni marges. Les columnes dels fills omplen l’amplada disponible i mantenen un mínim de 98 px amb desplaçament horitzontal quan cal. Les 24 hores aprofiten tota l’alçada visible i un zoom més gran conserva el desplaçament vertical de la pàgina.
 
 El botó del llapis de la barra obre un diàleg amb les opcions d’afegir franges, editar rotacions i restaurar el dia. La informació escolar i laboral es conserva en aquest diàleg. Tocar pernoctes, franges i activitats manté els editors i els detalls existents.
+
+
+## v0.16.5: àrees dins de Configuració
+
+La navegació principal es redueix a Calendari i Configuració. Configuració dona accés a les àrees General, Persones, Rotacions i Escoles, en aquest ordre. General conserva els ajustos anteriors: aparença, mida de lletra, actualitzacions, còpies JSON i gestió de dades.
+
+Totes les àrees ofereixen un botó per tornar a Configuració i mantenen ressaltat aquest accés a la navegació principal. Els accessos per afegir fills des del calendari continuen obrint Persones.

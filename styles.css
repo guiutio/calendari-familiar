@@ -130,7 +130,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   .app-layout { display:block; }
   .sidebar { display:none; }
   .main-area { padding:26px 24px 112px; }
-  .mobile-tabs { position:fixed;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));bottom:0;left:0;right:0;z-index:25;border-top:1px solid #e5e8ee;background:#ffffffec;backdrop-filter:blur(16px);padding:7px 10px calc(7px + env(safe-area-inset-bottom)); }
+  .mobile-tabs { position:fixed;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));bottom:0;left:0;right:0;z-index:25;border-top:1px solid #e5e8ee;background:#ffffffec;backdrop-filter:blur(16px);padding:7px 10px calc(7px + env(safe-area-inset-bottom)); }
   .mobile-tab { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:none;background:none;color:#9ba7b5;padding:5px 0;font-size:calc(10px * var(--font-scale, 1));font-weight:720; }
   .mobile-tab svg { width:20px;height:20px; }
   .mobile-tab.active { color:#315f95; }
@@ -283,7 +283,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .school-child-choice small {color:#aabbd0;}
 :root[data-theme="dark"] .school-schedule-row .delete-icon {background:#38272e;border-color:#59404d;color:#ffb3bd;}
 :root[data-theme="dark"] .school-day-notice {background:#273d56;color:#d0e3fa;}
-@media(max-width:900px) { .mobile-tabs {grid-template-columns:repeat(5,minmax(0,1fr));} }
+@media(max-width:900px) { .mobile-tabs {grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media(max-width:360px) { .mobile-tabs {padding-left:5px;padding-right:5px;} .mobile-tab {font-size:calc(9px * var(--font-scale, 1));} .school-link {font-size:calc(14px * var(--font-scale, 1));} }
 
 /* Calendari amb dos nivells: escola superior, pernocta inferior */
@@ -1088,3 +1088,15 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 @media(min-width:901px) {
   .calendar-day-layout {height:100vh;height:100dvh;min-height:0;grid-template-rows:auto minmax(0,1fr);overflow:hidden;}
 }
+
+/* Configuració agrupa les quatre àrees; la navegació principal té dos accessos. */
+.settings-areas {display:grid;gap:12px;grid-template-columns:minmax(0,1fr);}
+.settings-area-link {display:flex;align-items:center;gap:14px;width:100%;min-width:0;margin:0;padding:20px 16px;text-align:left;color:inherit;}
+.settings-area-icon {display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:12px;background:#e9eff8;color:#315f95;}
+.settings-area-copy {display:flex;flex:1;min-width:0;flex-direction:column;gap:5px;overflow-wrap:anywhere;}
+.settings-area-copy strong {font-size:calc(16px * var(--font-scale,1));}
+.settings-area-copy>span {font-size:calc(12px * var(--font-scale,1));color:#6e7b8d;line-height:1.45;}
+.settings-back {min-height:40px;}
+:root[data-theme="dark"] .settings-area-icon {background:#263a55;color:#a5ccfa;}
+:root[data-theme="dark"] .settings-area-copy>span {color:#aabbd0;}
+@media(min-width:700px) {.settings-areas {grid-template-columns:repeat(2,minmax(0,1fr));}}

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.4';
+const APP_VERSION = '0.16.5';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -632,7 +632,8 @@ function navigateCalendar(delta) {
     render();
 }
 function navButton(target, label, name, kind) {
-    return `<button type="button" class="${kind === 'side' ? 'nav-button' : 'mobile-tab'} ${tab === target ? 'active' : ''}" data-action="tab" data-tab="${target}" aria-current="${tab === target ? 'page' : 'false'}">${icon(name, 20)}<span>${label}</span></button>`;
+    const active = target === 'settings' ? tab !== 'calendar' : tab === target;
+    return `<button type="button" class="${kind === 'side' ? 'nav-button' : 'mobile-tab'} ${active ? 'active' : ''}" data-action="tab" data-tab="${target}" aria-current="${active ? 'page' : 'false'}">${icon(name, 20)}<span>${label}</span></button>`;
 }
 function calendarNavigation() {
     const children = activeChildren();
@@ -643,10 +644,10 @@ function calendarNavigation() {
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}${tab === 'calendar' && calendarView === 'day' ? ' calendar-day-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${navButton('calendar', 'Calendari', 'calendar', 'side')}${navButton('rotation', 'Rotacions', 'repeat', 'side')}${navButton('schools', 'Escoles', 'school', 'side')}${navButton('people', 'Persones', 'people', 'side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${navButton('calendar', 'Calendari', 'calendar', 'side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar', 'Calendari', 'calendar', 'mobile')}${navButton('rotation', 'Rotacions', 'repeat', 'mobile')}${navButton('schools', 'Escoles', 'school', 'mobile')}${navButton('people', 'Persones', 'people', 'mobile')}${navButton('settings', 'Ajustos', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
+  </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
+  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar', 'Calendari', 'calendar', 'mobile')}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
     const year = Math.floor(index / 12), month = index - year * 12;
@@ -1185,8 +1186,18 @@ function peoplePage() {
   ${state.guardians.map(g => `<div class="person-record"><div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash', 16)}</button></div>${personActions('guardian:' + g.id)}</div>`).join('')}</section>`;
 }
 function settingsPage() {
+    const areas = [
+        ['general', 'General', 'settings', 'Aparença, actualitzacions i dades.'],
+        ['people', 'Persones', 'people', 'Fills, tutors i responsables.'],
+        ['rotation', 'Rotacions', 'repeat', 'Patrons de pernocta i altres franges.'],
+        ['schools', 'Escoles', 'school', 'Centres, cursos i horaris escolars.']
+    ];
+    return `<header class="page-heading"><div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Tria l’àrea que vols configurar.</p></div></header>
+  <nav class="settings-areas" aria-label="Àrees de configuració">${areas.map(([target, label, glyph, description]) => `<button type="button" class="card settings-area-link" data-action="tab" data-tab="${target}"><span class="settings-area-icon">${icon(glyph, 23)}</span><span class="settings-area-copy"><strong>${label}</strong><span>${description}</span></span>${icon('chevronRight', 18)}</button>`).join('')}</nav>`;
+}
+function generalSettingsPage() {
     const storageDescription = storageMode === 'indexeddb' ? 'IndexedDB · desat automàtic' : storageMode === 'localStorage' ? 'LocalStorage · mode alternatiu' : 'Sense persistència garantida';
-    return `<header class="page-heading"><div><div class="eyebrow">PREFERÈNCIES</div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
+    return `<header class="page-heading"><div><div class="eyebrow">CONFIGURACIÓ</div><h1 class="page-title">General</h1><p class="page-subtitle">Personalitza el teu calendari familiar.</p></div></header>
   <section class="card appearance-card"><h2 class="section-title">Aparença</h2><p class="section-description">Tria el tema de l'aplicació. Automàtic segueix l'aparença de l'iPhone.</p>
   <div class="theme-options" role="group" aria-label="Mode d’aparença">${[['auto', 'Automàtic', 'monitor'], ['light', 'Clar', 'sun'], ['dark', 'Fosc', 'moon']].map(([mode, label, glyph]) => `<button type="button" class="theme-choice ${validTheme(state.preferences.theme) === mode ? 'is-selected' : ''}" data-action="set-theme" data-theme-mode="${mode}" aria-pressed="${validTheme(state.preferences.theme) === mode}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}</div></section>
   <section class="card font-size-card"><div class="panel-header"><h2 class="section-title">Mida de lletra</h2><output id="font-size-current" for="font-size-slider" class="sample-tag">${FONT_SIZE_LABELS[validFontSize(state.preferences.fontSize)]}</output></div>
@@ -1370,7 +1381,7 @@ function render() {
     const sheetScroll = previousSheet?.dataset.sheetKey === sheetKey ? previousSheet.scrollTop : 0;
     const pickerFocus = sheet && (sheet.type === 'schoolDayForm' || sheet.type === 'personHolidays') ? document.activeElement?.closest('.school-date-picker button') : null;
     const pickerFocusKey = pickerFocus?.dataset.date ? `[data-action="${pickerFocus.dataset.action}"][data-date="${pickerFocus.dataset.date}"]` : pickerFocus?.dataset.step ? `[data-action="${pickerFocus.dataset.action}"][data-step="${pickerFocus.dataset.step}"]` : '';
-    $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : settingsPage());
+    $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : tab === 'general' ? generalSettingsPage() : settingsPage());
     const main = $app.querySelector('.main-area');
     if (main && (calendarView === 'week' || calendarView === 'day'))
         fitCalendarTimeline(main);
@@ -1513,7 +1524,7 @@ function clearAllData() {
     extraRotationOpen = null;
     sheet = null;
     schoolNav = {};
-    tab = 'settings';
+    tab = 'general';
     calendarView = 'month';
     selectedDate = localDate(new Date());
     viewYear = parseDate(selectedDate).getFullYear();
