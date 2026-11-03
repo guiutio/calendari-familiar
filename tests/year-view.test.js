@@ -31,6 +31,15 @@ function setup(){
  return {ctx,state,children,click,get paints(){return paints;}};
 }
 
+test('Mes no inclou cap capçalera de Calendari Familiar que pugui aparèixer durant el scroll',()=>{
+ const s=setup();s.ctx.calendarView='month';
+ s.ctx.monthPanel=index=>`<section class="month-panel" data-month-index="${index}"></section>`;
+ const html=s.ctx.calendarPage();
+ assert.match(html,/class="month-sequence"/);
+ assert.equal((html.match(/class="month-panel"/g)||[]).length,7);
+ assert.doesNotMatch(html,/Calendari Familiar|page-heading|page-title|EL TEU CALENDARI|Miniatures proporcionals/);
+});
+
 test('l’any mostra dotze mesos, totes les dates una sola vegada i sis files per mes',()=>{
  const s=setup(),html=s.ctx.yearOverview(2026,s.children,'2026-11-02');
  assert.equal((html.match(/data-action="show-calendar-month"/g)||[]).length,12);

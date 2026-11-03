@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=app.indexOf('function calendarNavigation('),end=app.indexOf('function layout(',start);
-const labels={year:'2026',month:'novembre 2026',week:'2 nov – 8 nov',day:'3 de novembre'};
+const labels={year:'2026',month:'novembre 2026',week:'2 de novembre – 8 de novembre',day:'3 de novembre'};
 for(const view of Object.keys(labels))test(`${view}: títol a dalt, eines a l’esquerra i anterior/Avui/següent a la dreta`,()=>{
  const ctx=vm.createContext({calendarView:view,sheet:null,activeChildren:()=>[],
   state:{children:[],guardians:[],schools:[],preferences:{visibleGuardians:[],visibleSchools:[]}},

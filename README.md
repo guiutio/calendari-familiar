@@ -532,3 +532,10 @@ El títol superior i els títols d’any i mes del contingut comparteixen una ú
 La barra de filtres, llegenda, edició, zoom i navegació del període passa a dalt, abans del títol. Manté les eines a l’esquerra i anterior, Avui i següent a la dreta. La barra amb Any, Mes, Setmana, Dia i Configuració continua a baix de tot.
 
 Els controls i el títol queden fora del scroll, i l’espai útil del calendari s’ajusta a la nova disposició.
+
+
+## v0.16.10: dates en català i vista mensual sense capçalera sobrera
+
+Les dates de dia, els diàlegs i les descripcions accessibles comparteixen el format català: «2 d’abril», «2 de maig», «2 d’agost» i «2 d’octubre». Es retira la capitalització automàtica de les paraules dels títols. La vista setmanal utilitza els noms complets dels mesos als dos extrems de l’interval.
+
+La vista mensual ja no conté la capçalera «Calendari Familiar», ni el subtítol explicatiu, que es podien veure en desplaçar el calendari.

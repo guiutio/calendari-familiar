@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.9';
+const APP_VERSION = '0.16.10';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -116,8 +116,10 @@ function parseDate(value) { const [y, m, d] = value.split('-').map(Number); retu
 function addDays(date, days) { const d = parseDate(date); d.setDate(d.getDate() + days); return localDate(d); }
 function utcDay(date) { const [y, m, d] = date.split('-').map(Number); return Date.UTC(y ?? 2026, (m ?? 1) - 1, d ?? 1) / 86400000; }
 function diffDays(a, b) { return utcDay(a) - utcDay(b); }
+/** Dia i mes en català: de gener, d’abril, d’agost i d’octubre. */
+function dayMonth(date) { const d = parseDate(date), month = months[d.getMonth()]; return `${d.getDate()} ${/^[aeiou]/.test(month) ? 'd’' : 'de '}${month}`; }
 function monthTitle(year, month) { return `${months[month]} ${year}`; }
-function fullDate(date) { const d = parseDate(date); const dayIndex = (d.getDay() + 6) % 7; return `${weekLong[dayIndex]}, ${d.getDate()} d’${months[d.getMonth()]} de ${d.getFullYear()}`; }
+function fullDate(date) { const d = parseDate(date); const dayIndex = (d.getDay() + 6) % 7; return `${weekLong[dayIndex]}, ${dayMonth(date)} de ${d.getFullYear()}`; }
 function initial(name) { return [...name.trim()][0]?.toUpperCase() || '?'; }
 function newId() { return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 /** Estat inicial completament buit, sense dades familiars predefinides. */
@@ -611,9 +613,9 @@ function periodTitle() {
         return monthTitle(viewYear, viewMonth);
     if (calendarView === 'week') {
         const first = weekStart(selectedDate), last = addDays(first, 6);
-        return `${parseDate(first).getDate()} ${(months[parseDate(first).getMonth()] ?? '').slice(0, 3)} – ${parseDate(last).getDate()} ${(months[parseDate(last).getMonth()] ?? '').slice(0, 3)}`;
+        return `${dayMonth(first)} – ${dayMonth(last)}`;
     }
-    return `${parseDate(selectedDate).getDate()} de ${months[parseDate(selectedDate).getMonth()]}`;
+    return dayMonth(selectedDate);
 }
 function navigateCalendar(delta) {
     if (calendarView === 'year') {
@@ -956,8 +958,7 @@ function calendarPage() {
     else {
         return dayTimeline(selectedDate, children);
     }
-    return `${calendarView === 'month' ? `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>` : ''}
-    <section class="calendar-card" aria-label="Calendari familiar">
+    return `<section class="calendar-card" aria-label="Calendari familiar">
     ${content}
     </section>`;
 }
@@ -1259,7 +1260,7 @@ function sheetMarkup() {
     }
     else if (sheet?.type === 'day') {
         const date = sheet.date, bdays = birthdays(date).filter(c => state.preferences.visibleChildren.includes(c.id));
-        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${dayMonth(date)}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${bdays.length ? `<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c => `${c.name} fa ${birthdayAge(date, c)} anys`).join(' · '))}</div>` : ''}
     ${schoolInfoForDay(date)}${monthDayUI.detail(date, fullDate(date), activeChildren(), monthData(date, activeChildren()).nights, monthData(date, activeChildren()).activities, monthData(date, activeChildren()).slots, state)}${state.personTimeOff ? workSchedule.agenda(state, [date]) : ''}`;
     }

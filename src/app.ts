@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.9';
+const APP_VERSION = '0.16.10';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -143,8 +143,10 @@ function parseDate(value:string) {const [y,m,d]=value.split('-').map(Number);ret
 function addDays(date:string,days:number) {const d=parseDate(date); d.setDate(d.getDate()+days);return localDate(d);}
 function utcDay(date:string) {const [y,m,d]=date.split('-').map(Number);return Date.UTC(y??2026,(m??1)-1,d??1)/86400000;}
 function diffDays(a:string,b:string) {return utcDay(a)-utcDay(b);}
+/** Dia i mes en català: de gener, d’abril, d’agost i d’octubre. */
+function dayMonth(date:string) {const d=parseDate(date),month=months[d.getMonth()]!;return `${d.getDate()} ${/^[aeiou]/.test(month)?'d’':'de '}${month}`;}
 function monthTitle(year:number,month:number) {return `${months[month]} ${year}`;}
-function fullDate(date:string) {const d=parseDate(date); const dayIndex=(d.getDay()+6)%7;return `${weekLong[dayIndex]}, ${d.getDate()} d’${months[d.getMonth()]} de ${d.getFullYear()}`;}
+function fullDate(date:string) {const d=parseDate(date); const dayIndex=(d.getDay()+6)%7;return `${weekLong[dayIndex]}, ${dayMonth(date)} de ${d.getFullYear()}`;}
 function initial(name:string) {return [...name.trim()][0]?.toUpperCase() || '?';}
 function newId() {return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;}
 /** Estat inicial completament buit, sense dades familiars predefinides. */
@@ -544,8 +546,8 @@ function fullAgenda(date:string):string {
 function periodTitle(){
   if(calendarView==='year')return String(viewYear);
   if(calendarView==='month')return monthTitle(viewYear,viewMonth);
-  if(calendarView==='week'){const first=weekStart(selectedDate),last=addDays(first,6);return `${parseDate(first).getDate()} ${(months[parseDate(first).getMonth()]??'').slice(0,3)} – ${parseDate(last).getDate()} ${(months[parseDate(last).getMonth()]??'').slice(0,3)}`;}
-  return `${parseDate(selectedDate).getDate()} de ${months[parseDate(selectedDate).getMonth()]}`;
+  if(calendarView==='week'){const first=weekStart(selectedDate),last=addDays(first,6);return `${dayMonth(first)} – ${dayMonth(last)}`;}
+  return dayMonth(selectedDate);
 }
 function navigateCalendar(delta:number){
   if(calendarView==='year'){
@@ -817,8 +819,7 @@ function calendarPage(){
   } else {
     return dayTimeline(selectedDate,children);
   }
-  return `${calendarView==='month'?`<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>`:''}
-    <section class="calendar-card" aria-label="Calendari familiar">
+  return `<section class="calendar-card" aria-label="Calendari familiar">
     ${content}
     </section>`;
 }
@@ -1084,7 +1085,7 @@ function sheetMarkup(){
     <div class="action-row"><button class="secondary-btn" data-action="filter-all">Mostra-ho tot</button><button class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='day'){
     const date=sheet.date,bdays=birthdays(date).filter(c=>state.preferences.visibleChildren.includes(c.id));
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${parseDate(date).getDate()} de ${months[parseDate(date).getMonth()]}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">${dayMonth(date)}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${bdays.length?`<div class="tip-card" style="margin:0 0 14px;padding:12px">Aniversari: ${escapeHtml(bdays.map(c=>`${c.name} fa ${birthdayAge(date,c)} anys`).join(' · '))}</div>`:''}
     ${schoolInfoForDay(date)}${monthDayUI.detail(date,fullDate(date),activeChildren(),monthData(date,activeChildren()).nights,monthData(date,activeChildren()).activities,monthData(date,activeChildren()).slots,state)}${state.personTimeOff?workSchedule.agenda(state,[date]):''}`;
   } else if(sheet?.type==='dayEdit'){

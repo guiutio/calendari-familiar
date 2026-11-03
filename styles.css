@@ -34,7 +34,7 @@ svg { flex-shrink:0; }
 .calendar-card,.card { border:1px solid #e8ebef;background:white;border-radius:20px; box-shadow:0 8px 28px rgba(35,59,89,.025); }
 .calendar-card { overflow:hidden; }
 .calendar-toolbar { display:flex;justify-content:space-between;align-items:center;padding:19px 20px 14px; gap:10px; }
-.calendar-title { font-size:calc(18px * var(--font-scale, 1));font-weight:780;letter-spacing:-.45px;text-transform:capitalize; }
+.calendar-title { font-size:calc(18px * var(--font-scale, 1));font-weight:780;letter-spacing:-.45px;text-transform:none; }
 .calendar-nav { display:flex;align-items:center;gap:7px; }
 .calendar-nav .btn-icon { border:0;background:#f5f7fa;width:32px;height:32px;border-radius:10px; }
 .soft-btn { border:1px solid #e5e9ef;border-radius:10px;background:white;min-height:33px;padding:7px 12px;font-weight:650;font-size:calc(12px * var(--font-scale, 1));color:#63728a; }
@@ -892,7 +892,7 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 html:has(.calendar-layout) {overflow-anchor:none;scroll-behavior:auto;}
 
 /* v0.7.6 · Cada mes conté només les seves dates i comença amb un títol a tota l’amplada. */
-.month-section-title {margin:0;padding:16px 14px;font-size:calc(18px * var(--font-scale,1));font-weight:780;text-transform:capitalize;background:#fff;border-block:1px solid #e8ebef;}
+.month-section-title {margin:0;padding:16px 14px;font-size:calc(18px * var(--font-scale,1));font-weight:780;text-transform:none;background:#fff;border-block:1px solid #e8ebef;}
 .month-empty-cell {display:block;min-width:0;background:#f6f7f8;}
 :root[data-theme="dark"] .month-section-title {background:#192436;border-color:#304058;}
 :root[data-theme="dark"] .month-empty-cell {background:#172336;}
@@ -920,7 +920,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Calendari de selecció múltiple dels dies del curs. */
 .school-date-picker {min-width:0;margin-top:16px;}
 .school-date-nav {display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px;margin-bottom:14px;}
-.school-date-nav h3 {margin:0;text-align:center;text-transform:capitalize;font-size:calc(16px * var(--font-scale,1));overflow-wrap:anywhere;}
+.school-date-nav h3 {margin:0;text-align:center;text-transform:none;font-size:calc(16px * var(--font-scale,1));overflow-wrap:anywhere;}
 .school-date-nav button {min-height:44px;padding:8px;display:grid;place-items:center;}
 .school-date-weekdays,.school-date-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
 .school-date-weekdays {text-align:center;font-size:calc(11px * var(--font-scale,1));font-weight:750;color:#64758c;margin-bottom:7px;}
@@ -945,7 +945,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:0;}
 .year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:12px 10px;border:1px solid #dce5ef;border-radius:14px;background:#fff;color:#253851;text-align:left;}
 .year-month:hover {border-color:#92b0d4;background:#f7faff;}
-.year-month-title {display:block;margin-bottom:10px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:capitalize;}
+.year-month-title {display:block;margin-bottom:10px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
 .year-weekdays,.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
 .year-weekdays {margin-bottom:5px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
 .year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px 0;}
