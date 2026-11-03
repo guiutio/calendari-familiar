@@ -445,3 +445,8 @@ Quan coincideixen persones, els contorns són sòlids i niats: cada capa entra e
 ## v0.15.2: contorns anuals més fins
 
 Els contorns de festius i vacances d’Any passen a 1 px, incloses les cantonades i les capes niades. Mes conserva el gruix de 4 px.
+
+
+## v0.15.3: vista anual més ampla i compacta
+
+Els mesos queden alineats a dalt i aprofiten l’amplada sense el requadre exterior ni el seu marge interior. La llegenda anual s’obre des d’un botó petit d’informació al costat dels filtres. Es retiren el text d’ajuda anual i el peu informatiu de l’app.

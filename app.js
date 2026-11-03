@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.15.2';
+const APP_VERSION = '0.15.3';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -636,7 +636,7 @@ function navButton(target, label, name, kind) {
 function calendarNavigation() {
     const children = activeChildren();
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || Boolean(state.personTimeOff && personalTimeOff.filtered(state));
-    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button>${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
+    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button>${calendarView === 'year' ? `<button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>` : ''}${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
@@ -644,7 +644,7 @@ function layout(content) {
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${navButton('calendar', 'Calendari', 'calendar', 'side')}${navButton('rotation', 'Rotacions', 'repeat', 'side')}${navButton('schools', 'Escoles', 'school', 'side')}${navButton('people', 'Persones', 'people', 'side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${content}<div class="footer">Calendari Familiar · MVP web v${APP_VERSION} · Privat per disseny</div></div></main>
+  </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${content}</div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar', 'Calendari', 'calendar', 'mobile')}${navButton('rotation', 'Rotacions', 'repeat', 'mobile')}${navButton('schools', 'Escoles', 'school', 'mobile')}${navButton('people', 'Persones', 'people', 'mobile')}${navButton('settings', 'Ajustos', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
@@ -866,12 +866,15 @@ function yearOverview(year, children, today) {
         return `<button type="button" class="year-month" data-action="show-calendar-month" data-year="${year}" data-month="${month}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
     }).join('')}</div>`;
 }
+function calendarLegend() {
+    const personalLegend = state.personTimeOff && (calendarView === 'year' || calendarView === 'month') ? personalTimeOff.legendMarkup(state) : '';
+    return `<div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>`;
+}
 function calendarPage() {
     const today = localDate(new Date()), children = activeChildren();
-    const personalLegend = state.personTimeOff && (calendarView === 'year' || calendarView === 'month') ? personalTimeOff.legendMarkup(state) : '';
     let content = '';
     if (calendarView === 'year') {
-        content = yearOverview(viewYear, children, today);
+        return yearOverview(viewYear, children, today);
     }
     else if (calendarView === 'month') {
         const index = viewYear * 12 + viewMonth;
@@ -888,9 +891,8 @@ function calendarPage() {
     return `${calendarView === 'month' ? `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>` : ''}
     <section class="calendar-card" aria-label="Calendari familiar">
     ${content}
-    <footer class="calendar-bottom"><div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>
-    <span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView === 'year' ? '<div class="time-row-help">Toca un mes per obrir-lo a la vista mensual. Els colors segueixen els mateixos filtres i regles que a Mes.</div>' : calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
+    <footer class="calendar-bottom">${calendarLegend()}<span class="legend-note">● canvi puntual</span></footer></section>
+    ${calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
     <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
 }
 function rotationPage() {
@@ -1161,6 +1163,11 @@ function sheetMarkup() {
     else if (sheet?.type === 'personVacation') {
         contents = personalTimeOff.vacationForm(state, sheet.personKey, sheet.periodId, localDate(new Date()));
     }
+    else if (sheet?.type === 'legend') {
+        contents = `<div class="sheet-heading"><h2 class="sheet-title">Llegenda</h2><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+    <div class="calendar-legend-dialog">${calendarLegend()}</div>
+    <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
+    }
     else if (sheet?.type === 'zoom') {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Zoom · ${calendarView === 'day' ? 'Dia' : 'Setmana'}</h2><p class="sheet-subtitle">El nivell de zoom es desa per a aquesta vista.</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${zoomControls()}
@@ -1213,7 +1220,7 @@ function sheetMarkup() {
     else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'schoolVacationForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type.startsWith('person') ? 'Horari laboral' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type === 'legend' ? 'Llegenda' : sheet?.type.startsWith('person') ? 'Horari laboral' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
@@ -1811,6 +1818,10 @@ function clickAction(button) {
             break;
         case 'check-update':
             window.location.assign('./actualitza.html?comprovacio=' + Date.now());
+            break;
+        case 'open-legend':
+            sheet = { type: 'legend' };
+            render();
             break;
         case 'open-filters':
             sheet = { type: 'filters' };

@@ -120,7 +120,7 @@ test('tocar un mes obre Mes en l’any i mes correctes i Avui torna a l’any ac
 
 test('la pàgina anual presenta el calendari sense el títol introductori de l’app',()=>{
  const s=setup(),html=s.ctx.calendarPage();
- assert.match(html,/class="year-overview"/);assert.match(html,/Toca un mes per obrir-lo/);
+ assert.match(html,/class="year-overview"/);assert.doesNotMatch(html,/Toca un mes per obrir-lo|class="calendar-card"|class="legend"/);
  assert.doesNotMatch(html,/EL TEU CALENDARI|class="page-title"|Vista de 24 hores/);
 });
 

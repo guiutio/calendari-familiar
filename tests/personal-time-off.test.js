@@ -252,7 +252,13 @@ test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
  for(const view of ['week','day']){
   s.ctx.calendarView=view;assert.doesNotMatch(s.ctx.calendarPage(),/personal-outline|Festius personals|Vacances personals/);
  }
- s.ctx.calendarView='year';assert.match(s.ctx.calendarPage(),/Festius personals/);assert.match(s.ctx.calendarPage(),/Vacances personals/);
+ s.ctx.calendarView='year';assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"/);
+ assert.match(s.ctx.calendarNavigation(),/data-action="open-legend"/);
+ s.click('open-legend');
+ const dialog=s.ctx.sheetMarkup();
+ assert.match(dialog,/role="dialog" aria-modal="true" aria-label="Llegenda"/);
+ assert.match(dialog,/Festius personals/);assert.match(dialog,/Vacances personals/);
+ s.click('close-sheet');assert.equal(s.ctx.sheet,null);
 });
 
 test('el mòdul personal es carrega abans de l’app i queda inclòs a la memòria cau de la mateixa versió',()=>{
