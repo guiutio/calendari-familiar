@@ -470,3 +470,10 @@ Es retira el contorn gruixut que resseguia els dies de cada mes. Es conserven le
 ## v0.15.7: llegenda flotant a totes les vistes
 
 Mes, Setmana i Dia deixen de mostrar la llegenda i els textos explicatius sota el calendari. Totes les vistes disposen del botó petit de llegenda al costat dels filtres, amb els colors visibles i la indicació de canvi puntual dins d’un diàleg.
+
+
+## v0.16.0: desplaçament continu per anys
+
+Any mostra anys consecutius i carrega els anteriors i posteriors en arribar als extrems. Els anys visitats es conserven al seu lloc; la càrrega espera el final del gest i de la inèrcia, compartint el mateix mecanisme que Mes. La barra indica l’any visible i la data de referència segueix el mes visible.
+
+Els filtres i la llegenda conserven la posició. Avui recentra l’interval al voltant de l’any actual i enfoca el mes actual; les fletxes naveguen per anys i tocar qualsevol mes l’obre a Mes. Els límits del calendari són els anys 0100 a 9999.

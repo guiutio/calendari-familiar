@@ -1051,3 +1051,8 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .month-sequence .month-grid .month-mini {flex:1 1 0%;height:auto;min-height:0;grid-template-rows:min(12px,20%) minmax(0,1fr);}
 .month-sequence .month-grid .month-mini-child {font-size:min(calc(9px * var(--font-scale,1)),calc(var(--month-week-height,100px) * .12));}
 .month-sequence .month-grid .mini-empty {min-height:0;}
+
+/* Anys consecutius: cada any conserva els seus mesos i la posició de scroll. */
+.year-sequence {overflow-anchor:none;}
+.year-panel + .year-panel {margin-top:24px;}
+.year-section-title {margin:0 0 12px;font-size:calc(22px * var(--font-scale,1));font-weight:780;color:inherit;}

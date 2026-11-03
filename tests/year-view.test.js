@@ -13,7 +13,7 @@ function setup(){
   extraRotations:children.map((c,i)=>({id:'n'+i,kind:'night',name:'Nit '+i,startDate:'2026-01-01',length:1,startTime:'19:00',childIds:[c.id],assignments:{[c.id]:['g'+(i+1)]},activeDays:[true]})),
   preferences:{visibleChildren:['a','b'],visibleGuardians:['g1','g2'],visibleSchools:[]}};
  const ctx=vm.createContext({Date:Clock,window:{},state,calendarView:'year',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',
-  monthRange:null,monthScrollTarget:true,tab:'calendar',sheet:null,
+  monthRange:null,yearRange:null,monthScrollTarget:true,tab:'calendar',sheet:null,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],
   weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
   guardian:id=>guardians.find(g=>g.id===id),schoolActivities:()=>[],extraSlots:()=>[],icon:()=>'',
@@ -129,41 +129,29 @@ test('la pàgina anual presenta el calendari sense el títol introductori de l�
  assert.doesNotMatch(html,/EL TEU CALENDARI|class="page-title"|Vista de 24 hores/);
 });
 
-test('els filtres conserven el desplaçament anual i canviar d’any el reinicia',()=>{
+test('els filtres conserven el desplaçament encara que el scroll hagi canviat l’any visible',()=>{
  const s=setup();let main={dataset:{},scrollTop:0};
  Object.assign(s.ctx,{$app:{querySelector:selector=>selector==='.main-area'?main:null,set innerHTML(_html){main={dataset:{},scrollTop:0};}},
   document:{body:{style:{}}},schoolNav:{},layout:()=>'',monthPosition:()=>null,stopCalendarScroll:null,
   deferRenderForNativePicker:()=>false,mountCalendarScroll:()=>{}});
  vm.runInContext(section('function render()', 'function notify('),s.ctx);
  s.ctx.render();main.scrollTop=300;s.ctx.render();assert.equal(main.scrollTop,300);
- s.ctx.viewYear=2027;s.ctx.render();assert.equal(main.scrollTop,0);
+ s.ctx.viewYear=2027;s.ctx.render();assert.equal(main.scrollTop,300);
 });
 
 
-test('Any enfoca el mes actual en entrar i amb Avui, i conserva el scroll als repintats',()=>{
- for(const mobile of [true,false]){
-  const s=setup();let scroll=0;
-  const main={get scrollTop(){return scroll;},set scrollTop(value){scroll=value;}};
-  const target={getBoundingClientRect:()=>({top:1600-scroll})};
-  const bar={getBoundingClientRect:()=>({bottom:100})};
-  Object.assign(s.ctx,{$app:{querySelector:selector=>selector==='.year-month.current-month'?target:selector==='.main-area'?main:selector==='.calendar-sticky-bar'?bar:null},
-   window:{matchMedia:()=>({matches:mobile}),scrollTo:(_,top)=>{scroll=top;},scrollBy:(_,delta)=>{scroll+=delta;}}});
-  vm.runInContext(section('function mountCalendarScroll(', 'function zoomControls('),s.ctx);
-  s.ctx.mountCalendarScroll(null,true);
-  assert.equal(scroll,1500);assert.equal(s.ctx.monthScrollTarget,false);
-  scroll=250;s.ctx.mountCalendarScroll(null,false);
-  assert.equal(scroll,250,'Filtres i llegenda conserven el desplaçament manual');
-  s.click('today');s.ctx.mountCalendarScroll(null,false);
-  assert.equal(scroll,1500,'Avui funciona també dins del mateix any');
-  scroll=50;s.ctx.monthScrollTarget=false;s.ctx.mountCalendarScroll(null,true);
-  assert.equal(scroll,1500,'Tornar a entrar a Any torna a enfocar el mes actual');
+test('Any mostra tres anys consecutius, conserva els visitats als filtres i Avui recentra l’interval',()=>{
+ const s=setup();let html=s.ctx.calendarPage();
+ assert.deepEqual([...html.matchAll(/data-year-index="(\d+)"/g)].map(m=>Number(m[1])),[2025,2026,2027]);
+ const dates=[...html.matchAll(/data-year-date="([^"]+)"/g)].map(m=>m[1]);
+ assert.equal(dates.length,1095);assert.equal(new Set(dates).size,dates.length);
+ s.ctx.yearRange={first:2020,last:2032};s.ctx.viewYear=2032;s.ctx.monthScrollTarget=false;
+ html=s.ctx.calendarPage();assert.match(html,/data-year-index="2020"/);assert.match(html,/data-year-index="2032"/);
+ s.click('today');html=s.ctx.calendarPage();
+ assert.deepEqual([...html.matchAll(/data-year-index="(\d+)"/g)].map(m=>Number(m[1])),[2025,2026,2027]);
+ for(const year of [100,9999]){
+  s.ctx.viewYear=year;s.ctx.monthScrollTarget=true;html=s.ctx.calendarPage();
+  const years=[...html.matchAll(/data-year-index="(\d+)"/g)].map(m=>Number(m[1]));
+  assert.ok(years.every(y=>y>=100&&y<=9999));
  }
-});
-
-test('en navegar a un altre any no es força el mes actual ni s’arrossega la petició d’Avui',()=>{
- const s=setup();let scroll=500;
- Object.assign(s.ctx,{$app:{querySelector:()=>null},window:{matchMedia:()=>({matches:false}),scrollTo:(_,top)=>{scroll=top;},scrollBy:assert.fail}});
- vm.runInContext(section('function mountCalendarScroll(', 'function zoomControls('),s.ctx);
- s.ctx.navigateCalendar(1);s.ctx.mountCalendarScroll(null,true);
- assert.equal(scroll,0);assert.equal(s.ctx.monthScrollTarget,false);
 });

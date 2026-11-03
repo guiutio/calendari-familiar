@@ -12,7 +12,7 @@ function setup(){
  const state={version:2,children:[{id:'same',name:'Fill',birthDate:''}],guardians:[{id:'same',name:'Guiu',color:'#112233'},{id:'other',name:'Rebeca',color:'#445566'}],schools:[],personTimeOff:{},
   extraRotations:[],extraExceptions:{},overrides:{},bandOverrides:{},daySlots:{},nightDateTimes:{},
   preferences:{mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,showWorkSchedules:true,visibleChildren:['same'],visibleGuardians:['same','other'],visibleSchools:[]}};
- const ctx=vm.createContext({window:{},Date:Clock,state,sheet:null,schoolNav:{},tab:'people',calendarView:'month',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',monthRange:null,monthScrollTarget:true,
+ const ctx=vm.createContext({window:{},Date:Clock,state,sheet:null,schoolNav:{},tab:'people',calendarView:'month',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',monthRange:null,yearRange:null,monthScrollTarget:true,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
   icon:()=>'',activeChildren:()=>state.children.filter(c=>state.preferences.visibleChildren.includes(c.id)),
   childById:id=>state.children.find(c=>c.id===id),guardian:id=>state.guardians.find(g=>g.id===id),defaultGuardian:()=>state.guardians[0]?.id??'',
