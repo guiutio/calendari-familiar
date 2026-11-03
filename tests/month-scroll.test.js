@@ -83,15 +83,16 @@ test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de trasp
 });
 
 
-test('la barra superior és fora del contenidor desplaçable en les tres vistes',()=>{
+test('els controls queden sobre el títol i els modes sota el contingut, fora del scroll',()=>{
  const source=extract('function layout(content)', 'function monthPanel(');
- for(const calendarView of ['month','week','day']){
-  const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarViewButtons:()=>'',calendarControls:()=>'',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
+ for(const calendarView of ['year','month','week','day']){
+  const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarViewButtons:()=>'',calendarControls:()=>'<nav class="calendar-controls">Eines</nav>',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
   vm.runInContext(source,ctx);
   const html=ctx.layout('<section>Calendari</section>');
-  assert.match(html,/<\/aside><header class="calendar-sticky-bar">Controls<\/header><main class="main-area">/);
+  assert.match(html,/<\/aside><nav class="calendar-controls">Eines<\/nav><header class="calendar-sticky-bar">Controls<\/header><main class="main-area">/);
   const main=html.slice(html.indexOf('<main'),html.indexOf('</main>'));
-  assert.doesNotMatch(main,/calendar-sticky-bar/);
+  assert.doesNotMatch(main,/calendar-sticky-bar|calendar-controls|mobile-tabs/);
+  assert.match(html,/<\/main>\s*<nav class="mobile-tabs"/);
  }
 });
 
@@ -274,7 +275,7 @@ test('seleccionar un mes amaga la capçalera repetida i alinea la primera setman
 });
 
 test('sis setmanes caben a l’espai visible i només es recalcula la mida quan canvia',()=>{
- const context=vm.createContext({window:{innerHeight:900},$app:{querySelector:()=>({offsetHeight:52})}});
+ const context=vm.createContext({window:{innerHeight:900}});
  vm.runInContext(extract('function fitMonthRows(', 'function mountCalendarScroll('),context);
  for(const mobile of [true,false]){
   let bottom=800,top=180,value='',writes=0;
@@ -283,7 +284,7 @@ test('sis setmanes caben a l’espai visible i només es recalcula la mida quan 
   for(const available of [620,380,235,720]){
    bottom=top+available;context.window.innerHeight=bottom;
    assert.equal(context.fitMonthRows(main,sequence,bar,mobile),true);
-   const usable=available-(mobile?0:52);
+   const usable=available;
    assert.ok(6*parseFloat(value)+7<=usable,'El mes més llarg no queda tallat');
    assert.ok(usable-(6*parseFloat(value)+7)<6,'S’aprofita l’alçada disponible');
    const count=writes;

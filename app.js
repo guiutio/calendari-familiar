@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.8';
+const APP_VERSION = '0.16.9';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -659,8 +659,8 @@ function layout(content) {
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
-  ${tab === 'calendar' ? calendarControls() : ''}<nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
+  </aside>${tab === 'calendar' ? calendarControls() + calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
+  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
     const year = Math.floor(index / 12), month = index - year * 12;
@@ -706,7 +706,7 @@ function monthPosition() {
 }
 /** Sis setmanes caben entre la barra superior i el límit visible del calendari. */
 function fitMonthRows(main, sequence, bar, mobile) {
-    const bottom = mobile ? main.getBoundingClientRect().bottom : window.innerHeight - ($app.querySelector('.calendar-controls')?.offsetHeight ?? 0);
+    const bottom = mobile ? main.getBoundingClientRect().bottom : window.innerHeight;
     const available = bottom - bar.getBoundingClientRect().bottom;
     if (!sequence.style || !Number.isFinite(available) || available <= 7)
         return false;
@@ -779,7 +779,7 @@ function mountCalendarScroll(position, resetScroll = false) {
             return;
         const first = sequence.firstElementChild, last = sequence.lastElementChild;
         const top = bar.getBoundingClientRect().bottom;
-        const bottom = mobile() ? main.getBoundingClientRect().bottom : window.innerHeight - ($app.querySelector('.calendar-controls')?.offsetHeight ?? 0);
+        const bottom = mobile() ? main.getBoundingClientRect().bottom : window.innerHeight;
         let firstIndex = Number(annual ? first.dataset.yearIndex : first.dataset.monthIndex), lastIndex = Number(annual ? last.dataset.yearIndex : last.dataset.monthIndex), changed = false;
         const children = activeChildren(), today = localDate(new Date());
         if (first.getBoundingClientRect().top > top - 700) {

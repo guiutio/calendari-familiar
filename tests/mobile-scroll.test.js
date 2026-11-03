@@ -9,7 +9,7 @@ const end=js.indexOf('function notify(',start);
 assert.ok(start>=0&&end>start);
 const renderSource=js.slice(start,end);
 
-test('la barra queda ancorada a la part inferior fins i tot amb pàgines curtes',()=>{
+test('les barres queden fora del scroll fins i tot amb pàgines curtes',()=>{
   const rules=css.slice(css.indexOf('/* v0.1.12 · El contingut curt'));
   assert.match(rules,/\.app-layout \{position:fixed;inset:0;display:flex;flex-direction:column;/);
   assert.match(rules,/\.main-area \{flex:1 1 0%;[^}]*min-height:0;[^}]*overflow-y:auto/);

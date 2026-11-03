@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.8';
+const APP_VERSION = '0.16.9';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -579,8 +579,8 @@ function layout(content:string){return `<div class="app-layout ${tab==='calendar
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings','Configuració','settings','side')}</nav>
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside>${tab==='calendar'?calendarNavigation():''}<main class="main-area"><div class="content">${tab!=='calendar'&&tab!=='settings'?`<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft',17)} Configuració</button></nav>`:''}${content}</div></main>
-  ${tab==='calendar'?calendarControls():''}<nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
+  </aside>${tab==='calendar'?calendarControls()+calendarNavigation():''}<main class="main-area"><div class="content">${tab!=='calendar'&&tab!=='settings'?`<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft',17)} Configuració</button></nav>`:''}${content}</div></main>
+  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function monthPanel(index:number,children:Child[],today:string):string {
     const year=Math.floor(index/12),month=index-year*12;
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
@@ -623,7 +623,7 @@ function monthPosition():MonthPosition|null {
 }
 /** Sis setmanes caben entre la barra superior i el límit visible del calendari. */
 function fitMonthRows(main:HTMLElement,sequence:HTMLElement,bar:HTMLElement,mobile:boolean):boolean {
-  const bottom=mobile?main.getBoundingClientRect().bottom:window.innerHeight-($app.querySelector<HTMLElement>('.calendar-controls')?.offsetHeight??0);
+  const bottom=mobile?main.getBoundingClientRect().bottom:window.innerHeight;
   const available=bottom-bar.getBoundingClientRect().bottom;
   if(!sequence.style||!Number.isFinite(available)||available<=7)return false;
   // Vora superior, cinc separadors i 1 px per al perímetre inferior.
@@ -679,7 +679,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(!anchor)return;
     const first=sequence.firstElementChild as HTMLElement,last=sequence.lastElementChild as HTMLElement;
     const top=bar.getBoundingClientRect().bottom;
-    const bottom=mobile()?main.getBoundingClientRect().bottom:window.innerHeight-($app.querySelector<HTMLElement>('.calendar-controls')?.offsetHeight??0);
+    const bottom=mobile()?main.getBoundingClientRect().bottom:window.innerHeight;
     let firstIndex=Number(annual?first.dataset.yearIndex:first.dataset.monthIndex),lastIndex=Number(annual?last.dataset.yearIndex:last.dataset.monthIndex),changed=false;
     const children=activeChildren(),today=localDate(new Date());
     if(first.getBoundingClientRect().top>top-700){

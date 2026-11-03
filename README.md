@@ -525,3 +525,10 @@ Filtres, llegenda i, quan pertoquen, edició i zoom passen a una barra just damu
 ## v0.16.8: títols coherents i noms sencers a la navegació
 
 El títol superior i els títols d’any i mes del contingut comparteixen una única mida de 22 px, ajustada a la preferència de lletra. Els quatre modes de calendari queden agrupats a l’esquerra de la barra inferior i Configuració s’alinea a la dreta. Els noms es mostren sencers; Configuració pot ocupar dues línies si l’amplada disponible ho requereix.
+
+
+## v0.16.9: controls damunt del títol
+
+La barra de filtres, llegenda, edició, zoom i navegació del període passa a dalt, abans del títol. Manté les eines a l’esquerra i anterior, Avui i següent a la dreta. La barra amb Any, Mes, Setmana, Dia i Configuració continua a baix de tot.
+
+Els controls i el títol queden fora del scroll, i l’espai útil del calendari s’ajusta a la nova disposició.

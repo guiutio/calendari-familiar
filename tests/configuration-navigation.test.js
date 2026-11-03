@@ -57,7 +57,8 @@ test('cada àrea té retorn a Configuració i General conserva els ajustos sense
   s.ctx.changeTab('settings');assert.match(s.html,/Àrees de configuració/);
  }
  s.ctx.changeTab('calendar');
- assert.match(s.html,/<\/main>\s*<nav class="calendar-controls">Controls<\/nav><nav class="mobile-tabs"/);
+ assert.match(s.html,/<\/main>\s*<nav class="mobile-tabs"/);
+ assert.match(s.html,/<nav class="calendar-controls">Controls<\/nav><header class="calendar-sticky-bar">/);
  assert.match(s.html,/class="mobile-tab active" data-action="calendar-view" data-view="month" aria-current="page"/);
  assert.doesNotMatch(s.html,/settings-back/);
  assert.equal(s.ctx.calendarView,'month');assert.equal(s.ctx.selectedDate,'2026-11-03');
