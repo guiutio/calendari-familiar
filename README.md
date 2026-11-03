@@ -520,3 +520,8 @@ Cada botó obre directament la vista corresponent també des de qualsevol àrea 
 La barra superior conserva el títol del període, amb la mateixa mida de lletra a Any, Mes, Setmana i Dia. A Mes es manté la capçalera dels dies alineada amb la graella.
 
 Filtres, llegenda i, quan pertoquen, edició i zoom passen a una barra just damunt de la navegació inferior. Aquests controls s’alineen a l’esquerra; a la dreta es mostren anterior, Avui i següent, en aquest ordre. La barra queda fora del scroll i l’espai útil del calendari la descompta.
+
+
+## v0.16.8: títols coherents i noms sencers a la navegació
+
+El títol superior i els títols d’any i mes del contingut comparteixen una única mida de 22 px, ajustada a la preferència de lletra. Els quatre modes de calendari queden agrupats a l’esquerra de la barra inferior i Configuració s’alinea a la dreta. Els noms es mostren sencers; Configuració pot ocupar dues línies si l’amplada disponible ho requereix.
