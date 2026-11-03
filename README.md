@@ -455,3 +455,8 @@ Els mesos queden alineats a dalt i aprofiten l’amplada sense el requadre exter
 ## v0.15.4: mes i dia actuals a la vista anual
 
 En obrir Any o prémer Avui, el calendari es desplaça fins al mes actual, que es distingeix amb un perímetre més gruixut. El dia actual ressalta tota la cel·la amb els mateixos colors de Mes, sense el cercle del número. Els filtres i diàlegs conserven el desplaçament manual, i els altres anys no ressalten cap mes com a actual.
+
+
+## v0.15.5: sis setmanes visibles a Mes
+
+Seleccionar un mes, navegar amb fletxes o prémer Avui alinea la graella sota la barra fixa i deixa amagat el títol repetit. L’alçada de les setmanes s’ajusta a l’espai visible, descomptant la navegació superior i inferior, perquè hi càpiguen sis setmanes completes. Les miniatures s’adapten a aquesta alçada, també amb franges nocturnes especials. En redimensionar la finestra es recalcula la mida mantenint la posició del mes.

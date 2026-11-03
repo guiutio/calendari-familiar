@@ -7,13 +7,13 @@ const extract=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
 const dates=extract('function periodTitle()', 'function navButton(');
 const dateHelpers=extract('function localDate(', 'function monthTitle(');
 
-function controller(mobile=true){
+function controller(mobile=true,headerHeight=0){
  let frame,listen,timer;
  const base=2026*12+9;
  const main={scrollTop:0,addEventListener:(name,f)=>{if(name==='scroll')listen=f;},removeEventListener:()=>{},getBoundingClientRect:()=>({top:mobile?100:0,bottom:800})};
  const win={setTimeout:f=>(timer=f,2),clearTimeout:()=>{timer=undefined;},get scrollY(){return main.scrollTop;},innerHeight:800,matchMedia:()=>({matches:mobile}),scrollBy:(_,delta)=>main.scrollTop+=delta,scrollTo:(_,y)=>main.scrollTop=y,requestAnimationFrame:f=>(frame=f,1),cancelAnimationFrame:()=>{},addEventListener:()=>{},removeEventListener:()=>{}};
  let panels=[];
- const panel=index=>({querySelectorAll:()=>[],dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
+ const panel=index=>({querySelector(){return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+headerHeight})};},querySelectorAll:()=>[],dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
  const title={textContent:''};
  const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>title};
@@ -162,7 +162,7 @@ function inertialController(nativeScrollEnd=false){
   getBoundingClientRect:()=>({top:100,bottom:800}),
   addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
  if(nativeScrollEnd)main.onscrollend=null;
- const panel=index=>({dataset:{monthIndex:String(index)},querySelectorAll:()=>[],
+ const panel=index=>({dataset:{monthIndex:String(index)},querySelector:()=>null,querySelectorAll:()=>[],
   getBoundingClientRect(){const y=300+panels.slice(0,panels.indexOf(this)).reduce((n,p)=>n+height(Number(p.dataset.monthIndex)),0)-rawTop;return {top:y,bottom:y+height(index)};},
   remove(){mutations++;panels=panels.filter(p=>p!==this);nativeTop(rawTop);}
  });
@@ -257,5 +257,37 @@ test('un nou gest o sortir de la vista cancel·la una estabilització ja program
   const c=inertialController(true);c.scroll(2300);const before=c.metrics();
   c.signalEnd();if(stop)c.stop();else c.touch();
   c.flush();c.advance(2000);assert.deepEqual(c.metrics(),before);
+ }
+});
+
+
+test('seleccionar un mes amaga la capçalera repetida i alinea la primera setmana sota la barra',()=>{
+ for(const mobile of [true,false]){
+  const c=controller(mobile,58);
+  const current=()=>c.panels().find(p=>Number(p.dataset.monthIndex)===c.base);
+  assert.equal(current().querySelector('.month-grid').getBoundingClientRect().top,100);
+  assert.equal(current().getBoundingClientRect().top,42);
+  c.scroll(1400);c.ctx.viewYear=2026;c.ctx.viewMonth=9;c.ctx.monthScrollTarget=true;
+  c.ctx.mountCalendarScroll(c.ctx.monthPosition());c.refresh();
+  assert.equal(current().querySelector('.month-grid').getBoundingClientRect().top,100);
+ }
+});
+
+test('sis setmanes caben a l’espai visible i només es recalcula la mida quan canvia',()=>{
+ const context=vm.createContext({window:{innerHeight:900}});
+ vm.runInContext(extract('function fitMonthRows(', 'function mountCalendarScroll('),context);
+ for(const mobile of [true,false]){
+  let bottom=800,top=180,value='',writes=0;
+  const main={getBoundingClientRect:()=>({bottom})},bar={getBoundingClientRect:()=>({bottom:top})};
+  const sequence={style:{getPropertyValue:()=>value,setProperty:(name,next)=>{assert.equal(name,'--month-week-height');value=next;writes++;}}};
+  for(const available of [620,380,235,720]){
+   bottom=top+available;context.window.innerHeight=bottom;
+   assert.equal(context.fitMonthRows(main,sequence,bar,mobile),true);
+   assert.ok(6*parseFloat(value)+7<=available,'El mes més llarg no queda tallat');
+   assert.ok(available-(6*parseFloat(value)+7)<6,'S’aprofita l’alçada disponible');
+   const count=writes;
+   assert.equal(context.fitMonthRows(main,sequence,bar,mobile),false);
+   assert.equal(writes,count,'El scroll no provoca reajustaments d’alçada');
+  }
  }
 });

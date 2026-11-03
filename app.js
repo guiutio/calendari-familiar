@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.15.4';
+const APP_VERSION = '0.15.5';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -688,6 +688,19 @@ function monthPosition() {
     const cell = panel ? Array.from(panel.querySelectorAll('.day-cell')).find(el => el.getBoundingClientRect().bottom > top + 1) : null;
     return panel ? { index: Number(panel.dataset.monthIndex), top: panel.getBoundingClientRect().top, date: cell?.dataset.date } : null;
 }
+/** Sis setmanes caben entre la barra superior i el límit visible del calendari. */
+function fitMonthRows(main, sequence, bar, mobile) {
+    const bottom = mobile ? main.getBoundingClientRect().bottom : window.innerHeight;
+    const available = bottom - bar.getBoundingClientRect().bottom;
+    if (!sequence.style || !Number.isFinite(available) || available <= 7)
+        return false;
+    // Vora superior, cinc separadors i 1 px per al perímetre inferior.
+    const height = String(Math.floor((available - 7) / 6)) + 'px';
+    if (sequence.style.getPropertyValue('--month-week-height') === height)
+        return false;
+    sequence.style.setProperty('--month-week-height', height);
+    return true;
+}
 function mountCalendarScroll(position, resetScroll = false) {
     if (resetScroll && !window.matchMedia('(max-width:900px)').matches)
         window.scrollTo(0, 0);
@@ -715,6 +728,7 @@ function mountCalendarScroll(position, resetScroll = false) {
     const sequence = $app.querySelector('.month-sequence');
     const bar = $app.querySelector('.calendar-sticky-bar');
     const mobile = () => window.matchMedia('(max-width:900px)').matches;
+    fitMonthRows(main, sequence, bar, mobile());
     const shift = (delta) => { if (mobile())
         main.scrollTop += delta;
     else
@@ -729,7 +743,8 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (target) {
             // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
             const top = bar.getBoundingClientRect().bottom;
-            shift(target.getBoundingClientRect().top - top);
+            const grid = target.querySelector('.month-grid') ?? target;
+            shift(grid.getBoundingClientRect().top - top);
         }
     }
     else
@@ -842,7 +857,14 @@ function mountCalendarScroll(position, resetScroll = false) {
     main.addEventListener('touchcancel', touchEnd, { passive: true });
     window.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('scrollend', settle, { passive: true });
-    window.addEventListener('resize', schedule);
+    const resize = () => {
+        const anchor = monthPosition();
+        if (fitMonthRows(main, sequence, bar, mobile()) && anchor)
+            restore(anchor);
+        schedule();
+    };
+    window.addEventListener('resize', resize);
+    window.visualViewport?.addEventListener('resize', resize);
     stopCalendarScroll = () => {
         disposed = true;
         cancelSettle();
@@ -853,7 +875,8 @@ function mountCalendarScroll(position, resetScroll = false) {
         main.removeEventListener('touchcancel', touchEnd);
         window.removeEventListener('scroll', schedule);
         window.removeEventListener('scrollend', settle);
-        window.removeEventListener('resize', schedule);
+        window.removeEventListener('resize', resize);
+        window.visualViewport?.removeEventListener('resize', resize);
         window.cancelAnimationFrame(frame);
     };
     schedule();

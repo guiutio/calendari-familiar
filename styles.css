@@ -1072,3 +1072,12 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 
 /* La llegenda anual es consulta sense ocupar espai entre els mesos. */
 .calendar-legend-dialog .legend {align-items:flex-start;flex-direction:column;gap:14px;padding:8px 0;}
+
+/* Mes: sis setmanes dins de l’espai visible, sense comptar el títol repetit. */
+.month-sequence .month-grid {grid-auto-rows:var(--month-week-height,auto);}
+.month-sequence .month-grid .day-cell {height:100%;min-height:0;padding:4px 2px;gap:1px;}
+.month-sequence .month-grid .day-top {flex:0 0 auto;min-height:0;height:min(30px,calc(var(--month-week-height,100px) * .3));}
+.month-sequence .month-grid .day-number {height:100%;font-size:min(calc(18px * var(--font-scale,1)),calc(var(--month-week-height,100px) * .24));}
+.month-sequence .month-grid .month-mini {flex:1 1 0%;height:auto;min-height:0;grid-template-rows:min(12px,20%) minmax(0,1fr);}
+.month-sequence .month-grid .month-mini-child {font-size:min(calc(9px * var(--font-scale,1)),calc(var(--month-week-height,100px) * .12));}
+.month-sequence .month-grid .mini-empty {min-height:0;}

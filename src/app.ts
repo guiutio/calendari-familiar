@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.15.4';
+const APP_VERSION = '0.15.5';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -605,6 +605,17 @@ function monthPosition():MonthPosition|null {
   const cell=panel?Array.from(panel.querySelectorAll<HTMLElement>('.day-cell')).find(el=>el.getBoundingClientRect().bottom>top+1):null;
   return panel?{index:Number(panel.dataset.monthIndex),top:panel.getBoundingClientRect().top,date:cell?.dataset.date}:null;
 }
+/** Sis setmanes caben entre la barra superior i el límit visible del calendari. */
+function fitMonthRows(main:HTMLElement,sequence:HTMLElement,bar:HTMLElement,mobile:boolean):boolean {
+  const bottom=mobile?main.getBoundingClientRect().bottom:window.innerHeight;
+  const available=bottom-bar.getBoundingClientRect().bottom;
+  if(!sequence.style||!Number.isFinite(available)||available<=7)return false;
+  // Vora superior, cinc separadors i 1 px per al perímetre inferior.
+  const height=String(Math.floor((available-7)/6))+'px';
+  if(sequence.style.getPropertyValue('--month-week-height')===height)return false;
+  sequence.style.setProperty('--month-week-height',height);
+  return true;
+}
 function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   if(resetScroll&&!window.matchMedia('(max-width:900px)').matches)window.scrollTo(0,0);
   if(tab==='calendar'&&calendarView==='year'){
@@ -628,6 +639,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   const sequence=$app.querySelector<HTMLElement>('.month-sequence')!;
   const bar=$app.querySelector<HTMLElement>('.calendar-sticky-bar')!;
   const mobile=()=>window.matchMedia('(max-width:900px)').matches;
+  fitMonthRows(main,sequence,bar,mobile());
   const shift=(delta:number)=>{if(mobile())main.scrollTop+=delta;else window.scrollBy(0,delta);};
   const restore=(anchor:MonthPosition)=>{
     const el=sequence.querySelector<HTMLElement>(`[data-month-index="${anchor.index}"]`);
@@ -638,7 +650,8 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(target){
       // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
       const top=bar.getBoundingClientRect().bottom;
-      shift(target.getBoundingClientRect().top-top);
+      const grid=target.querySelector<HTMLElement>('.month-grid')??target;
+      shift(grid.getBoundingClientRect().top-top);
     }
   } else restore(position);
   monthScrollTarget=false;
@@ -728,12 +741,19 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   main.addEventListener('touchcancel',touchEnd,{passive:true});
   window.addEventListener('scroll',schedule,{passive:true});
   window.addEventListener('scrollend',settle,{passive:true});
-  window.addEventListener('resize',schedule);
+  const resize=()=>{
+    const anchor=monthPosition();
+    if(fitMonthRows(main,sequence,bar,mobile())&&anchor)restore(anchor);
+    schedule();
+  };
+  window.addEventListener('resize',resize);
+  window.visualViewport?.addEventListener('resize',resize);
   stopCalendarScroll=()=>{
     disposed=true;cancelSettle();
     main.removeEventListener('scroll',schedule);main.removeEventListener('scrollend',settle);main.removeEventListener('touchstart',touchStart);
     main.removeEventListener('touchend',touchEnd);main.removeEventListener('touchcancel',touchEnd);
-    window.removeEventListener('scroll',schedule);window.removeEventListener('scrollend',settle);window.removeEventListener('resize',schedule);
+    window.removeEventListener('scroll',schedule);window.removeEventListener('scrollend',settle);window.removeEventListener('resize',resize);
+    window.visualViewport?.removeEventListener('resize',resize);
     window.cancelAnimationFrame(frame);
   };
   schedule();
