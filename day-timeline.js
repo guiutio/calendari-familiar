@@ -56,11 +56,12 @@
     }).join('');
     return columns;
   }
-  function renderWeek(startDate,days,children,zoom=50,focusDate='',todayDate='') {
+  function renderWeek(startDate,days,children,zoom=50,focusDate='',todayDate='',minimumHeight=0) {
     const safeZoom=[25,50,75,100,125,150].includes(zoom)?zoom:50;
-    const pxPerMinute=PX_PER_MINUTE*safeZoom/100;
+    // Omple l'espai disponible sense retallar l'escala demanada amb el zoom.
+    const height=Math.max(DAY_MINUTES*PX_PER_MINUTE*safeZoom/100,Number.isFinite(minimumHeight)?minimumHeight:0);
+    const pxPerMinute=height/DAY_MINUTES;
     if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
-    const height=DAY_MINUTES*pxPerMinute;
     const tickStep=safeZoom===25?120:60;
     const ticks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>
       `<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');

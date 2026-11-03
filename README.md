@@ -482,3 +482,8 @@ Els filtres i la llegenda conserven la posició. Avui recentra l’interval al v
 ## v0.16.1: vista setmanal sense blocs inferiors ni doble marc
 
 Es retiren de Setmana el resum plegable en format de llista i l’horari laboral inferior. La graella deixa de tenir el requadre exterior addicional, de manera que només conserva el marc de la cronologia.
+
+
+## v0.16.2: setmana a tota la zona disponible
+
+La graella setmanal ocupa tota l’amplada entre les barres superior i inferior, sense marges ni marc arrodonit. Si les 24 hores són més curtes que l’espai visible, l’escala s’amplia proporcionalment fins a omplir-lo, descomptant la capçalera de dies i fills. Un zoom més gran conserva el desplaçament vertical de la pàgina. L’ajust es recalcula en redimensionar o girar el dispositiu.

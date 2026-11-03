@@ -1056,3 +1056,14 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-sequence {overflow-anchor:none;}
 .year-panel + .year-panel {margin-top:24px;}
 .year-section-title {margin:0 0 12px;font-size:calc(22px * var(--font-scale,1));font-weight:780;color:inherit;}
+
+/* Setmana: tota la zona entre les barres, amb scroll vertical de pàgina. */
+.calendar-week-layout .main-area {padding:0;min-height:0;overflow-x:hidden;overflow-y:auto;}
+.calendar-week-layout .content {max-width:none;width:100%;min-height:100%;margin:0;}
+.calendar-week-layout .week-timeline {margin:0;padding:0;}
+.calendar-week-layout .week-timeline-viewport {width:100%;max-width:100%;margin:0;border:0;border-radius:0;}
+.calendar-week-layout .day-time-tick:first-child {transform:none;}
+.calendar-week-layout .day-time-tick:last-child {transform:translateY(-100%);}
+@media(min-width:901px) {
+  .calendar-week-layout {height:100vh;height:100dvh;min-height:0;grid-template-rows:auto minmax(0,1fr);overflow:hidden;}
+}

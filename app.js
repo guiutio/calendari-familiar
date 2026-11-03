@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.1';
+const APP_VERSION = '0.16.2';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -564,7 +564,7 @@ function dayTimeline(date, children) {
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="people"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
     return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, timelineZoomForView('day'), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extraSlots(date, children));
 }
-function weekTimeline(start, children) {
+function weekTimeline(start, children, minimumHeight = 0) {
     if (!dayTimelineUI)
         return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -576,7 +576,7 @@ function weekTimeline(start, children) {
     });
     if (!children.length)
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="people"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
-    return dayTimelineUI.renderWeek(start, days, children, timelineZoomForView('week'), selectedDate, localDate(new Date()));
+    return dayTimelineUI.renderWeek(start, days, children, timelineZoomForView('week'), selectedDate, localDate(new Date()), minimumHeight);
 }
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
@@ -641,7 +641,7 @@ function calendarNavigation() {
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
-    return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}"><aside class="sidebar">
+    return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
   <nav class="side-nav" aria-label="Navegació">${navButton('calendar', 'Calendari', 'calendar', 'side')}${navButton('rotation', 'Rotacions', 'repeat', 'side')}${navButton('schools', 'Escoles', 'school', 'side')}${navButton('people', 'Persones', 'people', 'side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
@@ -1314,6 +1314,29 @@ function queueNativePickerRender(delay = 100) {
     window.clearTimeout(nativePickerRenderTimer);
     nativePickerRenderTimer = window.setTimeout(flushNativePickerRender, delay);
 }
+function fitWeekTimeline(main) {
+    if (tab !== 'calendar' || calendarView !== 'week')
+        return;
+    const head = main.querySelector('.week-timeline-head');
+    const content = main.querySelector('.content');
+    if (!head || !content)
+        return;
+    // La capçalera ocupa espai propi: les 24 hores omplen la resta de la zona útil.
+    content.innerHTML = weekTimeline(weekStart(selectedDate), activeChildren(), Math.max(0, main.clientHeight - head.offsetHeight));
+    if (typeof ResizeObserver === 'undefined')
+        return;
+    let width = main.clientWidth, height = main.clientHeight, frame = 0;
+    const observer = new ResizeObserver(() => {
+        if (width === main.clientWidth && height === main.clientHeight)
+            return;
+        width = main.clientWidth;
+        height = main.clientHeight;
+        window.cancelAnimationFrame(frame);
+        frame = window.requestAnimationFrame(() => render());
+    });
+    observer.observe(main);
+    stopCalendarScroll = () => { observer.disconnect(); window.cancelAnimationFrame(frame); };
+}
 function render() {
     if (deferRenderForNativePicker())
         return;
@@ -1341,6 +1364,8 @@ function render() {
     const pickerFocusKey = pickerFocus?.dataset.date ? `[data-action="${pickerFocus.dataset.action}"][data-date="${pickerFocus.dataset.date}"]` : pickerFocus?.dataset.step ? `[data-action="${pickerFocus.dataset.action}"][data-step="${pickerFocus.dataset.step}"]` : '';
     $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : settingsPage());
     const main = $app.querySelector('.main-area');
+    if (main && calendarView === 'week')
+        fitWeekTimeline(main);
     if (main) {
         main.dataset.scrollKey = scrollKey;
         main.scrollTop = mainScroll;

@@ -45,6 +45,39 @@ test('capçaleres navegables amb dates, horaris independents i dades filtrables'
  const empty=ui.renderWeek(dates[0],days,[]);
  assert.match(empty,/Selecciona algun fill/);
 });
+test('les 24 hores omplen l’alçada útil i tots els esdeveniments mantenen la proporció',()=>{
+ const markup=ui.renderWeek(dates[0],days,children,50,'','',720);
+ assert.match(markup,/data-px-per-minute="0.5"/);
+ assert.match(markup,/--hour-height:30px/);
+ assert.equal((markup.match(/class="day-time-column" style="height:720px"/g)||[]).length,14);
+ assert.match(markup,/top:270px;height:30px/); // escola 09:00–10:00
+ assert.match(markup,/top:570px;height:150px/); // pernocta 19:00–24:00
+ assert.match(markup,/top:720px">24:00/);
+ const zoom=ui.renderWeek(dates[0],days,children,100,'','',720);
+ assert.match(zoom,/data-px-per-minute="0.8"/);
+ assert.match(zoom,/height:1152px/); // el zoom gran continua permetent scroll vertical
+ const quarter=ui.renderWeek(dates[0],days,children,25,'','',720);
+ assert.match(quarter,/data-px-per-minute="0.5"/);
+ assert.match(quarter,/top:720px">24:00/);
+});
+test('l’ajust descompta la capçalera, respon als canvis de mida i es cancel·la en sortir',()=>{
+ const fitted=[];let callback,disconnected=false,pending,cancelled;
+ const content={innerHTML:''};
+ const main={clientWidth:402,clientHeight:780,querySelector:selector=>selector==='.content'?content:{offsetHeight:60}};
+ const ctx=vm.createContext({tab:'calendar',calendarView:'week',selectedDate:dates[0],
+  weekStart:()=>dates[0],activeChildren:()=>children,weekTimeline:(_date,_children,height)=>{fitted.push(height);return 'fitted';},
+  ResizeObserver:class {constructor(fn){callback=fn;}observe(target){assert.equal(target,main);}disconnect(){disconnected=true;}},
+  window:{requestAnimationFrame:fn=>{pending=fn;return 42;},cancelAnimationFrame:id=>{cancelled=id;}},
+  render:()=>ctx.fitWeekTimeline(main),stopCalendarScroll:null});
+ vm.runInContext(js.slice(js.indexOf('function fitWeekTimeline('),js.indexOf('function render()')),ctx);
+ ctx.fitWeekTimeline(main);
+ assert.deepEqual(fitted,[720]);assert.equal(content.innerHTML,'fitted');
+ callback();assert.equal(pending,undefined); // la primera observació no repinta
+ main.clientHeight=580;callback();pending();
+ assert.deepEqual(fitted,[720,520]);
+ ctx.stopCalendarScroll();assert.equal(disconnected,true);assert.equal(cancelled,0);
+ ctx.calendarView='day';ctx.fitWeekTimeline(main);assert.equal(fitted.length,2);
+});
 test('la vista setmanal reusa la mateixa estructura de pernoctes i d’activitats que Dia',()=>{
  assert.match(source,/function buildColumns\(/);
  assert.match(source,/function renderWeek\(/);
