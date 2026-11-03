@@ -248,17 +248,23 @@ test('marcar festius conserva el desplaçament i el focus del selector personal'
 
 test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
  const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
- Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>''});
+ Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
  for(const view of ['week','day']){
   s.ctx.calendarView=view;assert.doesNotMatch(s.ctx.calendarPage(),/personal-outline|Festius personals|Vacances personals/);
  }
- s.ctx.calendarView='year';assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"/);
- assert.match(s.ctx.calendarNavigation(),/data-action="open-legend"/);
- s.click('open-legend');
- const dialog=s.ctx.sheetMarkup();
- assert.match(dialog,/role="dialog" aria-modal="true" aria-label="Llegenda"/);
- assert.match(dialog,/Festius personals/);assert.match(dialog,/Vacances personals/);
- s.click('close-sheet');assert.equal(s.ctx.sheet,null);
+ for(const view of ['year','month','week','day']){
+  s.ctx.calendarView=view;
+  assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"|calendar-bottom|time-row-help|class="tip-card"/);
+  assert.match(s.ctx.calendarNavigation(),/data-action="open-legend"/);
+  s.click('open-legend');
+  const dialog=s.ctx.sheetMarkup();
+  assert.match(dialog,/role="dialog" aria-modal="true" aria-label="Llegenda"/);
+  assert.match(dialog,/Sense assignar/);assert.match(dialog,/Canvi puntual/);
+  if(view==='year'||view==='month'){
+   assert.match(dialog,/Festius personals/);assert.match(dialog,/Vacances personals/);
+  } else assert.doesNotMatch(dialog,/Festius personals|Vacances personals/);
+  s.click('close-sheet');assert.equal(s.ctx.sheet,null);
+ }
 });
 
 test('el mòdul personal es carrega abans de l’app i queda inclòs a la memòria cau de la mateixa versió',()=>{
@@ -320,7 +326,7 @@ test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panell
  let html=s.ctx.sheetMarkup();assert.match(html,/data-work-rotation-form="true"/);assert.match(html,/Horari laboral/);assert.match(html,/name="work-0-0-startTime"/);
  const draft=s.ctx.sheet.draft;draft.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];
  assert.equal(s.ctx.workSchedule.save(s.state,'guardian:same',draft,()=> 'job'),'');s.ctx.sheet=null;
- Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>''});
+ Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
  for(const view of ['week','day']){
   s.ctx.calendarView=view;html=s.ctx.calendarPage();assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);
  }

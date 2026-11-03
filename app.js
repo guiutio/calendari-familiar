@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.15.6';
+const APP_VERSION = '0.15.7';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -636,7 +636,7 @@ function navButton(target, label, name, kind) {
 function calendarNavigation() {
     const children = activeChildren();
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || Boolean(state.personTimeOff && personalTimeOff.filtered(state));
-    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button>${calendarView === 'year' ? `<button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>` : ''}${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
+    return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
     <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
@@ -932,9 +932,7 @@ function calendarPage() {
     return `${calendarView === 'month' ? `<header class="page-heading"><div><div class="eyebrow">EL TEU CALENDARI</div><h1 class="page-title">Calendari Familiar</h1><p class="page-subtitle">Miniatures proporcionals a les 24 hores de cada dia.</p></div></header>` : ''}
     <section class="calendar-card" aria-label="Calendari familiar">
     ${content}
-    <footer class="calendar-bottom">${calendarLegend()}<span class="legend-note">● canvi puntual</span></footer></section>
-    ${calendarView === 'day' || calendarView === 'week' ? `<div class="time-row-help">Vista de 24 hores per fill, amb pernocta i activitats escolars. Desplaça la cronologia verticalment per consultar totes les hores i horitzontalment a la setmana per veure tots els dies.</div><div class="tip-card">${icon('info', 18)}<span>El color de fons indica la pernocta. Les activitats escolars se superposen. Toca un bloc per consultar l’activitat o editar l’assignació de la nit.</span></div>` : `<div class="time-row-help">Desplaça’t verticalment per recórrer els mesos. Toca un dia per obrir Dia, o el número de setmana a l’esquerra per obrir Setmana.</div>
-    <div class="tip-card">${icon('info', 18)}<span>Els colors mostren les pernoctes i les escoles superposades. A Dia i Setmana pots tocar les franges per editar-les o consultar-les.</span></div>`}`;
+    </section>`;
 }
 function rotationPage() {
     return `<header class="page-heading"><div><div class="eyebrow">ORGANITZACIÓ</div><h1 class="page-title">Rotacions</h1><p class="page-subtitle">Patrons opcionals de pernocta i altres franges, amb dates i fills propis.</p></div></header>
@@ -1206,7 +1204,7 @@ function sheetMarkup() {
     }
     else if (sheet?.type === 'legend') {
         contents = `<div class="sheet-heading"><h2 class="sheet-title">Llegenda</h2><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
-    <div class="calendar-legend-dialog">${calendarLegend()}</div>
+    <div class="calendar-legend-dialog">${calendarLegend()}<p class="settings-note">● Canvi puntual</p></div>
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
     }
     else if (sheet?.type === 'zoom') {

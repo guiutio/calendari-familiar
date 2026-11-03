@@ -54,8 +54,8 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
  assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.15\.6/);
- assert.match(sw,/day-timeline\.js\?v=0\.15\.6/);
+ assert.match(html,/day-timeline\.js\?v=0\.15\.7/);
+ assert.match(sw,/day-timeline\.js\?v=0\.15\.7/);
 });
 test('les pernoctes utilitzen l’hora de la rotació aplicable per fill',()=>{
  assert.match(ts,/rotationPatterns\.nightTimeFor\(state\.extraRotations,date,childId,state\.nightDateTimes\)/);

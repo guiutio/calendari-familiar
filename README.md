@@ -465,3 +465,8 @@ Seleccionar un mes, navegar amb fletxes o prémer Avui alinea la graella sota la
 ## v0.15.6: vista mensual sense perímetre ressaltat
 
 Es retira el contorn gruixut que resseguia els dies de cada mes. Es conserven les línies de la graella, els contorns personals de festius i vacances i el ressaltat del dia actual.
+
+
+## v0.15.7: llegenda flotant a totes les vistes
+
+Mes, Setmana i Dia deixen de mostrar la llegenda i els textos explicatius sota el calendari. Totes les vistes disposen del botó petit de llegenda al costat dels filtres, amb els colors visibles i la indicació de canvi puntual dins d’un diàleg.
