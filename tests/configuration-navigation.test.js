@@ -16,7 +16,7 @@ function setup(){
  const ctx=vm.createContext({tab:'calendar',calendarView:'month',selectedDate:'2026-11-03',schoolNav:{},sheet:null,state,
   icon:()=>'<svg></svg>',escapeHtml:String,storageMode:'indexeddb',APP_VERSION:'test',
   validTheme:value=>value,validFontSize:value=>value,FONT_SIZE_LABELS:{normal:'Normal'},FONT_SIZE_OPTIONS:['normal','large','xlarge'],
-  calendarNavigation:()=>'<header class="calendar-sticky-bar">Calendari</header>',
+  calendarNavigation:()=>'<header class="calendar-sticky-bar">Calendari</header>',calendarControls:()=>'<nav class="calendar-controls">Controls</nav>',
   calendarPage:()=>'<h1>Calendari</h1>',peoplePage:()=>'<h1>Persones</h1>',rotationPage:()=>'<h1>Rotacions</h1>',schoolsPage:()=>'<h1>Escoles</h1>',
   deferRenderForNativePicker:()=>false,monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},
   parseDate:value=>new Date(value+'T12:00:00'),weekStart:value=>value,fitCalendarTimeline:()=>{},
@@ -46,6 +46,7 @@ test('cada àrea té retorn a Configuració i General conserva els ajustos sense
  const s=setup();
  for(const [area,title] of [['general','General'],['people','Persones'],['rotation','Rotacions'],['schools','Escoles']]){
   s.ctx.changeTab(area);
+  assert.doesNotMatch(s.html,/class="calendar-controls"/);
   assert.match(s.html,new RegExp('<h1[^>]*>'+title+'</h1>'));
   assert.match(s.html,/settings-back" data-action="tab" data-tab="settings"/);
   assert.match(s.html,/class="mobile-tab active" data-action="tab" data-tab="settings" aria-current="page"/);
@@ -56,6 +57,7 @@ test('cada àrea té retorn a Configuració i General conserva els ajustos sense
   s.ctx.changeTab('settings');assert.match(s.html,/Àrees de configuració/);
  }
  s.ctx.changeTab('calendar');
+ assert.match(s.html,/<\/main>\s*<nav class="calendar-controls">Controls<\/nav><nav class="mobile-tabs"/);
  assert.match(s.html,/class="mobile-tab active" data-action="calendar-view" data-view="month" aria-current="page"/);
  assert.doesNotMatch(s.html,/settings-back/);
  assert.equal(s.ctx.calendarView,'month');assert.equal(s.ctx.selectedDate,'2026-11-03');

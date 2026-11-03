@@ -174,7 +174,7 @@ test('Mes i Any generen els contorns només als dies afectats i responen als fil
 test('el panell de filtres identifica qui soc jo i el botó de filtres indica seleccions ocultes',()=>{
  const s=setup();s.holidays(['2026-11-02']);s.click('person-me');
  assert.equal(s.api.filtered(s.state),false);s.click('person-off-type',{kind:'holiday'});assert.equal(s.api.filtered(s.state),true);
- assert.ok(s.ctx.calendarNavigation().includes('filter-dot'));
+ assert.ok(s.ctx.calendarControls().includes('filter-dot'));
  s.ctx.sheet={type:'filters'};const html=s.ctx.sheetMarkup();
  assert.match(html,/Horari laboral/);assert.match(html,/Guiu · Jo/);
  assert.match(html,/data-action="person-off-type" data-kind="holiday" aria-pressed="false"/);
@@ -256,7 +256,7 @@ test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
   s.ctx.calendarView=view;
   assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"|calendar-bottom|time-row-help|class="tip-card"/);
   if(view==='week')assert.doesNotMatch(s.ctx.calendarPage(),/class="calendar-card"|Horari laboral/);
-  assert.match(s.ctx.calendarNavigation(),/data-action="open-legend"/);
+  assert.match(s.ctx.calendarControls(),/data-action="open-legend"/);
   s.click('open-legend');
   const dialog=s.ctx.sheetMarkup();
   assert.match(dialog,/role="dialog" aria-modal="true" aria-label="Llegenda"/);
@@ -342,12 +342,12 @@ test('el llapis obre les accions del dia i conserva els editors, la data i la re
  const s=setup(),date=s.ctx.selectedDate;
  Object.assign(s.ctx,{tab:'calendar',calendarView:'day',dayTimeline:()=>'<div class="day-timeline">Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50,detailOrigin:'calendar',detailReturnDate:date});
  assert.doesNotMatch(s.ctx.calendarPage(),/calendar-card|daily-agenda|day-edit-actions|day-slot-add/);
- assert.match(s.ctx.calendarNavigation(),/data-action="open-day-edit"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/);
+ assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/);
  s.click('open-day-edit');let html=s.ctx.sheetMarkup();
  assert.match(html,/role="dialog" aria-modal="true" aria-label="Edita el dia"/);
  assert.match(html,new RegExp('data-action="day-slot-add" data-date="'+date+'"'));
  assert.doesNotMatch(html,/data-action="day-restore"|data-action="extra-date-choose"/);
- assert.match(s.ctx.calendarNavigation(),/data-action="open-day-edit"[^>]*aria-expanded="true"/);
+ assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-expanded="true"/);
  s.ctx.clickAction({dataset:{action:'day-slot-add',date},closest:()=>null});
  assert.equal(s.ctx.sheet.type,'daySlotForm');assert.equal(s.ctx.sheet.childId,'same');
  assert.equal(s.ctx.calendarView,'day');assert.equal(s.ctx.selectedDate,date);

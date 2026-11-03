@@ -1088,3 +1088,21 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 :root[data-theme="dark"] .settings-area-icon {background:#263a55;color:#a5ccfa;}
 :root[data-theme="dark"] .settings-area-copy>span {color:#aabbd0;}
 @media(min-width:700px) {.settings-areas {grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Títol uniforme a dalt i controls independents del scroll, sobre les vistes. */
+.calendar-layout {--calendar-controls-height:calc(52px * var(--font-scale,1));}
+.calendar-sticky-bar .calendar-toolbar {padding:12px 14px;}
+.calendar-sticky-bar .calendar-title {min-width:0;font-size:calc(18px * var(--font-scale,1));line-height:1.25;}
+.calendar-controls {display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;height:var(--calendar-controls-height);min-width:0;padding:8px 9px;border-top:1px solid #e8ebef;background:#fff;z-index:26;overscroll-behavior:none;touch-action:pan-x;}
+.calendar-tools {display:flex;align-items:center;gap:4px;}
+.calendar-period-nav {margin-left:auto;gap:4px;}
+.calendar-controls .filter-button {position:relative;justify-content:center;width:32px;min-width:32px;min-height:32px;padding:0;}
+.calendar-controls .filter-copy {display:none;}
+.calendar-controls .filter-dot {position:absolute;right:2px;top:2px;margin:0;}
+.calendar-controls .soft-btn {white-space:nowrap;}
+:root[data-theme="dark"] .calendar-controls {background:#192436;border-color:#304058;}
+@media(min-width:901px) {
+  .calendar-controls {position:fixed;bottom:0;left:calc(max(0px, calc(50vw - 585px)) + 248px);right:max(0px, calc(50vw - 585px));}
+  .calendar-week-layout,.calendar-day-layout {padding-bottom:var(--calendar-controls-height);}
+  .calendar-layout:not(.calendar-week-layout):not(.calendar-day-layout) .main-area {padding-bottom:calc(64px + var(--calendar-controls-height));}
+}

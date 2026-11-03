@@ -29,7 +29,7 @@ export function installScrollGuard(doc, win) {
     const scroller = timeline ? target.closest('.main-area') : target.closest('.sheet, .main-area');
     const block = scroller
       ? shouldPreventBoundaryScroll(scroller.scrollTop, scroller.scrollHeight, scroller.clientHeight, dy)
-      : Boolean(target.closest('.mobile-tabs, .overlay'));
+      : Boolean(target.closest('.mobile-tabs, .calendar-controls, .overlay'));
     if (block && event.cancelable) event.preventDefault();
   }, {passive: false});
   const reset = () => { lastTouch = null; };

@@ -513,3 +513,10 @@ Totes les àrees ofereixen un botó per tornar a Configuració i mantenen ressal
 Any, Mes, Setmana i Dia passen a ser accessos directes de la barra inferior, al costat de Configuració. El selector desapareix de la barra superior, deixant més espai al calendari. A l’escriptori es mostren els mateixos accessos a la barra lateral.
 
 Cada botó obre directament la vista corresponent també des de qualsevol àrea de Configuració, conserva la data seleccionada i ressalta únicament la vista activa.
+
+
+## v0.16.7: controls del calendari a una segona barra inferior
+
+La barra superior conserva el títol del període, amb la mateixa mida de lletra a Any, Mes, Setmana i Dia. A Mes es manté la capçalera dels dies alineada amb la graella.
+
+Filtres, llegenda i, quan pertoquen, edició i zoom passen a una barra just damunt de la navegació inferior. Aquests controls s’alineen a l’esquerra; a la dreta es mostren anterior, Avui i següent, en aquest ordre. La barra queda fora del scroll i l’espai útil del calendari la descompta.

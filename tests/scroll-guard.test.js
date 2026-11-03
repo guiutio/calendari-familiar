@@ -54,7 +54,7 @@ test('no intercepta gestos horitzontals ni pantalles d’escriptori', () => {
 
 test('el gest que comença a la barra inferior no fa scroll', () => {
   const h = harness();
-  const tab = {closest(selector) {return selector === '.mobile-tabs, .overlay' ? {} : null;}};
+  const tab = {closest(selector) {return selector === '.mobile-tabs, .calendar-controls, .overlay' ? {} : null;}};
   h.touch('touchstart', 400, {node: tab});
   assert.equal(h.touch('touchmove', 375, {node: tab}), 1);
 });
@@ -79,7 +79,7 @@ test('els recursos de la protecció tàctil estan inclosos a la PWA', async () =
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
-  assert.match(html, /scroll-guard\.js\?v=0\.16\.6/);
-  assert.match(sw, /scroll-guard\.js\?v=0\.16\.6/);
+  assert.match(html, /scroll-guard\.js\?v=0\.16\.7/);
+  assert.match(sw, /scroll-guard\.js\?v=0\.16\.7/);
   assert.match(css, /\.main-area,\.sheet \{overscroll-behavior-y:none;/);
 });
