@@ -93,10 +93,10 @@ test('les franges nocturnes especials no tornen a ampliar l’escola a Any i man
  assert.ok(annual.includes('month-mini-custom'),'La franja especial es conserva a la miniatura');
 });
 
-test('la barra inclou Any, indica l’any i navega per anys sense oferir zoom horari',()=>{
+test('la barra superior indica l’any i navega per anys sense selector de vistes ni zoom horari',()=>{
  const s=setup(),html=s.ctx.calendarNavigation();
- assert.equal(s.ctx.periodTitle(),'2026');assert.match(html,/data-view="year" class="active" aria-pressed="true">Any/);
- for(const view of ['month','week','day'])assert.match(html,new RegExp('data-view="'+view+'"'));
+ assert.equal(s.ctx.periodTitle(),'2026');
+ assert.doesNotMatch(html,/calendar-view-switch|data-action="calendar-view"/);
  assert.match(html,/aria-label="Any anterior"/);assert.match(html,/aria-label="Any següent"/);
  assert.doesNotMatch(html,/data-action="open-zoom"|class="weekdays"/);
  s.ctx.navigateCalendar(1);assert.equal(s.ctx.viewYear,2027);assert.equal(s.ctx.selectedDate,'2027-11-02');

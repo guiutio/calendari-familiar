@@ -86,7 +86,7 @@ test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de trasp
 test('la barra superior és fora del contenidor desplaçable en les tres vistes',()=>{
  const source=extract('function layout(content)', 'function monthPanel(');
  for(const calendarView of ['month','week','day']){
-  const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
+  const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarViewButtons:()=>'',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
   vm.runInContext(source,ctx);
   const html=ctx.layout('<section>Calendari</section>');
   assert.match(html,/<\/aside><header class="calendar-sticky-bar">Controls<\/header><main class="main-area">/);

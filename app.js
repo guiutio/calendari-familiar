@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.5';
+const APP_VERSION = '0.16.6';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -83,6 +83,10 @@ const months = ['gener', 'febrer', 'març', 'abril', 'maig', 'juny', 'juliol', '
 const icons = {
     school: '<path d="M3 22V8l9-5 9 5v14M2 22h20M7 12h2m6 0h2M7 16h2m6 0h2M10 22v-4h4v4"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    'calendar-year': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M7 13h2m4 0h2m2 0h.01M7 17h2m4 0h2m2 0h.01"/>',
+    'calendar-month': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M9 10v11m6-11v11M3 15h18"/>',
+    'calendar-week': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M7 10v11m5-11v11m5-11v11"/>',
+    'calendar-day': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h8m-8 3h5"/>',
     repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
     settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2 2-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-2.85v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06-2-2 .06-.06A1.65 1.65 0 0 0 7.6 15a1.65 1.65 0 0 0-1.51-1H6v-2.85h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06 2-2 .06.06A1.65 1.65 0 0 0 11.09 6a1.65 1.65 0 0 0 1-1.51V4h2.85v.49a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06 2 2-.06.06A1.65 1.65 0 0 0 19.4 10a1.65 1.65 0 0 0 1.51 1H21v3h-.09a1.65 1.65 0 0 0-1.51 1Z" transform="translate(-.5 -.5) scale(.94)"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>', chevronRight: '<path d="m9 18 6-6-6-6"/>',
@@ -635,19 +639,25 @@ function navButton(target, label, name, kind) {
     const active = target === 'settings' ? tab !== 'calendar' : tab === target;
     return `<button type="button" class="${kind === 'side' ? 'nav-button' : 'mobile-tab'} ${active ? 'active' : ''}" data-action="tab" data-tab="${target}" aria-current="${active ? 'page' : 'false'}">${icon(name, 20)}<span>${label}</span></button>`;
 }
+function calendarViewButtons(kind) {
+    return [['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([view, label]) => {
+        const active = tab === 'calendar' && calendarView === view;
+        return `<button type="button" class="${kind === 'side' ? 'nav-button' : 'mobile-tab'} ${active ? 'active' : ''}" data-action="calendar-view" data-view="${view}" aria-current="${active ? 'page' : 'false'}" aria-label="Vista de calendari: ${label}">${icon('calendar-' + view, 20)}<span>${label}</span></button>`;
+    }).join('');
+}
 function calendarNavigation() {
     const children = activeChildren();
     const filtered = children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || Boolean(state.personTimeOff && personalTimeOff.filtered(state));
     return `<header class="calendar-sticky-bar" aria-label="Navegació del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div><div class="calendar-nav"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>${calendarView === 'day' ? `<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'dayEdit'}" title="Edita el dia">${icon('pencil', 18)}</button>` : ''}${calendarView === 'day' || calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}<button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView === 'year' ? 'Any anterior' : calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Setmana anterior' : 'Dia anterior'}">${icon('chevronLeft', 18)}</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView === 'year' ? 'Any següent' : calendarView === 'month' ? 'Mes següent' : calendarView === 'week' ? 'Setmana següent' : 'Dia següent'}">${icon('chevronRight', 18)}</button></div></div>
-    <div class="calendar-view-switch" role="group" aria-label="Vista de calendari">${[['year', 'Any'], ['month', 'Mes'], ['week', 'Setmana'], ['day', 'Dia']].map(([value, label]) => `<button data-action="calendar-view" data-view="${value}" class="${calendarView === value ? 'active' : ''}" aria-pressed="${calendarView === value}">${label}</button>`).join('')}</div>${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
+    ${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}${tab === 'calendar' && calendarView === 'day' ? ' calendar-day-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${navButton('calendar', 'Calendari', 'calendar', 'side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
   </aside>${tab === 'calendar' ? calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${navButton('calendar', 'Calendari', 'calendar', 'mobile')}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
+  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
     const year = Math.floor(index / 12), month = index - year * 12;
@@ -1964,8 +1974,10 @@ function clickAction(button) {
         case 'calendar-view': {
             const v = button.dataset.view;
             if (v === 'year' || v === 'month' || v === 'week' || v === 'day') {
-                if (v === calendarView)
+                if (v === calendarView && tab === 'calendar')
                     break;
+                tab = 'calendar';
+                sheet = null;
                 calendarView = v;
                 const d = parseDate(selectedDate);
                 viewYear = d.getFullYear();

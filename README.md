@@ -506,3 +506,10 @@ El botó del llapis de la barra obre un diàleg amb les opcions d’afegir frang
 La navegació principal es redueix a Calendari i Configuració. Configuració dona accés a les àrees General, Persones, Rotacions i Escoles, en aquest ordre. General conserva els ajustos anteriors: aparença, mida de lletra, actualitzacions, còpies JSON i gestió de dades.
 
 Totes les àrees ofereixen un botó per tornar a Configuració i mantenen ressaltat aquest accés a la navegació principal. Els accessos per afegir fills des del calendari continuen obrint Persones.
+
+
+## v0.16.6: selector de vistes a la barra inferior
+
+Any, Mes, Setmana i Dia passen a ser accessos directes de la barra inferior, al costat de Configuració. El selector desapareix de la barra superior, deixant més espai al calendari. A l’escriptori es mostren els mateixos accessos a la barra lateral.
+
+Cada botó obre directament la vista corresponent també des de qualsevol àrea de Configuració, conserva la data seleccionada i ressalta únicament la vista activa.
