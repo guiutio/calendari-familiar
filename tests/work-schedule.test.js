@@ -130,14 +130,14 @@ test('les còpies de seguretat conserven patrons i colors i rebutgen patrons inc
  const old=s.personal.clean({[s.key]:{holidays:[],vacations:[]}},s.state.children,s.state.guardians);assert.equal(old[s.key].workRotations,undefined);
 });
 
-test('Dia i Setmana mostren el resultat amb filtres per feina i persona, sense afectar el càlcul',()=>{
+test('Dia mostra el resultat laboral amb filtres i Setmana es limita a la graella',()=>{
  const s=setup(),d=s.draft();d.days[0]=[s.shift('09:00','13:00'),s.shift('15:00','18:00')];assert.equal(s.save(d),'');
  let html=s.api.agenda(s.state,['2026-11-02']);assert.ok(html.includes('Horari laboral'));assert.ok(html.includes('09:00–13:00'));assert.ok(html.includes('15:00–18:00'));assert.ok(html.includes('Guiu · Jo'));
  s.personal.setHolidays(s.state,s.key,['2026-11-09']);html=s.api.agenda(s.state,['2026-11-09']);assert.ok(html.includes('Festiu'));assert.ok(!html.includes('09:00–13:00'));
  s.click('person-off-type',{kind:'work'});assert.equal(s.api.agenda(s.state,['2026-11-02']),'');assert.equal(s.api.slots(s.state,s.key,'2026-11-02').length,2);
  s.personal.showAll(s.state);s.click('person-off-filter');assert.equal(s.api.agenda(s.state,['2026-11-02']),'');
  s.personal.showAll(s.state);assert.ok(s.personal.filterMarkup(s.state).includes('Franges de feina'));
- assert.match(app,/content = weekTimeline[^;]+workSchedule.agenda/);
+ assert.doesNotMatch(app,/content = weekTimeline[^;]+workSchedule.agenda/);
  assert.match(app,/dayTimeline\(selectedDate, children\)[^;]+workSchedule.agenda/);
 });
 

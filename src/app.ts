@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings';
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.0';
+const APP_VERSION = '0.16.1';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -799,7 +799,7 @@ function calendarPage(){
     if(monthScrollTarget||!monthRange||index<=monthRange.first||index>=monthRange.last)monthRange={first:index-3,last:index+3};
     content=`${!state.children.length?`<div class="calendar-empty-state"><p>El calendari encara no té fills.</p><button class="secondary-btn" data-action="tab" data-tab="people">Afegeix un fill</button></div>`:''}<div class="month-sequence">${Array.from({length:monthRange.last-monthRange.first+1},(_,i)=>monthPanel(monthRange!.first+i,children,today)).join('')}</div>`;
   } else if(calendarView==='week'){
-    content=weekTimeline(weekStart(selectedDate),children)+(state.personTimeOff?workSchedule.agenda(state,Array.from({length:7},(_,i)=>addDays(weekStart(selectedDate),i))):'');
+    return weekTimeline(weekStart(selectedDate),children);
   } else {
     content=`<section class="daily-agenda"><div class="agenda-day-heading"><strong>${escapeHtml(fullDate(selectedDate))}</strong></div><div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${selectedDate}">+ Afegeix una franja</button>`:''}${state.extraRotations.some(r=>r.kind!=='night'&&rotationPatterns.inRange(r,selectedDate))?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${selectedDate}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,selectedDate)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${selectedDate}">Restaurar segons la rotació</button>`:''}</div>${schoolInfoForDay(selectedDate)}${dayTimeline(selectedDate,children)}</section>${state.personTimeOff?workSchedule.agenda(state,[selectedDate]):''}`;
   }

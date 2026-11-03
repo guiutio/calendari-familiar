@@ -477,3 +477,8 @@ Mes, Setmana i Dia deixen de mostrar la llegenda i els textos explicatius sota e
 Any mostra anys consecutius i carrega els anteriors i posteriors en arribar als extrems. Els anys visitats es conserven al seu lloc; la càrrega espera el final del gest i de la inèrcia, compartint el mateix mecanisme que Mes. La barra indica l’any visible i la data de referència segueix el mes visible.
 
 Els filtres i la llegenda conserven la posició. Avui recentra l’interval al voltant de l’any actual i enfoca el mes actual; les fletxes naveguen per anys i tocar qualsevol mes l’obre a Mes. Els límits del calendari són els anys 0100 a 9999.
+
+
+## v0.16.1: vista setmanal sense blocs inferiors ni doble marc
+
+Es retiren de Setmana el resum plegable en format de llista i l’horari laboral inferior. La graella deixa de tenir el requadre exterior addicional, de manera que només conserva el marc de la cronologia.

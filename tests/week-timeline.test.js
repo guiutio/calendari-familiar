@@ -23,6 +23,7 @@ const days=dates.map((date,i)=>{
 });
 test('set dies, amb dues subcolumnes per dia i un sol eix de 24 hores',()=>{
  const markup=ui.renderWeek(dates[0],days,children);
+ assert.doesNotMatch(markup,/<details|day-timeline-summary|format de llista/);
  assert.match(markup,/data-timeline-key="week:2026-10-26"/);
  assert.match(markup,/data-initial-scroll="144"/);
  assert.match(markup,/--week-day-count:7/);
@@ -48,7 +49,7 @@ test('la vista setmanal reusa la mateixa estructura de pernoctes i d’activitat
  assert.match(source,/function buildColumns\(/);
  assert.match(source,/function renderWeek\(/);
  assert.match(source,/function render\(/);
- assert.match(ts,/content=weekTimeline\(weekStart\(selectedDate\),children\)/);
+ assert.match(ts,/return weekTimeline\(weekStart\(selectedDate\),children\)/);
  assert.doesNotMatch(ts,/content=\`<div class="week-agendas"/);
  assert.match(ts,/calendarView==='week'\?\`week:/);
  assert.match(ts,/case 'show-calendar-day'/);

@@ -255,6 +255,7 @@ test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
  for(const view of ['year','month','week','day']){
   s.ctx.calendarView=view;
   assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"|calendar-bottom|time-row-help|class="tip-card"/);
+  if(view==='week')assert.doesNotMatch(s.ctx.calendarPage(),/class="calendar-card"|Horari laboral/);
   assert.match(s.ctx.calendarNavigation(),/data-action="open-legend"/);
   s.click('open-legend');
   const dialog=s.ctx.sheetMarkup();
@@ -321,14 +322,16 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres n
  assert.match(css,/\.year-day \.personal-outline,\.year-day \.personal-corner \{--pto-stroke:1px;\}/);
 });
 
-test('l’editor laboral i l’agenda de Dia/Setmana s’integren amb els panells i filtres existents',()=>{
+test('l’editor laboral i l’agenda de Dia s’integren amb els filtres i Setmana no inclou l’agenda inferior',()=>{
  const s=setup();s.click('work-add');s.click('work-shift-add',{day:'0'});
  let html=s.ctx.sheetMarkup();assert.match(html,/data-work-rotation-form="true"/);assert.match(html,/Horari laboral/);assert.match(html,/name="work-0-0-startTime"/);
  const draft=s.ctx.sheet.draft;draft.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];
  assert.equal(s.ctx.workSchedule.save(s.state,'guardian:same',draft,()=> 'job'),'');s.ctx.sheet=null;
  Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
  for(const view of ['week','day']){
-  s.ctx.calendarView=view;html=s.ctx.calendarPage();assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);
+  s.ctx.calendarView=view;html=s.ctx.calendarPage();
+  if(view==='week')assert.doesNotMatch(html,/Horari laboral|09:00–13:00|15:00–18:00/);
+  else {assert.match(html,/Horari laboral/);assert.match(html,/09:00–13:00/);assert.match(html,/15:00–18:00/);}
  }
  s.click('person-off-type',{kind:'work'});assert.doesNotMatch(s.ctx.calendarPage(),/09:00–13:00/);
  s.click('filter-all');assert.match(s.ctx.calendarPage(),/09:00–13:00/);

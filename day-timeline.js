@@ -71,10 +71,6 @@
     </div>`).join('');
     const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
       ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots)}</div>`).join('');
-    const list=days.map(day=>`<li><strong>${escape(day.label)}</strong><ul>${children.map(c=>{
-      const parts=day.nightSegments[c.id]??[];
-      return `<li>${escape(c.name)}: ${parts.filter(x=>x.visible).map(x=>`${fmt(x.from)}–${fmt(x.to)} ${escape(x.guardianName)}`).join('; ')||'Sense responsable visible'}${day.activities.filter(a=>a.childId===c.id).map(a=>`; ${escape(a.startTime)}–${escape(a.endTime)} ${escape(a.kind)} (${escape(a.schoolName)})`).join('')}</li>`;
-    }).join('')}</ul></li>`).join('');
     return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
@@ -88,7 +84,6 @@
           </div>
         </div>
       </div>
-      <details class="day-timeline-summary"><summary>Pernoctes i activitats de tota la setmana en format de llista</summary><ul>${list}</ul></details>
     </section>`;
   }
   function render(date,dateLabel,children,activities,nightSegments,changeTime,zoom=50,customSlots={},rotatingSlots=[]) {
