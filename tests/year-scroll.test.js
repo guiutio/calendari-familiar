@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const section=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
-function controller({mobile=true,native=true,year=2026}={}){
+function controller({mobile=true,native=true,year=2026,headings=false}={}){
  let panels=[],top=0,writes=0,changes=0,serial=0,clock=0;
  const events=[],frames=new Map(),timers=new Map(),mainEvents=new Map(),windowEvents=new Map();
  const height=y=>1080+(y%3)*90;
@@ -19,7 +19,12 @@ function controller({mobile=true,native=true,year=2026}={}){
   getBoundingClientRect(){const start=132+panels.slice(0,panels.indexOf(this)).reduce((n,p)=>n+height(p.year),0)-top;return {top:start,bottom:start+height(y)};},
   querySelectorAll(){return Array.from({length:12},(_,month)=>({dataset:{focusDate:`${String(y).padStart(4,'0')}-${String(month+1).padStart(2,'0')}-01`},
    getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+40+Math.floor(month/2)*170,bottom:this.getBoundingClientRect().top+40+(Math.floor(month/2)+1)*170})}));},
-  querySelector(selector){return y===2026&&selector==='.year-month.current-month'?this.querySelectorAll()[10]:null;}
+  querySelector(selector){
+   if(y===2026&&selector==='.year-month.current-month')return this.querySelectorAll()[10];
+   if(headings&&selector==='.year-section-title')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top,bottom:this.getBoundingClientRect().top+28})};
+   if(headings&&selector==='.year-overview')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+40,bottom:this.getBoundingClientRect().bottom})};
+   return null;
+  }
  });
  const first=Math.max(100,year-1),last=Math.min(9999,year+1);
  panels=Array.from({length:last-first+1},(_,i)=>panel(first+i));
@@ -105,5 +110,22 @@ test('Any respecta els límits de dates en carregar anys anteriors i posteriors'
  for(const year of [100,9999]){
   const c=controller({year});c.go(year,year===100?0:700);c.end();
   assert.ok(c.panels().every(p=>p.year>=100&&p.year<=9999));
+ }
+});
+
+
+test('Any amaga el títol en entrar en un any diferent i quan la inèrcia deixa el títol repetit',()=>{
+ for(const mobile of [true,false]){
+  const c=controller({mobile,year:2027,headings:true});
+  const body=y=>c.panels().find(p=>p.year===y).querySelector('.year-overview');
+  assert.equal(body(2027).getBoundingClientRect().top,100);
+  for(const year of [2028,2026]){
+  c.fire('touchstart');c.go(year,10);c.fire('touchend');
+  const before=c.metrics();assert.equal(body(year).getBoundingClientRect().top,130);
+  c.advance(2000);assert.deepEqual(c.metrics(),before);
+  c.end();assert.equal(body(year).getBoundingClientRect().top,100);
+  assert.equal(c.metrics().writes,before.writes+(year===2026?2:1));
+  const stable=c.metrics();c.end();c.advance(10000);assert.deepEqual(c.metrics(),stable);
+  }
  }
 });

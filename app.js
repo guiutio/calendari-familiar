@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.10';
+const APP_VERSION = '0.16.11';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -746,7 +746,7 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (target) {
             // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
             const top = bar.getBoundingClientRect().bottom;
-            const grid = target.querySelector(annual ? '.year-month.current-month' : '.month-grid') ?? target;
+            const grid = (annual ? target.querySelector('.year-month.current-month') ?? target.querySelector('.year-overview') : target.querySelector('.month-grid')) ?? target;
             shift(grid.getBoundingClientRect().top - top);
         }
     }
@@ -771,6 +771,24 @@ function mountCalendarScroll(position, resetScroll = false) {
         const title = bar.querySelector('.calendar-title');
         if (title)
             title.textContent = periodTitle();
+    };
+    const hideRepeatedTitle = () => {
+        const anchor = monthPosition();
+        const panel = anchor ? sequence.querySelector(panelSelector(anchor.index)) : null;
+        const heading = panel?.querySelector(annual ? '.year-section-title' : '.month-section-title');
+        const top = bar.getBoundingClientRect().bottom;
+        if (!heading || heading.getBoundingClientRect().bottom <= top + .5)
+            return;
+        const body = panel?.querySelector(annual ? '.year-overview' : '.month-grid');
+        if (!body)
+            return;
+        const delta = body.getBoundingClientRect().top - top;
+        // Només s'ajusta el títol repetit del període visible, un cop acabada la inèrcia.
+        if (delta > .5) {
+            shift(delta);
+            correctedScroll = scrollTop();
+            refresh();
+        }
     };
     const extendMonths = () => {
         idleTimer = undefined;
@@ -826,6 +844,7 @@ function mountCalendarScroll(position, resetScroll = false) {
                 correctedScroll = scrollTop();
             }
         }
+        hideRepeatedTitle();
     };
     const cancelSettle = () => {
         revision++;
@@ -2732,6 +2751,7 @@ async function init() {
     await loadState();
     applyTheme();
     applyFontSize();
+    await document.fonts?.load('800 22px "Barlow Condensed"').catch(() => []);
     render();
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => reg.update().catch(() => { })).catch(err => console.warn('Service worker no registrat:', err));

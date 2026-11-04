@@ -539,3 +539,10 @@ Els controls i el títol queden fora del scroll, i l’espai útil del calendari
 Les dates de dia, els diàlegs i les descripcions accessibles comparteixen el format català: «2 d’abril», «2 de maig», «2 d’agost» i «2 d’octubre». Es retira la capitalització automàtica de les paraules dels títols. La vista setmanal utilitza els noms complets dels mesos als dos extrems de l’interval.
 
 La vista mensual ja no conté la capçalera «Calendari Familiar», ni el subtítol explicatiu, que es podien veure en desplaçar el calendari.
+
+
+## v0.16.11: títols sense repeticions en aturar el scroll
+
+En entrar a Mes o Any s’alinea el contingut sota la barra fixa. Si el títol del període es repeteix en acabar la inèrcia, el calendari fa un ajust curt per deixar-lo amagat sota la barra. El gest i la desacceleració conserven el desplaçament natural.
+
+Els noms de mesos que fan de títol comencen amb majúscula, mantenint «2 d’abril» i altres dates en català. Els títols utilitzen Barlow Condensed ExtraBold, inclosa localment amb la llicència SIL OFL, precarregada i disponible fora de línia.

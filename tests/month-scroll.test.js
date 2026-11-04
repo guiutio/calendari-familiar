@@ -151,7 +151,7 @@ test('octubre acaba al 31 i novembre comença a l’1 amb una capçalera al mig'
 
 // Layout realista: inserir/retirar panells mou físicament els altres i pot
 // limitar scrollTop; les escriptures programàtiques generen esdeveniments scroll.
-function inertialController(nativeScrollEnd=false){
+function inertialController(nativeScrollEnd=false,headings=false){
  const base=2026*12+9;
  let panels=[],rawTop=0,clock=0,serial=0,mutations=0,writes=0;
  const events=[],frames=new Map(),timers=new Map(),listeners=new Map();
@@ -163,7 +163,12 @@ function inertialController(nativeScrollEnd=false){
   getBoundingClientRect:()=>({top:100,bottom:800}),
   addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)};
  if(nativeScrollEnd)main.onscrollend=null;
- const panel=index=>({dataset:{monthIndex:String(index)},querySelector:()=>null,querySelectorAll:()=>[],
+ const panel=index=>({dataset:{monthIndex:String(index)},querySelector(selector){
+  if(!headings)return null;
+  if(selector==='.month-section-title')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top,bottom:this.getBoundingClientRect().top+58})};
+  if(selector==='.month-grid')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+58,bottom:this.getBoundingClientRect().bottom})};
+  return null;
+ },querySelectorAll:()=>[],
   getBoundingClientRect(){const y=300+panels.slice(0,panels.indexOf(this)).reduce((n,p)=>n+height(Number(p.dataset.monthIndex)),0)-rawTop;return {top:y,bottom:y+height(index)};},
   remove(){mutations++;panels=panels.filter(p=>p!==this);nativeTop(rawTop);}
  });
@@ -200,6 +205,8 @@ function inertialController(nativeScrollEnd=false){
  ctx.mountCalendarScroll(null);flush();advance(500);
  return {ctx,advance,flush,touch:()=>dispatch('touchstart'),release:()=>dispatch('touchend'),end:()=>{dispatch('scrollend');flush();},signalEnd:()=>dispatch('scrollend'),
   scroll(delta){nativeTop(rawTop+delta);flush();},metrics:()=>({mutations,writes,count:panels.length}),
+  base,goToHeading(index,visible=30){const p=panels.find(p=>Number(p.dataset.monthIndex)===index);nativeTop(rawTop+p.getBoundingClientRect().top-(100+visible-58));flush();},
+  bodyTop:index=>panels.find(p=>Number(p.dataset.monthIndex)===index).querySelector('.month-grid').getBoundingClientRect().top,
   indices:()=>panels.map(p=>Number(p.dataset.monthIndex)),anchor:()=>({...ctx.monthPosition()}),stop:()=>ctx.stopCalendarScroll()};
 }
 test('inèrcia: no carrega mesos ni escriu scrollTop durant el gest o la desacceleració',()=>{
@@ -292,4 +299,24 @@ test('sis setmanes caben a l’espai visible i només es recalcula la mida quan 
    assert.equal(writes,count,'El scroll no provoca reajustaments d’alçada');
   }
  }
+});
+
+
+test('Mes amaga el títol repetit només quan acaba la inèrcia i no inicia un bucle de scroll',()=>{
+ for(const native of [true,false])for(const prepend of [false,true]){
+  const c=inertialController(native,true),index=c.base+(prepend?-3:1);assert.equal(c.bodyTop(c.base),100);
+  c.touch();c.goToHeading(index);c.release();
+  const before=c.metrics();assert.equal(c.bodyTop(index),130);
+  c.advance(native?2000:399);assert.deepEqual(c.metrics(),before);
+  if(native)c.end();else c.advance(1);
+  assert.equal(c.bodyTop(index),100);assert.equal(c.metrics().writes,before.writes+(prepend?2:1));
+  const stable={anchor:c.anchor(),metrics:c.metrics()};c.end();c.advance(10000);
+  assert.deepEqual({anchor:c.anchor(),metrics:c.metrics()},stable);
+ }
+});
+
+test('un nou gest cancel·la l’ajust pendent del títol mensual',()=>{
+ const c=inertialController(true,true);c.touch();c.goToHeading(c.base+1);c.release();
+ const before=c.metrics();c.signalEnd();c.touch();c.flush();c.advance(2000);
+ assert.equal(c.bodyTop(c.base+1),130);assert.deepEqual(c.metrics(),before);
 });

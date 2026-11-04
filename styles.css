@@ -1,3 +1,4 @@
+@font-face {font-family:"Barlow Condensed";src:url("./assets/fonts/BarlowCondensed-ExtraBold.woff") format("woff");font-style:normal;font-weight:800;font-display:swap;}
 :root { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; color:#202c3d; background:#f6f7f8; font-synthesis:none; -webkit-tap-highlight-color:transparent; }
 * { box-sizing:border-box; }
 html { min-height:100%; }
@@ -1132,3 +1133,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
   .calendar-layout.calendar-week-layout,.calendar-layout.calendar-day-layout {grid-template-rows:var(--calendar-controls-height) auto minmax(0,1fr);padding-bottom:0;}
   .calendar-layout:not(.calendar-week-layout):not(.calendar-day-layout) .main-area {padding-bottom:64px;}
 }
+
+/* Barlow Condensed als títols; majúscula només a l’inici del nom de mes. */
+.calendar-title,.year-section-title,.month-section-title,.year-month-title,.page-title,.section-title,.sheet-title,.school-date-nav h3 {font-family:"Barlow Condensed",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.calendar-title::first-letter,.month-section-title::first-letter,.year-month-title::first-letter,.school-date-nav h3::first-letter {text-transform:uppercase;}

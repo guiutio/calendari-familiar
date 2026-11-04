@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.10';
+const APP_VERSION = '0.16.11';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -654,7 +654,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(target){
       // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
       const top=bar.getBoundingClientRect().bottom;
-      const grid=target.querySelector<HTMLElement>(annual?'.year-month.current-month':'.month-grid')??target;
+      const grid=(annual?target.querySelector<HTMLElement>('.year-month.current-month')??target.querySelector<HTMLElement>('.year-overview'):target.querySelector<HTMLElement>('.month-grid'))??target;
       shift(grid.getBoundingClientRect().top-top);
     }
   } else restore(position);
@@ -673,6 +673,18 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(selected.getFullYear()!==viewYear||selected.getMonth()!==viewMonth)selectedDate=localDate(new Date(viewYear,viewMonth,1,12));
     const title=bar.querySelector<HTMLElement>('.calendar-title');
     if(title)title.textContent=periodTitle();
+  };
+  const hideRepeatedTitle=()=>{
+    const anchor=monthPosition();
+    const panel=anchor?sequence.querySelector<HTMLElement>(panelSelector(anchor.index)):null;
+    const heading=panel?.querySelector<HTMLElement>(annual?'.year-section-title':'.month-section-title');
+    const top=bar.getBoundingClientRect().bottom;
+    if(!heading||heading.getBoundingClientRect().bottom<=top+.5)return;
+    const body=panel?.querySelector<HTMLElement>(annual?'.year-overview':'.month-grid');
+    if(!body)return;
+    const delta=body.getBoundingClientRect().top-top;
+    // Només s'ajusta el títol repetit del període visible, un cop acabada la inèrcia.
+    if(delta>.5){shift(delta);correctedScroll=scrollTop();refresh();}
   };
   const extendMonths=()=>{
     idleTimer=undefined;
@@ -712,6 +724,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
         correctedScroll=scrollTop();
       }
     }
+    hideRepeatedTitle();
   };
   const cancelSettle=()=>{
     revision++;window.clearTimeout(idleTimer);window.cancelAnimationFrame(settleFrame);settleFrame=0;
@@ -1783,7 +1796,7 @@ document.addEventListener('pointerup',()=>{nativePickerPointerDown=false;queueNa
 document.addEventListener('pointercancel',()=>{nativePickerPointerDown=false;queueNativePickerRender();},true);
 document.addEventListener('focusout',()=>queueNativePickerRender(),true);
 document.addEventListener('click',()=>queueNativePickerRender(0));
-async function init(){await loadState();applyTheme();applyFontSize();render();if('serviceWorker'in navigator && location.protocol!=='file:'){
+async function init(){await loadState();applyTheme();applyFontSize();await document.fonts?.load('800 22px "Barlow Condensed"').catch(()=>[]);render();if('serviceWorker'in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update().catch(()=>{})).catch(err=>console.warn('Service worker no registrat:',err));
 }}
 void init();
