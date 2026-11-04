@@ -553,3 +553,8 @@ Els noms de mesos que fan de títol comencen amb majúscula, mantenint «2 d’a
 Els títols passen a Roboto Condensed ExtraBold, inclosa localment i disponible fora de línia. La paleta utilitza colors semàntics a `theme.css`: superfícies blanques i grises en mode clar; fons negre, superfícies gris fosc i diàlegs elevats en mode fosc. El blau queda com a accent de navegació i d’acció.
 
 Es revisen barres, calendaris, formularis, selectors i diàlegs. Els colors de tutors, escoles i calendaris personals es conserven. Els modes automàtic, clar i fosc continuen disponibles a Configuració → General.
+
+
+## v0.16.13: alineació de l’any i inicial dels mesos
+
+El títol de l’any dins del contingut comparteix el marge esquerre amb el títol de la barra superior. Els títols de Dia i Setmana mostren els mesos amb inicial majúscula, mantenint les preposicions i l’apostrofació (per exemple, «2 d’Abril» i «30 de Març – 5 d’Abril»).
