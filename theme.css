@@ -1,0 +1,120 @@
+/* Colors semàntics per a les dues aparences, inspirats en les superfícies d’Apple. */
+:root {
+  --app-background:#f2f2f7;
+  --surface:#ffffff;
+  --surface-elevated:#ffffff;
+  --surface-secondary:#f2f2f7;
+  --control-background:#e5e5ea;
+  --field-background:#f2f2f7;
+  --bar-background:rgba(255,255,255,.96);
+  --text-primary:#1c1c1e;
+  --text-secondary:#636366;
+  --separator:#c7c7cc;
+  --grid-line:#e5e5ea;
+  --accent:#005fc7;
+  --on-accent:#ffffff;
+  --selection-background:#e5e5ea;
+  --danger:#b3261e;
+  --danger-background:#fff0ef;
+  --success:#248a3d;
+  --warning:#925400;
+  --warning-background:#fff7df;
+  --surface-shadow:0 6px 24px rgba(0,0,0,.04);
+}
+:root[data-theme="dark"] {
+  --app-background:#000000;
+  --surface:#1c1c1e;
+  --surface-elevated:#2c2c2e;
+  --surface-secondary:#1c1c1e;
+  --control-background:#3a3a3c;
+  --field-background:#2c2c2e;
+  --bar-background:rgba(28,28,30,.96);
+  --text-primary:#f5f5f7;
+  --text-secondary:#b0b0b8;
+  --separator:#48484a;
+  --grid-line:#38383a;
+  --accent:#64a8ff;
+  --on-accent:#000000;
+  --selection-background:#3a3a3c;
+  --danger:#ff6961;
+  --danger-background:#361b1b;
+  --success:#32d74b;
+  --warning:#ffd60a;
+  --warning-background:#332d15;
+  --surface-shadow:none;
+}
+
+:root[data-theme],:root[data-theme] body {background:var(--app-background);color:var(--text-primary);}
+:root[data-theme] .sidebar {background:var(--surface);border-color:var(--separator);}
+:root[data-theme] :is(.calendar-card,.card,.year-month,.month-section-title) {background:var(--surface);color:var(--text-primary);border-color:var(--separator);box-shadow:var(--surface-shadow);}
+:root[data-theme] :is(.calendar-sticky-bar,.calendar-controls,.mobile-tabs) {background:var(--bar-background);border-color:var(--separator);}
+:root[data-theme] .sheet {background:var(--surface-elevated);color:var(--text-primary);box-shadow:0 -12px 40px rgba(0,0,0,.25);}
+:root[data-theme] .overlay {background:rgba(0,0,0,.45);}
+:root[data-theme] .sheet-handle {background:var(--text-secondary);}
+:root[data-theme] hr {border-color:var(--separator);}
+:root[data-theme] .brand-mark {background:var(--accent);color:var(--on-accent);box-shadow:none;}
+
+:root[data-theme] :is(.page-subtitle,.eyebrow,.section-description,.duration-help,.duration-row,.settings-note,.sheet-subtitle,.field label,.field-label,.legend-entry,.legend-note,.day-time-tick,.weekdays span,.year-weekdays,.school-meta,.rotation-week-title,.rotation-cell .small-day,.school-date-count,.sheet-section-label,.member-source,.font-size-labels,.loading-state,.empty-state,.calendar-empty-state,.brand-caption,.side-foot,.side-foot strong,.footer,.school-details p,.school-child-choice small,.settings-area-copy>span,.school-time-tick,.school-timeline-details) {color:var(--text-secondary);}
+:root[data-theme] :is(.calendar-title,.year-section-title,.month-section-title,.year-month-title,.agenda-day-heading,.school-timeline-heading,.school-timeline-corner,.school-timeline-child,.month-mini-child) {color:var(--text-primary);}
+:root[data-theme] :is(.school-breadcrumb,.school-link,.school-details a) {color:var(--accent);}
+:root[data-theme] :focus-visible {outline-color:var(--accent);}
+:root[data-theme] input {accent-color:var(--accent);}
+:root[data-theme] :is(.field input,.field select,.editable-text,.work-shift-row input) {background:var(--field-background);color:var(--text-primary);border-color:var(--separator);}
+:root[data-theme] :is(input,textarea)::placeholder {color:var(--text-secondary);}
+:root[data-theme] :is(.field input,.field select):focus {border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);}
+
+:root[data-theme] :is(.btn-icon,.filter-button,.soft-btn,.secondary-btn,.week-fill-btn,.sheet-close,.option,.day-member,.guardian-choice,.school-child-choice,.school-schedule-target,.school-schedule-edit,.timeline-zoom-button,.month-day-slot-row,.rotation-cell,.extra-day-toggle,.rotation-tutor-choice,.school-date-cell,.work-week-tabs button,.theme-choice) {background:var(--control-background);color:var(--text-primary);border-color:var(--separator);}
+:root[data-theme] .calendar-nav .btn-icon {background:var(--control-background);color:var(--text-primary);border-color:var(--separator);}
+:root[data-theme] :is(.option.selected,.guardian-choice.is-selected,.school-child-choice.selected,.school-schedule-target.active,.extra-day-toggle:not(.inactive),.work-week-tabs .selected,.person-me.selected,.theme-choice.is-selected,.rotation-tutor-choice:has(.rotation-guardian-radio:checked)) {background:var(--selection-background);color:var(--accent);border-color:var(--accent);}
+:root[data-theme] .theme-choice.is-selected {box-shadow:0 0 0 1px var(--accent);}
+:root[data-theme] .nav-button {color:var(--text-secondary);}
+:root[data-theme] .nav-button.active {background:var(--selection-background);color:var(--accent);}
+:root[data-theme] .mobile-tab {color:var(--text-secondary);}
+:root[data-theme] .mobile-tab.active {color:var(--accent);}
+:root[data-theme] .primary-btn {background:var(--accent);color:var(--on-accent);}
+:root[data-theme] :is(.danger-btn,.settings-item .delete-icon,.school-schedule-row .delete-icon) {background:var(--danger-background);color:var(--danger);border-color:var(--danger);}
+:root[data-theme] .status-good {color:var(--success);}
+:root[data-theme] :is(.sample-tag,.school-timeline-reduced) {background:var(--warning-background);color:var(--warning);border-color:var(--warning);}
+:root[data-theme] :is(.tip-card,.school-day-notice,.school-schedule-notice,.badge-soft,.timeline-zoom-toolbar,.settings-area-icon) {background:var(--surface-secondary);color:var(--text-primary);border-color:var(--separator);}
+:root[data-theme] :is(.tip-card strong,.tip-card svg,.timeline-zoom-toolbar label,.timeline-zoom-toolbar output,.settings-area-icon) {color:var(--accent);}
+:root[data-theme] .toast {background:var(--text-primary);color:var(--app-background);box-shadow:0 6px 24px rgba(0,0,0,.2);}
+:root[data-theme] :is(.extra-day-toggle.inactive,.extra-pattern-cell.extra-inactive,.extra-pattern-cell.extra-inactive .guardian-initial) {background:var(--surface-secondary);color:var(--text-secondary);border-color:var(--separator);}
+:root[data-theme] :is(.school-row,.school-period,.school-schedule-row,.person-record+.person-record,.work-pattern-day,.work-agenda) {border-color:var(--separator);}
+
+/* El calendari conserva els colors de responsabilitat i neutralitza les superfícies. */
+:root[data-theme] .month-grid {background:var(--grid-line);border-color:var(--grid-line);}
+:root[data-theme] .day-cell {background:var(--surface);color:var(--text-primary);}
+:root[data-theme] .day-cell:hover {background:var(--surface-secondary);}
+:root[data-theme] :is(.month-empty-cell,.day-cell.other-month) {background:var(--app-background);}
+:root[data-theme] .month-week-number {background:var(--control-background);color:var(--text-secondary);border-color:var(--grid-line);}
+:root[data-theme] .month-week-number:hover,:root[data-theme] .month-week-number:active {background:var(--selection-background);color:var(--accent);}
+:root[data-theme] .weekdays .month-week-heading {color:var(--text-secondary);}
+:root[data-theme] .year-month:hover {background:var(--surface-elevated);border-color:var(--accent);}
+:root[data-theme] .year-month.current-month {border-color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent);}
+:root[data-theme] .month-grid .day-cell.today,
+:root[data-theme] .month-grid .day-cell.today:hover,
+:root[data-theme] .month-grid .day-cell.today.other-month {background:var(--selection-background);color:var(--text-primary);box-shadow:inset 0 0 0 2px var(--accent);}
+:root[data-theme] .month-grid .day-cell.today :is(.day-number,.month-mini-child,.mini-birthday) {color:var(--text-primary);}
+:root[data-theme] .month-grid .day-cell.today .change-dot {background:var(--accent);}
+:root[data-theme] .year-day.today {background:var(--selection-background);color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--accent);}
+:root[data-theme] :is(.month-mini-column,.mini-band-empty,.legend-empty,.agenda-cell.is-empty) {background:var(--control-background);border-color:var(--separator);box-shadow:none;}
+:root[data-theme] .month-grid .day-cell.today .month-mini-column,
+:root[data-theme] .year-day.today .month-mini-column {background:var(--control-background);}
+:root[data-theme] .agenda-cell.is-empty {color:var(--text-secondary);}
+
+:root[data-theme] :is(.day-timeline-viewport,.month-day-timeline,.school-timeline,.week-time-axis) {background:var(--surface);border-color:var(--separator);}
+:root[data-theme] :is(.day-timeline-headers,.week-timeline-head,.week-time-corner,.week-date-button) {background:var(--control-background);color:var(--text-primary);border-color:var(--separator);}
+:root[data-theme] :is(.day-timeline-headers span,.week-child-label,.week-time-corner) {color:var(--text-primary);}
+:root[data-theme] :is(.week-day-header,.week-date-columns,.week-child-headers,.school-timeline-axis) {border-color:var(--separator);}
+:root[data-theme] .week-date-button:active {background:var(--selection-background);}
+:root[data-theme] .day-time-column {border-color:var(--grid-line);background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hour-height,48px) - 1px),var(--grid-line) calc(var(--hour-height,48px) - 1px),var(--grid-line) var(--hour-height,48px));}
+:root[data-theme] .school-timeline-column {border-color:var(--grid-line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 53px,var(--grid-line) 53px,var(--grid-line) 54px);}
+:root[data-theme] .week-day-header.today,
+:root[data-theme] .week-day-header.today :is(.week-child-headers,.week-date-button) {background:var(--selection-background);color:var(--text-primary);}
+:root[data-theme] .week-day-header.today .week-child-label {color:var(--text-primary);}
+:root[data-theme] .week-date-columns.today .day-time-column {background:repeating-linear-gradient(to bottom,var(--selection-background) 0,var(--selection-background) calc(var(--hour-height,48px) - 1px),var(--separator) calc(var(--hour-height,48px) - 1px),var(--separator) var(--hour-height,48px));border-color:var(--accent);}
+:root[data-theme] .week-date-columns.today {box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent);}
+:root[data-theme] .day-night-block {background:color-mix(in srgb,var(--night-color) 52%,var(--surface));border-color:color-mix(in srgb,var(--night-color) 60%,var(--surface));}
+:root[data-theme] .day-school-block {background:color-mix(in srgb,var(--school-event-color) 49%,var(--surface));}
+:root[data-theme] .school-timeline-event {background:color-mix(in srgb,var(--activity-color) 44%,var(--surface));}
+:root[data-theme] .day-extra-block {background:color-mix(in srgb,var(--extra-color) 58%,var(--surface));border-color:var(--surface);}

@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.11';
+const APP_VERSION = '0.16.12';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -361,7 +361,7 @@ function applyTheme(){
   const effective=mode==='auto'?(themeMedia.matches?'dark':'light'):mode;
   document.documentElement.dataset.theme=effective;
   document.documentElement.style.colorScheme=effective;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',effective==='dark'?'#101722':'#f6f7f8');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',effective==='dark'?'#1c1c1e':'#ffffff');
   try{localStorage.setItem('calendari-familiar-theme',mode);}catch{/* Emmagatzematge opcional */}
 }
 function applyFontSize(){document.documentElement.dataset.fontSize=validFontSize(state.preferences.fontSize);}
@@ -1796,7 +1796,7 @@ document.addEventListener('pointerup',()=>{nativePickerPointerDown=false;queueNa
 document.addEventListener('pointercancel',()=>{nativePickerPointerDown=false;queueNativePickerRender();},true);
 document.addEventListener('focusout',()=>queueNativePickerRender(),true);
 document.addEventListener('click',()=>queueNativePickerRender(0));
-async function init(){await loadState();applyTheme();applyFontSize();await document.fonts?.load('800 22px "Barlow Condensed"').catch(()=>[]);render();if('serviceWorker'in navigator && location.protocol!=='file:'){
+async function init(){await loadState();applyTheme();applyFontSize();await document.fonts?.load('800 22px "Roboto Condensed"').catch(()=>[]);render();if('serviceWorker'in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update().catch(()=>{})).catch(err=>console.warn('Service worker no registrat:',err));
 }}
 void init();

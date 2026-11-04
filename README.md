@@ -546,3 +546,10 @@ La vista mensual ja no conté la capçalera «Calendari Familiar», ni el subtí
 En entrar a Mes o Any s’alinea el contingut sota la barra fixa. Si el títol del període es repeteix en acabar la inèrcia, el calendari fa un ajust curt per deixar-lo amagat sota la barra. El gest i la desacceleració conserven el desplaçament natural.
 
 Els noms de mesos que fan de títol comencen amb majúscula, mantenint «2 d’abril» i altres dates en català. Els títols utilitzen Barlow Condensed ExtraBold, inclosa localment amb la llicència SIL OFL, precarregada i disponible fora de línia.
+
+
+## v0.16.12: Roboto Condensed i paleta clara/fosca d’inspiració Apple
+
+Els títols passen a Roboto Condensed ExtraBold, inclosa localment i disponible fora de línia. La paleta utilitza colors semàntics a `theme.css`: superfícies blanques i grises en mode clar; fons negre, superfícies gris fosc i diàlegs elevats en mode fosc. El blau queda com a accent de navegació i d’acció.
+
+Es revisen barres, calendaris, formularis, selectors i diàlegs. Els colors de tutors, escoles i calendaris personals es conserven. Els modes automàtic, clar i fosc continuen disponibles a Configuració → General.

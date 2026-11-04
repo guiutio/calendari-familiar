@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.11';
+const APP_VERSION = '0.16.12';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -376,7 +376,7 @@ function applyTheme() {
     const effective = mode === 'auto' ? (themeMedia.matches ? 'dark' : 'light') : mode;
     document.documentElement.dataset.theme = effective;
     document.documentElement.style.colorScheme = effective;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', effective === 'dark' ? '#101722' : '#f6f7f8');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', effective === 'dark' ? '#1c1c1e' : '#ffffff');
     try {
         localStorage.setItem('calendari-familiar-theme', mode);
     }
@@ -2751,7 +2751,7 @@ async function init() {
     await loadState();
     applyTheme();
     applyFontSize();
-    await document.fonts?.load('800 22px "Barlow Condensed"').catch(() => []);
+    await document.fonts?.load('800 22px "Roboto Condensed"').catch(() => []);
     render();
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(reg => reg.update().catch(() => { })).catch(err => console.warn('Service worker no registrat:', err));
