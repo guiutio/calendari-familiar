@@ -75,6 +75,10 @@ test('el JSON buit es pot importar i reobrir sense restaurar les dades de mostra
   context.raw=JSON.parse(JSON.stringify(stored));
   const result=vm.runInContext('cleanState(raw)',context);
   assert.deepEqual(asJSON(result),stored);
+  delete context.raw.preferences.showHolyWeek;
+  assert.equal(context.cleanState(context.raw).preferences.showHolyWeek,false);
+  context.clickAction({dataset:{action:'toggle-holy-week'}});
+  assert.equal(context.cleanState(asJSON(context.state)).preferences.showHolyWeek,true);
   assert.match(ts,/if\(children.length>30 \|\| guardians.length>30/);
   assert.doesNotMatch(ts,/if\(!children.length \|\| !guardians.length/);
 });
@@ -153,8 +157,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.16\.17/);
-  assert.match(sw,/calendari-familiar-v0\.16\.17/);
+  assert.match(html,/app\.js\?v=0\.16\.18/);
+  assert.match(sw,/calendari-familiar-v0\.16\.18/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{

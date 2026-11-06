@@ -86,7 +86,7 @@ type WorkShift = {startTime:string;endTime:string};
 type WorkRotation = {id:string;name:string;startDate:string;endDate?:string;weeks:number;days:WorkShift[][]};
 type WorkDraft = WorkRotation & {week:number};
 type PersonTimeOff = {workRotations?:WorkRotation[];holidayColor?:string;vacationColor?:string;holidays:string[];vacations:SchoolVacation[]};
-type Preferences = { showWorkSchedules:boolean;mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
+type Preferences = { showHolyWeek:boolean;showWorkSchedules:boolean;mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
 type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>;schoolDaysOnly?:boolean;kind?:'night'|'activity';endDate?:string;nightTimes?:Record<string,string>};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.17';
+const APP_VERSION = '0.16.18';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -154,7 +154,7 @@ function emptyState():AppState {
   return {
     version:2,children:[],guardians:[],personTimeOff:{},
     overrides:{},bandOverrides:{},daySlots:{},schools:[],nightDateTimes:{},extraRotations:[],extraExceptions:{},
-    preferences:{showWorkSchedules:true,mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
+    preferences:{showHolyWeek:false,showWorkSchedules:true,mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
   };
 }
 const SCHOOL_PALETTE = ['#74c6a3','#f0be75','#afa4e6','#7bbcc9','#d3a1cd','#bbc773','#d4a68f','#87b8e1'];
@@ -331,7 +331,7 @@ function cleanState(raw:unknown):AppState {
   extraRotations.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.id.localeCompare(b.id));
   const nightDateTimes=rotationPatterns.cleanNightDateTimes(obj.nightDateTimes,children) as Record<string,string>;
   const extraExceptions=rotationPatterns.cleanExtraExceptions(obj.extraExceptions,extraRotations,children,guardians) as Record<string,ExtraException>;
-  return {version:2,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
+  return {version:2,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,showHolyWeek:obj.preferences.showHolyWeek===true,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
 }
 let db:IDBDatabase|null=null;
 let storageMode:'indexeddb'|'localStorage'|'session'='session';
@@ -581,8 +581,9 @@ function isCurrentPeriod(){
 }
 function calendarControls(){
   const children=activeChildren();
-  const filtered=children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
-  return `<nav class="calendar-controls" aria-label="Controls del calendari"><div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtrar fills, tutors i escoles">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='day'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div><div class="calendar-nav calendar-period-nav"><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='year'?'Any anterior':calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='year'?'Any següent':calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></nav>`;
+  const showHolyWeek=state.preferences.showHolyWeek&&(calendarView==='year'||calendarView==='month');
+  const filtered=showHolyWeek||children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
+  return `<nav class="calendar-controls" aria-label="Controls del calendari"><div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='day'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='day'||calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div><div class="calendar-nav calendar-period-nav"><button class="btn-icon" data-action="calendar-navigate" data-step="-1" aria-label="${calendarView==='year'?'Any anterior':calendarView==='month'?'Mes anterior':calendarView==='week'?'Setmana anterior':'Dia anterior'}">${icon('chevronLeft',18)}</button><button class="soft-btn" data-action="today">Avui</button><button class="btn-icon" data-action="calendar-navigate" data-step="1" aria-label="${calendarView==='year'?'Any següent':calendarView==='month'?'Mes següent':calendarView==='week'?'Setmana següent':'Dia següent'}">${icon('chevronRight',18)}</button></div></nav>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}${tab==='calendar'&&calendarView==='week'?' calendar-week-layout':''}${tab==='calendar'&&calendarView==='day'?' calendar-day-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
@@ -595,7 +596,7 @@ function monthPanel(index:number,children:Child[],today:string):string {
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
     const daysInMonth=new Date(year,month+1,0).getDate();
     const monthStart=localDate(new Date(year,month,1,12)),monthEnd=localDate(new Date(year,month,daysInMonth,12));
-    const personalEntries=state.personTimeOff?personalTimeOff.visibleEntries(state,monthStart,monthEnd):[];
+    const outlineEntries=state.personTimeOff||state.preferences?.showHolyWeek?personalTimeOff.calendarEntries(state,year,monthStart,monthEnd):[];
     const starting=localDate(new Date(year,month,1-firstDay,12));
     const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
     const cells=Array.from({length:totalCells},(_,offset)=>{
@@ -604,7 +605,7 @@ function monthPanel(index:number,children:Child[],today:string):string {
       const weekButton=iso?`<button type="button" class="month-week-number" data-action="show-calendar-week" data-date="${date}" title="Setmana ${iso.week} de ${iso.year}" aria-label="Mostra la setmana ${iso.week} de ${iso.year}, del ${date} al ${addDays(date,6)}">${iso.week}</button>`:'';
       // Els espais dels altres mesos només alineen els dies: no repeteixen cap data ni assignació.
       if(offset<firstDay||offset>=firstDay+daysInMonth)return `${weekButton}<span class="month-empty-cell" aria-hidden="true"></span>`;
-      const personalMarks=personalEntries.length?personalTimeOff.marks(personalEntries,date,monthStart,monthEnd):{html:'',label:''};
+      const personalMarks=outlineEntries.length?personalTimeOff.marks(outlineEntries,date,monthStart,monthEnd):{html:'',label:''};
       const monthEdges=monthDayUI.outline(date,year,month,i,totalCells,daysInMonth);
       const changed=monthDayUI.hasChanges(state,date);
       const bdays=birthdays(date).filter(c=>children.some(child=>child.id===c.id));
@@ -808,14 +809,14 @@ function zoomControls(){
     </div>`;
 }
 function yearOverview(year:number,children:Child[],today:string):string {
-  const personalEntries=state.personTimeOff?personalTimeOff.visibleEntries(state,localDate(new Date(year,0,1,12)),localDate(new Date(year,11,31,12))):[];
+  const outlineEntries=state.personTimeOff||state.preferences?.showHolyWeek?personalTimeOff.calendarEntries(state,year,localDate(new Date(year,0,1,12)),localDate(new Date(year,11,31,12))):[];
   return `<div class="year-overview" aria-label="Calendari anual ${year}">${months.map((name,month)=>{
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7,count=new Date(year,month+1,0).getDate();
     const monthStart=localDate(new Date(year,month,1,12)),monthEnd=localDate(new Date(year,month,count,12));
     const cells=Array.from({length:42},(_,index)=>{
       const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
       const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
-      const marks=personalEntries.length?personalTimeOff.marks(personalEntries,date,monthStart,monthEnd):{html:'',label:''};
+      const marks=outlineEntries.length?personalTimeOff.marks(outlineEntries,date,monthStart,monthEnd):{html:'',label:''};
       return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${date===today?'aria-current="date"':''} ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
     }).join('');
     return `<button type="button" class="year-month${today>=monthStart&&today<=monthEnd?' current-month':''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" data-focus-date="${monthStart}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day=>`<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
@@ -826,8 +827,10 @@ function yearPanel(year:number,children:Child[],today:string):string {
   return `<section class="year-panel" data-year-index="${year}" aria-label="Any ${year}"><h2 class="year-section-title"${current?' data-current-period':''}>${year}</h2>${yearOverview(year,children,today)}</section>`;
 }
 function calendarLegend():string {
-  const personalLegend=state.personTimeOff&&(calendarView==='year'||calendarView==='month')?personalTimeOff.legendMarkup(state):'';
-  return `<div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>`;
+  const showOutlines=calendarView==='year'||calendarView==='month';
+  const personalLegend=showOutlines&&state.personTimeOff?personalTimeOff.legendMarkup(state):'';
+  const holyWeekLegend=showOutlines&&state.preferences.showHolyWeek?'<span class="legend-entry"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>':'';
+  return `<div class="legend">${state.schools.filter(s=>state.preferences.visibleSchools.includes(s.id)).map(s=>`<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g=>state.preferences.visibleGuardians.includes(g.id)).map(g=>`<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}${holyWeekLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>`;
 }
 function calendarPage(){
   const today=localDate(new Date()),children=activeChildren();
@@ -1102,7 +1105,11 @@ function sheetMarkup(){
     ${zoomControls()}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='filters'){
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Decideix qui vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    const showHolyWeek=state.preferences.showHolyWeek===true;
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Tria què vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    <div class="sheet-section-label">Calendari</div>
+    <button type="button" class="option ${showHolyWeek?'selected':''}" data-action="toggle-holy-week" aria-pressed="${showHolyWeek}"><span class="option-left"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>${showHolyWeek?icon('check',17):'<span class="badge-soft">Oculta</span>'}</button>
+    <p class="settings-note">De Rams a Pasqua, a les vistes Any i Mes.</p>
     <div class="sheet-section-label">Fills</div>${state.children.map(c=>filterOption(c.id,c.name,state.preferences.visibleChildren.includes(c.id),'child')).join('')}
     <div class="sheet-section-label">Tutors</div>${state.guardians.map(g=>filterOption(g.id,g.name,state.preferences.visibleGuardians.includes(g.id),'guardian',g.color)).join('')}
     <div class="sheet-section-label">Escoles <span class="filter-section-hint">(ocultes per defecte)</span></div>${state.schools.length?state.schools.map(s=>filterOption(s.id,s.name,state.preferences.visibleSchools.includes(s.id),'school',s.color)).join(''):'<p class="settings-note">Afegeix escoles a la pestanya Escoles.</p>'}
@@ -1549,7 +1556,8 @@ function clickAction(button:HTMLElement){
       const kind=button.dataset.filterKind==='child'?'visibleChildren':button.dataset.filterKind==='school'?'visibleSchools':'visibleGuardians',id=button.dataset.id!;
       const selected=state.preferences[kind];state.preferences[kind]=selected.includes(id)?selected.filter(x=>x!==id):[...selected,id];update();break;
     }
-    case 'filter-all':state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);if(state.personTimeOff)personalTimeOff.showAll(state);update();break;
+    case 'toggle-holy-week':state.preferences.showHolyWeek=!state.preferences.showHolyWeek;update();break;
+    case 'filter-all':state.preferences.showHolyWeek=true;state.preferences.visibleChildren=state.children.map(c=>c.id);state.preferences.visibleGuardians=state.guardians.map(g=>g.id);state.preferences.visibleSchools=state.schools.map(s=>s.id);if(state.personTimeOff)personalTimeOff.showAll(state);update();break;
     case 'assign-night':{const date=button.dataset.date!,childId=button.dataset.child!,gId=button.dataset.guardian!;if(!childById(childId)||!guardian(gId))break;sheet=returnFromDetail(date);chooseGuardian(date,childId,gId);break;}
     case 'clear-night':delete state.overrides[`${button.dataset.date}|${button.dataset.child}`];sheet=returnFromDetail(button.dataset.date!);update();notify('Patró habitual restaurat');break;
     case 'night-date-time-clear':{const date=button.dataset.date??'';delete state.nightDateTimes[date+'|'+button.dataset.child];sheet=returnFromDetail(date);update();notify('Hora habitual restaurada');break;}

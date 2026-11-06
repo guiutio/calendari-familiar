@@ -98,6 +98,30 @@
  }
  const monthFrames=new WeakMap();
  const dateOf=n=>new Date(n*86400000).toISOString().slice(0,10);
+
+ // Còmput gregorià d’Oudin, amb divisions enteres segons l’USNO.
+ // https://aa.usno.navy.mil/faq/easter#compute
+ function easterSunday(year){
+  const div=(a,b)=>Math.trunc(a/b);
+  const century=div(year,100),lunarCycle=year%19;
+  const correction=div(century-17,25);
+  const epact=(century-div(century,4)-div(century-correction,3)+19*lunarCycle+15)%30;
+  const lateMoon=div(epact,28);
+  const moon=epact-lateMoon*(1-lateMoon*div(29,epact+1)*div(21-lunarCycle,11));
+  const weekday=(year+div(year,4)+moon+2-century+div(century,4))%7;
+  const offset=moon-weekday,month=3+div(offset+40,44);
+  const date=offset+28-31*div(month,4);
+  return new Date(Date.UTC(year,month-1,date,12)).toISOString().slice(0,10);
+ }
+ function calendarEntries(state,year,from,to){
+  const entries=visibleEntries(state,from,to);
+  if(state.preferences.showHolyWeek!==true||year<100||year>9999)return entries;
+  const endDate=easterSunday(year),startDate=dateOf(day(endDate)-7);
+  if(startDate<=to&&endDate>=from){
+   entries.unshift({kind:'holy-week',name:'Setmana Santa',ranges:[{startDate,endDate}]});
+  }
+  return entries;
+ }
  // Resolem una sola vegada cada mes. Les absències de dies de descans separen
  // els trams, i cada tram conserva la mateixa capa al llarg del seu perímetre.
  function framesForMonth(entries,monthStart,monthEnd){
@@ -111,9 +135,10 @@
     for(let n=start;n<=end;n++)if(!entry.eligible||entry.eligible(dateOf(n)))days.push(n);
    }
    let run;
+   const frameColor=entry.kind==='holy-week'?'var(--holy-week-color)':validColor(entry.color)?entry.color:defaults[entry.kind];
    for(const n of [...new Set(days)].sort((a,b)=>a-b)){
     if(run&&run.endDay+1===n){run.endDay=n;run.endDate=dateOf(n);}
-    else {run={...entry,color:validColor(entry.color)?entry.color:defaults[entry.kind],startDay:n,endDay:n,startDate:dateOf(n),endDate:dateOf(n)};frames.push(run);}
+    else {run={...entry,color:frameColor,startDay:n,endDay:n,startDate:dateOf(n),endDate:dateOf(n)};frames.push(run);}
    }
   }
   // Només els trams amb dates coincidents ocupen una capa interior. Reutilitzem
@@ -134,10 +159,11 @@
    const aboveLeft=weekday>0&&n-8>=start&&n-8<=end,belowRight=weekday<6&&n+8>=start&&n+8<=end;
    items.push({...frame,top,bottom,left,right,concaveTL:!top&&!left&&!aboveLeft,concaveBR:!bottom&&!right&&!belowRight});
   }
-  const label=[...new Set(items.map(p=>(p.kind==='holiday'?'Festiu de ':'Vacances de ')+p.name))].join('. ');
+  const label=[...new Set(items.map(p=>p.kind==='holy-week'?p.name:(p.kind==='holiday'?'Festiu de ':'Vacances de ')+p.name))].join('. ');
   return {items,label,html:items.map(p=>{
    const edges=['top','right','bottom','left'].filter(edge=>p[edge]),style=`--pto-color:${p.color};--pto-layer:${p.layer}`;
-   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}" data-outline-layer="${p.layer}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner pto-concave-tl" style="${style}" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner pto-concave-br" style="${style}" aria-hidden="true"></span>`:''}`;
+   const source=p.kind==='holy-week'?'data-calendar-mark="holy-week"':`data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}"`;
+   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" ${source} data-outline-layer="${p.layer}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner pto-concave-tl" style="${style}" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner pto-concave-br" style="${style}" aria-hidden="true"></span>`:''}`;
   }).join('')};
  }
  function filterMarkup(state){
@@ -169,5 +195,5 @@
   const p=person(state,key),v=get(state,key).vacations.find(v=>v.id===id);if(!p||(id&&!v))return '';
   return heading(v?'Edita vacances':'Afegeix vacances',p.name)+`<form data-person-vacation-form="true" data-person="${esc(key)}" data-period="${esc(v?.id??'')}"><div class="school-form-fields"><div class="field"><label>Nom del període<input type="text" name="name" maxlength="120" value="${esc(v?.name??'Vacances')}" required></label></div><div class="form-row"><div class="field"><label>Data d’inici<input type="date" name="startDate" value="${v?.startDate??today}" required></label></div><div class="field"><label>Data final<input type="date" name="endDate" value="${v?.endDate??today}" required></label></div></div></div><p class="settings-note">L’inici i el final estan inclosos.</p><div class="action-row"><button type="submit" class="primary-btn">Desa el període</button><button type="button" class="soft-btn" data-action="person-time-off" data-person="${esc(key)}">Cancel·la</button></div></form>`;
  }
- window.personalTimeOff={valid,color,setColor,people,person,get,clean,cleanPreferences,hasData,setHolidays,saveVacation,deleteVacation,removePerson,setMe,showAll,filtered,mergeRanges,visibleEntries,marks,filterMarkup,legendMarkup,panel,holidayPicker,vacationForm};
+ window.personalTimeOff={valid,color,setColor,people,person,get,clean,cleanPreferences,hasData,setHolidays,saveVacation,deleteVacation,removePerson,setMe,showAll,filtered,mergeRanges,visibleEntries,calendarEntries,marks,filterMarkup,legendMarkup,panel,holidayPicker,vacationForm};
 })();

@@ -35,6 +35,44 @@ function setup(){
  return {ctx,state,api,click,vacation,holidays,marks,messages,get saves(){return saves;},get paints(){return paints;}};
 }
 const leave={name:'Vacances de Nadal',startDate:'2026-12-22',endDate:'2027-01-07'};
+
+test('Setmana Santa es calcula de Rams a Pasqua, inclosos els extrems de març i abril',()=>{
+ const s=setup();s.state.preferences.showHolyWeek=true;
+ for(const [year,startDate,endDate] of [
+  [1818,'1818-03-15','1818-03-22'],[1943,'1943-04-18','1943-04-25'],
+  [2010,'2010-03-28','2010-04-04'],[2026,'2026-03-29','2026-04-05'],
+  [2027,'2027-03-21','2027-03-28']
+ ]){
+  const [entry]=s.api.calendarEntries(s.state,year,`${year}-01-01`,`${year}-12-31`);
+  assert.equal(entry.kind,'holy-week');
+  assert.deepEqual(plain(entry.ranges),[{startDate,endDate}]);
+ }
+});
+
+test('el filtre mostra els contorns a Any i Mes encara que no hi hagi fills visibles',()=>{
+ const s=setup();s.ctx.sheet={type:'filters'};
+ const march=()=>s.ctx.monthPanel(2026*12+2,[],'2026-11-02');
+ const april=()=>s.ctx.monthPanel(2026*12+3,[],'2026-11-02');
+ const year=()=>s.ctx.yearOverview(2026,[],'2026-11-02');
+ const marker=/data-calendar-mark="holy-week"/g;
+ assert.match(s.ctx.sheetMarkup(),/data-action="toggle-holy-week" aria-pressed="false"/);
+ assert.doesNotMatch(march(),marker);
+ s.click('toggle-holy-week');
+ assert.match(s.ctx.sheetMarkup(),/data-action="toggle-holy-week" aria-pressed="true"/);
+ assert.equal((march().match(marker)||[]).length,3);
+ assert.equal((april().match(marker)||[]).length,5);
+ assert.equal((year().match(marker)||[]).length,8);
+ s.holidays(['2026-04-03']);
+ const entries=s.api.calendarEntries(s.state,2026,'2026-04-01','2026-04-30');
+ const overlap=s.api.marks(entries,'2026-04-03','2026-04-01','2026-04-30');
+ assert.deepEqual(plain(overlap.items.map(({kind,layer})=>[kind,layer])),[['holy-week',0],['holiday',1]]);
+ assert.match(overlap.label,/Setmana Santa.*Festiu de Guiu/);
+ assert.match(s.ctx.calendarLegend(),/Setmana Santa/);
+ s.ctx.calendarView='week';assert.doesNotMatch(s.ctx.calendarLegend(),/Setmana Santa/);
+ s.click('toggle-holy-week');assert.doesNotMatch(year(),marker);
+ s.click('filter-all');assert.equal((year().match(marker)||[]).length,8);
+});
+
 function working(s,key='guardian:same',days=[0,1,2,3,4,5,6]){
  const draft=s.ctx.workSchedule.draft(s.state,key,undefined,'2026-01-01');
  for(const index of days)draft.days[index]=[{startTime:'09:00',endTime:'17:00'}];

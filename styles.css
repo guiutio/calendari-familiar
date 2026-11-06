@@ -905,6 +905,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .personal-holidays .school-date-cell.selected {background:#fff0ee;border-color:#d13939;color:#a52d2d;}
 .personal-legend {display:inline-block;flex:0 0 12px;width:12px;height:12px;border:2px solid #d32f2f;border-radius:2px;}
 .personal-legend.vacation {border-color:#168948;}
+.personal-legend.holy-week {border-color:var(--holy-week-color);}
 /* Cada capa entra un gruix exacte: requadres niats, sense espai entre vores. */
 .personal-outline,.personal-corner {position:absolute;z-index:9;pointer-events:none;box-sizing:border-box;border:0 solid var(--pto-color);--pto-stroke:var(--month-outline-width,4px);--pto-inset:calc(var(--pto-layer,0) * var(--pto-stroke) - 1px);}
 .personal-outline {inset:-1px;}
