@@ -7,9 +7,9 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=app.indexOf('function calendarNavigation('),end=app.indexOf('function layout(',start);
 const dateHelpers=app.slice(app.indexOf('function localDate('),app.indexOf('function initial('))+
  app.slice(app.indexOf('function weekStart('),app.indexOf('function fullAgenda('));
-const labels={year:'2026',month:'novembre 2026',week:'2 de Novembre – 8 de Novembre',day:'4 de Novembre'};
-for(const view of Object.keys(labels))test(`${view}: títol a dalt, eines a l’esquerra i anterior/Avui/següent a la dreta`,()=>{
- const ctx=vm.createContext({calendarView:view,viewYear:2026,viewMonth:10,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
+const labels={year:'',month:'',week:'2 de Novembre – 8 de Novembre',day:'4 de Novembre'};
+for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i controls de navegació`,()=>{
+ const ctx=vm.createContext({calendarView:view,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
   Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]));}},
   state:{children:[],guardians:[],schools:[],preferences:{visibleGuardians:[],visibleSchools:[]}},
   icon:()=>'',escapeHtml:String,periodTitle:()=>labels[view],timelineZoomForView:()=>50,
@@ -17,9 +17,11 @@ for(const view of Object.keys(labels))test(`${view}: títol a dalt, eines a l’
  vm.runInContext(dateHelpers+app.slice(start,end),ctx);
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
  if(view==='year')assert.equal(title,'');
+ else if(view==='month'){
+  assert.match(title,/<div class="weekdays">.*Setm\.<\/span><span>Dl<\/span>.*<span>Dg<\/span>/);
+  assert.doesNotMatch(title,/calendar-title|calendar-toolbar/);
+ }
  else assert.ok(title.includes(`<div class="calendar-title" data-current-period>${labels[view]}</div>`));
- if(view==='year')ctx.viewYear=2027;
- if(view==='month')ctx.viewMonth=11;
  if(view==='week')ctx.selectedDate='2026-11-09';
  if(view==='day')ctx.selectedDate='2026-11-03';
  assert.doesNotMatch(ctx.calendarNavigation(),/data-current-period/);

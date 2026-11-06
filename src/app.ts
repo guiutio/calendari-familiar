@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.18';
+const APP_VERSION = '0.16.19';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -570,13 +570,13 @@ function calendarViewButtons(kind:'side'|'mobile'){
 }
 function calendarNavigation(){
   if(calendarView==='year')return '';
-  return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod()?' data-current-period':''}>${escapeHtml(periodTitle())}</div></div>
-    ${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
+  if(calendarView==='month'){
+    return `<header class="calendar-sticky-bar" aria-label="Dies de la setmana"><div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div></header>`;
+  }
+  return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod()?' data-current-period':''}>${escapeHtml(periodTitle())}</div></div></header>`;
 }
 function isCurrentPeriod(){
-  const today=new Date();
-  if(calendarView==='month')return viewYear===today.getFullYear()&&viewMonth===today.getMonth();
-  const todayDate=localDate(today);
+  const todayDate=localDate(new Date());
   return calendarView==='week'?weekStart(selectedDate)===weekStart(todayDate):selectedDate===todayDate;
 }
 function calendarControls(){
@@ -662,7 +662,8 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(target){
       // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
       const top=bar.getBoundingClientRect().bottom;
-      const start=target.querySelector<HTMLElement>(annual?'.year-month.current-month':'.month-grid')??target;
+      const currentMonth=annual?target.querySelector<HTMLElement>('.year-month.current-month'):null;
+      const start=currentMonth??target;
       shift(start.getBoundingClientRect().top-top);
     }
   } else restore(position);
@@ -679,24 +680,6 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     viewMonth=annual?(anchor.date?parseDate(anchor.date).getMonth():viewMonth):anchor.index-viewYear*12;
     const selected=parseDate(selectedDate);
     if(selected.getFullYear()!==viewYear||selected.getMonth()!==viewMonth)selectedDate=localDate(new Date(viewYear,viewMonth,1,12));
-    const title=annual?null:bar.querySelector<HTMLElement>('.calendar-title');
-    if(title){
-      title.textContent=periodTitle();
-      title.toggleAttribute('data-current-period',isCurrentPeriod());
-    }
-  };
-  const hideRepeatedTitle=()=>{
-    if(annual)return;
-    const anchor=monthPosition();
-    const panel=anchor?sequence.querySelector<HTMLElement>(panelSelector(anchor.index)):null;
-    const heading=panel?.querySelector<HTMLElement>('.month-section-title');
-    const top=bar.getBoundingClientRect().bottom;
-    if(!heading||heading.getBoundingClientRect().bottom<=top+.5)return;
-    const body=panel?.querySelector<HTMLElement>('.month-grid');
-    if(!body)return;
-    const delta=body.getBoundingClientRect().top-top;
-    // Només s'ajusta el títol repetit del període visible, un cop acabada la inèrcia.
-    if(delta>.5){shift(delta);correctedScroll=scrollTop();refresh();}
   };
   const extendMonths=()=>{
     idleTimer=undefined;
@@ -736,7 +719,6 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
         correctedScroll=scrollTop();
       }
     }
-    hideRepeatedTitle();
   };
   const cancelSettle=()=>{
     revision++;window.clearTimeout(idleTimer);window.cancelAnimationFrame(settleFrame);settleFrame=0;

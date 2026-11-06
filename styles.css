@@ -974,7 +974,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Any i Mes: el contingut i els dies de la capçalera comparteixen tota l’amplada. */
 .calendar-layout:has(.year-sequence,.month-sequence) .main-area {padding-inline:0;}
 .calendar-layout:has(.year-sequence,.month-sequence) .content {width:100%;max-width:none;}
-.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {width:100%;max-width:none;}
+.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {width:100%;max-width:none;padding-block:6px;}
 .calendar-layout:has(.month-sequence) .calendar-card {border-inline:0;border-radius:0;}
 
 /* Setmana: tota la zona entre les barres, amb scroll vertical de pàgina. */

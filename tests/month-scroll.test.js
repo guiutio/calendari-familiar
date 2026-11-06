@@ -6,10 +6,6 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const extract=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
 const dates=extract('function periodTitle()', 'function navButton(');
 const dateHelpers=extract('function localDate(', 'function monthTitle(');
-const currentMonth=extract('function isCurrentPeriod()', 'function calendarControls(');
-class OctoberClock extends Date {
- constructor(...args){super(...(args.length?args:[2026,9,31,12]));}
-}
 
 function controller(mobile=true,headerHeight=0){
  let frame,listen,timer;
@@ -19,18 +15,17 @@ function controller(mobile=true,headerHeight=0){
  let panels=[];
  const panel=index=>({querySelector(){return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+headerHeight})};},querySelectorAll:()=>[],dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
- const title={textContent:'',attributes:new Set(),toggleAttribute(name,enabled){if(enabled)this.attributes.add(name);else this.attributes.delete(name);}};
- const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>title};
+ const bar={getBoundingClientRect:()=>({bottom:100,height:100})};
  const sequence={isConnected:true,querySelectorAll:()=>panels,querySelector:s=>panels.find(p=>s.includes('"'+p.dataset.monthIndex+'"')),get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},insertAdjacentHTML(where,html){const next=html.split(',').map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];}};
  const $app={querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:bar};
- const ctx=vm.createContext({$app,window:win,Date:OctoberClock,tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+',',periodTitle:()=>`${ctx.viewYear}-${ctx.viewMonth+1}`});
+ const ctx=vm.createContext({$app,window:win,tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+','});
  // Use a delimiter only between generated panels, including appends/prepends.
  sequence.insertAdjacentHTML=(where,html)=>{const next=html.split(',').filter(Boolean).map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];};
- vm.runInContext(currentMonth+extract('function monthPosition()', 'function calendarPage()'),ctx);
+ vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
  const flush=()=>{for(let i=0;frame&&i<10;i++){const next=frame;frame=undefined;next();}};
  const idle=()=>{const next=timer;timer=undefined;next?.();flush();};
  ctx.mountCalendarScroll(null);flush();idle();
- return {ctx,main,title,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();flush();idle();},refresh(){flush();idle();},base};
+ return {ctx,main,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();flush();idle();},refresh(){flush();idle();},base};
 }
 
 test('mesos: la càrrega inicial enfoca el mes actual en mòbil i escriptori',()=>{
@@ -69,14 +64,11 @@ test('mesos: conserva el desplaçament parcial en repintar filtres o diàlegs',(
 });
 test('mesos: les fletxes i Avui poden enfocar un mes ja carregat',()=>{
  const c=controller();
- assert.ok(c.title.attributes.has('data-current-period'));
  c.scroll(1400);
- assert.ok(!c.title.attributes.has('data-current-period'));
  c.ctx.viewYear=2026;c.ctx.viewMonth=9;c.ctx.monthScrollTarget=true;
  c.ctx.mountCalendarScroll(c.ctx.monthPosition());c.refresh();
  assert.equal(c.ctx.monthPosition().index,c.base);
  assert.equal(c.ctx.monthPosition().top,100);
- assert.ok(c.title.attributes.has('data-current-period'));
 });
 test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de traspàs',()=>{
  const context=vm.createContext({calendarView:'month',viewYear:2026,viewMonth:11,selectedDate:'2026-12-31',monthScrollTarget:false,render:()=>{}});
@@ -181,7 +173,7 @@ function inertialController(nativeScrollEnd=false,headings=false){
   remove(){mutations++;panels=panels.filter(p=>p!==this);nativeTop(rawTop);}
  });
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
- const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>({textContent:'',toggleAttribute:()=>{}})};
+ const bar={getBoundingClientRect:()=>({bottom:100,height:100})};
  const sequence={isConnected:true,querySelectorAll:()=>panels,
   querySelector:s=>panels.find(p=>s.includes('"'+p.dataset.monthIndex+'"')),
   get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},
@@ -192,8 +184,8 @@ function inertialController(nativeScrollEnd=false,headings=false){
   addEventListener:()=>{},removeEventListener:()=>{}};
  const ctx=vm.createContext({$app:{querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:bar},window:win,
   tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,
-  activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>i+',',periodTitle:()=>''});
- vm.runInContext(currentMonth+extract('function monthPosition()', 'function calendarPage()'),ctx);
+  activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>i+','});
+ vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
  const flush=()=>{
   for(let safety=0;events.length||frames.size;safety++){
    assert.ok(safety<30,'No hi pot haver realimentació de scroll');
@@ -277,15 +269,15 @@ test('un nou gest o sortir de la vista cancel·la una estabilització ja program
 });
 
 
-test('seleccionar un mes amaga la capçalera repetida i alinea la primera setmana sota la barra',()=>{
+test('seleccionar un mes alinea el seu títol sota els dies de la setmana',()=>{
  for(const mobile of [true,false]){
   const c=controller(mobile,58);
   const current=()=>c.panels().find(p=>Number(p.dataset.monthIndex)===c.base);
-  assert.equal(current().querySelector('.month-grid').getBoundingClientRect().top,100);
-  assert.equal(current().getBoundingClientRect().top,42);
+  assert.equal(current().querySelector('.month-grid').getBoundingClientRect().top,158);
+  assert.equal(current().getBoundingClientRect().top,100);
   c.scroll(1400);c.ctx.viewYear=2026;c.ctx.viewMonth=9;c.ctx.monthScrollTarget=true;
   c.ctx.mountCalendarScroll(c.ctx.monthPosition());c.refresh();
-  assert.equal(current().querySelector('.month-grid').getBoundingClientRect().top,100);
+  assert.equal(current().getBoundingClientRect().top,100);
  }
 });
 
@@ -310,20 +302,20 @@ test('sis setmanes caben a l’espai visible i només es recalcula la mida quan 
 });
 
 
-test('Mes amaga el títol repetit només quan acaba la inèrcia i no inicia un bucle de scroll',()=>{
+test('Mes conserva la posició del títol en acabar la inèrcia',()=>{
  for(const native of [true,false])for(const prepend of [false,true]){
-  const c=inertialController(native,true),index=c.base+(prepend?-3:1);assert.equal(c.bodyTop(c.base),100);
+  const c=inertialController(native,true),index=c.base+(prepend?-3:1);assert.equal(c.bodyTop(c.base),158);
   c.touch();c.goToHeading(index);c.release();
   const before=c.metrics();assert.equal(c.bodyTop(index),130);
   c.advance(native?2000:399);assert.deepEqual(c.metrics(),before);
   if(native)c.end();else c.advance(1);
-  assert.equal(c.bodyTop(index),100);assert.equal(c.metrics().writes,before.writes+(prepend?2:1));
+  assert.equal(c.bodyTop(index),130);assert.equal(c.metrics().writes,before.writes+(prepend?1:0));
   const stable={anchor:c.anchor(),metrics:c.metrics()};c.end();c.advance(10000);
   assert.deepEqual({anchor:c.anchor(),metrics:c.metrics()},stable);
  }
 });
 
-test('un nou gest cancel·la l’ajust pendent del títol mensual',()=>{
+test('un nou gest manté la posició de la capçalera mensual',()=>{
  const c=inertialController(true,true);c.touch();c.goToHeading(c.base+1);c.release();
  const before=c.metrics();c.signalEnd();c.touch();c.flush();c.advance(2000);
  assert.equal(c.bodyTop(c.base+1),130);assert.deepEqual(c.metrics(),before);
