@@ -907,17 +907,29 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .personal-legend.vacation {border-color:#168948;}
 .personal-legend.holy-week {border-color:var(--holy-week-color);}
 /* Cada capa entra un gruix exacte: requadres niats, sense espai entre vores. */
-.personal-outline,.personal-corner {position:absolute;z-index:9;pointer-events:none;box-sizing:border-box;border:0 solid var(--pto-color);--pto-stroke:var(--month-outline-width,4px);--pto-inset:calc(var(--pto-layer,0) * var(--pto-stroke) - 1px);}
+.personal-fill,.personal-outline,.personal-corner {
+  position:absolute;pointer-events:none;
+  --pto-stroke:var(--month-outline-width,4px);
+  --pto-inset:calc(var(--pto-layer,0) * var(--pto-stroke) - 1px);
+  --pto-radius:max(var(--pto-stroke),calc(var(--pto-base-radius,8px) - var(--pto-layer,0) * var(--pto-stroke)));
+}
+.personal-fill {inset:0;z-index:0;background:color-mix(in srgb,var(--pto-color) var(--pto-fill-strength,17%),transparent);}
+.today > .personal-fill {display:none;}
+:is(.day-cell,.year-day):has(> .personal-fill) > :is(.month-mini,.mini-birthday) {position:relative;z-index:1;}
+.personal-outline,.personal-corner {z-index:9;border:0 solid var(--pto-color);}
 .personal-outline {inset:-1px;}
 .personal-outline.pto-top {top:var(--pto-inset);border-top-width:var(--pto-stroke);}
 .personal-outline.pto-right {right:var(--pto-inset);border-right-width:var(--pto-stroke);}
 .personal-outline.pto-bottom {bottom:var(--pto-inset);border-bottom-width:var(--pto-stroke);}
 .personal-outline.pto-left {left:var(--pto-inset);border-left-width:var(--pto-stroke);}
 .personal-corner {width:calc(var(--pto-inset) + var(--pto-stroke) + 1px);height:calc(var(--pto-inset) + var(--pto-stroke) + 1px);}
-.personal-corner.pto-concave-tl {top:-1px;left:-1px;border-right-width:var(--pto-stroke);border-bottom-width:var(--pto-stroke);}
-.personal-corner.pto-concave-br {bottom:-1px;right:-1px;border-left-width:var(--pto-stroke);border-top-width:var(--pto-stroke);}
-.year-day {position:relative;}
-.year-day .personal-outline,.year-day .personal-corner {--pto-stroke:1px;}
+.personal-corner.pto-concave-tl {top:-1px;left:-1px;border-right-width:var(--pto-stroke);border-bottom-width:var(--pto-stroke);border-bottom-right-radius:var(--pto-stroke);}
+.personal-corner.pto-concave-br {bottom:-1px;right:-1px;border-left-width:var(--pto-stroke);border-top-width:var(--pto-stroke);border-top-left-radius:var(--pto-stroke);}
+:is(.personal-fill,.personal-outline).pto-top.pto-left {border-top-left-radius:var(--pto-radius);}
+:is(.personal-fill,.personal-outline).pto-top.pto-right {border-top-right-radius:var(--pto-radius);}
+:is(.personal-fill,.personal-outline).pto-bottom.pto-left {border-bottom-left-radius:var(--pto-radius);}
+:is(.personal-fill,.personal-outline).pto-bottom.pto-right {border-bottom-right-radius:var(--pto-radius);}
+.year-day {position:relative;--month-outline-width:1px;--pto-base-radius:4px;}
 .year-day-number,.day-top {position:relative;z-index:7;}
 .personal-person-colors {display:inline-flex;gap:5px;margin-top:5px;}
 .personal-holidays .school-date-cell.selected {border-color:var(--personal-holiday-color);box-shadow:inset 0 0 0 1px var(--personal-holiday-color);}

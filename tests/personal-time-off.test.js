@@ -65,8 +65,12 @@ test('el filtre mostra els contorns a Any i Mes encara que no hi hagi fills visi
  s.holidays(['2026-04-03']);
  const entries=s.api.calendarEntries(s.state,2026,'2026-04-01','2026-04-30');
  const overlap=s.api.marks(entries,'2026-04-03','2026-04-01','2026-04-30');
- assert.deepEqual(plain(overlap.items.map(({kind,layer})=>[kind,layer])),[['holy-week',0],['holiday',1]]);
- assert.match(overlap.label,/Setmana Santa.*Festiu de Guiu/);
+ assert.deepEqual(plain(overlap.items.map(({kind,layer})=>[kind,layer])),[['holiday',0],['holy-week',1]]);
+ assert.match(overlap.label,/Festiu de Guiu.*Setmana Santa/);
+ assert.match(overlap.html,/<span class="personal-fill [^"]*" style="--pto-color:#d32f2f;/);
+ assert.equal((overlap.html.match(/class="personal-fill /g)||[]).length,1);
+ const easterOnly=s.api.marks(entries,'2026-04-04','2026-04-01','2026-04-30');
+ assert.match(easterOnly.html,/<span class="personal-fill [^"]*" style="--pto-color:var\(--holy-week-color\);/);
  assert.match(s.ctx.calendarLegend(),/Setmana Santa/);
  s.ctx.calendarView='week';assert.doesNotMatch(s.ctx.calendarLegend(),/Setmana Santa/);
  s.click('toggle-holy-week');assert.doesNotMatch(year(),marker);
@@ -336,7 +340,7 @@ test('colors independents per persona i tipus, desats sense alterar dates ni el 
  assert.throws(()=>s.api.clean({'guardian:same':{holidayColor:'bad'}},s.state.children,s.state.guardians),/Color/);
 });
 
-test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres niats i contigus',()=>{
+test('Any i Mes conserven els contorns niats i omplen la cel·la amb el color prioritari',()=>{
  const s=setup();s.state.guardians.push({id:'third',name:'Àvia',color:'#555555'});working(s,'guardian:third');
  s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'},'guardian:third');
  s.holidays(['2026-11-02'],'guardian:other');
@@ -346,6 +350,8 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres n
  assert.ok(mark.html.includes('--pto-color:#123abc;--pto-layer:0'));assert.ok(mark.html.includes('--pto-color:#aa0011;--pto-layer:1'));assert.ok(mark.html.includes('--pto-color:#abcdef;--pto-layer:2'));
  assert.doesNotMatch(mark.html,/gradient/);
  assert.equal((mark.html.match(/data-personal-kind=/g)||[]).length,3);
+ assert.equal((mark.html.match(/class="personal-fill /g)||[]).length,1);
+ assert.match(mark.html,/<span class="personal-fill [^"]*" style="--pto-color:#123abc;/);
  for(const html of [s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),s.ctx.yearOverview(2026,s.state.children,'2026-11-02')]){
   assert.ok(html.includes('#123abc'));assert.ok(html.includes('#abcdef'));assert.ok(html.includes('#aa0011'));
  }
@@ -357,7 +363,7 @@ test('Any, Mes, filtres i llegenda utilitzen els colors personals en requadres n
  assert.match(css,/--pto-stroke:var\(--month-outline-width,4px\)/);
  assert.match(css,/--pto-inset:calc\(var\(--pto-layer,0\) \* var\(--pto-stroke\) - 1px\)/);
  assert.match(css,/\.personal-outline \{inset:-1px;/);assert.doesNotMatch(css,/--pto-top-paint/);
- assert.match(css,/\.year-day \.personal-outline,\.year-day \.personal-corner \{--pto-stroke:1px;\}/);
+ assert.match(css,/\.year-day \{position:relative;--month-outline-width:1px;/);
 });
 
 test('l’agenda laboral es conserva al diàleg de Dia i respecta els filtres',()=>{

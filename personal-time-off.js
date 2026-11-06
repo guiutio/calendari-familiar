@@ -118,7 +118,7 @@
   if(state.preferences.showHolyWeek!==true||year<100||year>9999)return entries;
   const endDate=easterSunday(year),startDate=dateOf(day(endDate)-7);
   if(startDate<=to&&endDate>=from){
-   entries.unshift({kind:'holy-week',name:'Setmana Santa',ranges:[{startDate,endDate}]});
+   entries.push({kind:'holy-week',name:'Setmana Santa',ranges:[{startDate,endDate}]});
   }
   return entries;
  }
@@ -160,10 +160,12 @@
    items.push({...frame,top,bottom,left,right,concaveTL:!top&&!left&&!aboveLeft,concaveBR:!bottom&&!right&&!belowRight});
   }
   const label=[...new Set(items.map(p=>p.kind==='holy-week'?p.name:(p.kind==='holiday'?'Festiu de ':'Vacances de ')+p.name))].join('. ');
-  return {items,label,html:items.map(p=>{
-   const edges=['top','right','bottom','left'].filter(edge=>p[edge]),style=`--pto-color:${p.color};--pto-layer:${p.layer}`;
+  return {items,label,html:items.map((p,index)=>{
+   const edges=['top','right','bottom','left'].filter(edge=>p[edge]).map(edge=>'pto-'+edge).join(' ');
+   const style=`--pto-color:${p.color};--pto-layer:${p.layer}`;
+   const fill=index===0?`<span class="personal-fill ${edges}" style="${style}" aria-hidden="true"></span>`:'';
    const source=p.kind==='holy-week'?'data-calendar-mark="holy-week"':`data-person-key="${esc(p.key)}" data-personal-kind="${p.kind}"`;
-   return `<span class="personal-outline ${p.kind} ${edges.map(edge=>'pto-'+edge).join(' ')}" style="${style}" ${source} data-outline-layer="${p.layer}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner pto-concave-tl" style="${style}" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner pto-concave-br" style="${style}" aria-hidden="true"></span>`:''}`;
+   return `${fill}<span class="personal-outline ${p.kind} ${edges}" style="${style}" ${source} data-outline-layer="${p.layer}" aria-hidden="true"></span>${p.concaveTL?`<span class="personal-corner pto-concave-tl" style="${style}" aria-hidden="true"></span>`:''}${p.concaveBR?`<span class="personal-corner pto-concave-br" style="${style}" aria-hidden="true"></span>`:''}`;
   }).join('')};
  }
  function filterMarkup(state){
