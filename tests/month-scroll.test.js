@@ -93,7 +93,7 @@ test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de trasp
 
 test('els controls queden sobre el títol i els modes sota el contingut, fora del scroll',()=>{
  const source=extract('function layout(content)', 'function monthPanel(');
- for(const calendarView of ['year','month','week','day']){
+ for(const calendarView of ['month','week','day']){
   const ctx=vm.createContext({tab:'calendar',calendarView,sheet:null,APP_VERSION:'test',icon:()=>'',navButton:()=>'',calendarViewButtons:()=>'',calendarControls:()=>'<nav class="calendar-controls">Eines</nav>',calendarNavigation:()=>'<header class="calendar-sticky-bar">Controls</header>'});
   vm.runInContext(source,ctx);
   const html=ctx.layout('<section>Calendari</section>');

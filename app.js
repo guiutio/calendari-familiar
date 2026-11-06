@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.16';
+const APP_VERSION = '0.16.17';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -648,13 +648,13 @@ function calendarViewButtons(kind) {
     }).join('');
 }
 function calendarNavigation() {
+    if (calendarView === 'year')
+        return '';
     return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod() ? ' data-current-period' : ''}>${escapeHtml(periodTitle())}</div></div>
     ${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
 }
 function isCurrentPeriod() {
     const today = new Date();
-    if (calendarView === 'year')
-        return viewYear === today.getFullYear();
     if (calendarView === 'month')
         return viewYear === today.getFullYear() && viewMonth === today.getMonth();
     const todayDate = localDate(today);
@@ -706,7 +706,7 @@ function monthPanel(index, children, today) {
 function monthPosition() {
     const annual = calendarView === 'year';
     const sequence = $app.querySelector(annual ? '.year-sequence' : '.month-sequence');
-    const bar = $app.querySelector('.calendar-sticky-bar');
+    const bar = $app.querySelector(annual ? '.calendar-controls' : '.calendar-sticky-bar');
     if (!sequence || !bar)
         return null;
     const panels = Array.from(sequence.querySelectorAll(annual ? '.year-panel' : '.month-panel'));
@@ -736,7 +736,7 @@ function mountCalendarScroll(position, resetScroll = false) {
     const annual = calendarView === 'year';
     const main = $app.querySelector('.main-area');
     const sequence = $app.querySelector(annual ? '.year-sequence' : '.month-sequence');
-    const bar = $app.querySelector('.calendar-sticky-bar');
+    const bar = $app.querySelector(annual ? '.calendar-controls' : '.calendar-sticky-bar');
     const mobile = () => window.matchMedia('(max-width:900px)').matches;
     const panelSelector = (index) => `[data-${annual ? 'year' : 'month'}-index="${index}"]`;
     if (!annual)
@@ -755,8 +755,8 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (target) {
             // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
             const top = bar.getBoundingClientRect().bottom;
-            const grid = (annual ? target.querySelector('.year-month.current-month') ?? target.querySelector('.year-overview') : target.querySelector('.month-grid')) ?? target;
-            shift(grid.getBoundingClientRect().top - top);
+            const start = target.querySelector(annual ? '.year-month.current-month' : '.month-grid') ?? target;
+            shift(start.getBoundingClientRect().top - top);
         }
     }
     else
@@ -777,20 +777,22 @@ function mountCalendarScroll(position, resetScroll = false) {
         const selected = parseDate(selectedDate);
         if (selected.getFullYear() !== viewYear || selected.getMonth() !== viewMonth)
             selectedDate = localDate(new Date(viewYear, viewMonth, 1, 12));
-        const title = bar.querySelector('.calendar-title');
+        const title = annual ? null : bar.querySelector('.calendar-title');
         if (title) {
             title.textContent = periodTitle();
             title.toggleAttribute('data-current-period', isCurrentPeriod());
         }
     };
     const hideRepeatedTitle = () => {
+        if (annual)
+            return;
         const anchor = monthPosition();
         const panel = anchor ? sequence.querySelector(panelSelector(anchor.index)) : null;
-        const heading = panel?.querySelector(annual ? '.year-section-title' : '.month-section-title');
+        const heading = panel?.querySelector('.month-section-title');
         const top = bar.getBoundingClientRect().bottom;
         if (!heading || heading.getBoundingClientRect().bottom <= top + .5)
             return;
-        const body = panel?.querySelector(annual ? '.year-overview' : '.month-grid');
+        const body = panel?.querySelector('.month-grid');
         if (!body)
             return;
         const delta = body.getBoundingClientRect().top - top;

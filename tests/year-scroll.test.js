@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const section=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
-function controller({mobile=true,native=true,year=2026,headings=false}={}){
+function controller({mobile=true,native=true,year=2026}={}){
  let panels=[],top=0,writes=0,changes=0,serial=0,clock=0;
  const events=[],frames=new Map(),timers=new Map(),mainEvents=new Map(),windowEvents=new Map();
  const height=y=>1080+(y%3)*90;
@@ -21,15 +21,12 @@ function controller({mobile=true,native=true,year=2026,headings=false}={}){
    getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+40+Math.floor(month/2)*170,bottom:this.getBoundingClientRect().top+40+(Math.floor(month/2)+1)*170})}));},
   querySelector(selector){
    if(y===2026&&selector==='.year-month.current-month')return this.querySelectorAll()[10];
-   if(headings&&selector==='.year-section-title')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top,bottom:this.getBoundingClientRect().top+28})};
-   if(headings&&selector==='.year-overview')return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+40,bottom:this.getBoundingClientRect().bottom})};
    return null;
   }
  });
  const first=Math.max(100,year-1),last=Math.min(9999,year+1);
  panels=Array.from({length:last-first+1},(_,i)=>panel(first+i));
- const title={textContent:'',current:false,toggleAttribute(_,enabled){this.current=enabled;}};
- const bar={getBoundingClientRect:()=>({bottom:100}),querySelector:()=>title};
+ const bar={getBoundingClientRect:()=>({bottom:100})};
  const sequence={isConnected:true,querySelectorAll:()=>panels,
   querySelector:selector=>panels.find(p=>selector.includes('"'+p.year+'"')),
   get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},
@@ -41,12 +38,12 @@ function controller({mobile=true,native=true,year=2026,headings=false}={}){
   requestAnimationFrame:f=>{frames.set(++serial,f);return serial;},cancelAnimationFrame:id=>frames.delete(id),
   setTimeout:(f,delay)=>{timers.set(++serial,{f,due:clock+delay});return serial;},clearTimeout:id=>timers.delete(id)};
  if(native&&!mobile)win.onscrollend=null;
- const ctx=vm.createContext({$app:{querySelector:s=>s==='.main-area'?main:s==='.year-sequence'?sequence:s==='.calendar-sticky-bar'?bar:null},
-  window:win,Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,10,2,12]));}},
+ const ctx=vm.createContext({$app:{querySelector:s=>s==='.main-area'?main:s==='.year-sequence'?sequence:s==='.calendar-controls'?bar:null},
+  window:win,
   tab:'calendar',calendarView:'year',viewYear:year,viewMonth:10,selectedDate:`${String(year).padStart(4,'0')}-11-02`,monthScrollTarget:true,
   yearRange:{first,last},stopCalendarScroll:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),
-  yearPanel:y=>y+',',periodTitle:()=>String(ctx.viewYear)});
- vm.runInContext(section('function isCurrentPeriod()', 'function calendarControls(')+section('function monthPosition()', 'function zoomControls('),ctx);
+  yearPanel:y=>y+','});
+ vm.runInContext(section('function monthPosition()', 'function zoomControls('),ctx);
  function flush(){for(let i=0;i<30&&(events.length||frames.size);i++){
   const queue=events.splice(0);for(const f of queue)f();const current=[...frames.values()];frames.clear();for(const f of current)f();
  }}
@@ -54,7 +51,7 @@ function controller({mobile=true,native=true,year=2026,headings=false}={}){
  const end=()=>{fire('scrollend');flush();};
  const advance=ms=>{clock+=ms;for(const [id,t] of [...timers])if(t.due<=clock){timers.delete(id);t.f();}flush();};
  ctx.mountCalendarScroll(null,true);flush();
- return {ctx,main,title,panels:()=>panels,metrics:()=>({top,writes,changes}),flush,end,advance,
+ return {ctx,main,panels:()=>panels,metrics:()=>({top,writes,changes}),flush,end,advance,
   fire:n=>mainEvents.get(n)?.(),scroll:v=>{setTop(v);flush();},
   go(y,offset=0){const p=panels.find(p=>p.year===y);assert.ok(p,'Any carregat: '+y);setTop(top+p.getBoundingClientRect().top-100+offset);flush();},
   remount(){const anchor=ctx.monthPosition();ctx.stopCalendarScroll();top=0;ctx.mountCalendarScroll(anchor,false);flush();},
@@ -67,19 +64,16 @@ test('Any enfoca el mes actual en mòbil i escriptori i Avui el recupera despré
   const c=controller({mobile});
   const current=()=>c.panels().find(p=>p.year===2026).querySelector('.year-month.current-month');
   assert.equal(current().getBoundingClientRect().top,100);
-  assert.equal(c.title.current,true);
-  c.go(2027);c.end();assert.equal(c.ctx.viewYear,2027);assert.equal(c.title.textContent,'2027');
-  assert.equal(c.title.current,false);
+  c.go(2027);c.end();assert.equal(c.ctx.viewYear,2027);
   c.focus();assert.equal(current().getBoundingClientRect().top,100);
-  assert.equal(c.title.current,true);
   assert.equal(c.ctx.monthScrollTarget,false);
  }
 });
 
-test('Any recorre dues dècades en ambdues direccions, conserva els anys i sincronitza la barra',()=>{
+test('Any recorre dues dècades en ambdues direccions i conserva els anys carregats',()=>{
  const c=controller(),original=c.panels().find(p=>p.year===2026);
  for(let year=2027;year<=2046;year++){
-  c.go(year);c.end();assert.equal(c.ctx.viewYear,year);assert.equal(c.title.textContent,String(year));
+  c.go(year);c.end();assert.equal(c.ctx.viewYear,year);
   assert.equal(c.ctx.selectedDate.slice(0,4),String(year));
  }
  for(let year=2045;year>=2006;year--){c.go(year);c.end();assert.equal(c.ctx.viewYear,year);}
@@ -119,18 +113,18 @@ test('Any respecta els límits de dates en carregar anys anteriors i posteriors'
 });
 
 
-test('Any amaga el títol en entrar en un any diferent i quan la inèrcia deixa el títol repetit',()=>{
+test('Any mostra el títol sota els controls i conserva la posició quan s’acaba la inèrcia',()=>{
  for(const mobile of [true,false]){
-  const c=controller({mobile,year:2027,headings:true});
-  const body=y=>c.panels().find(p=>p.year===y).querySelector('.year-overview');
-  assert.equal(body(2027).getBoundingClientRect().top,100);
+  const c=controller({mobile,year:2027});
+  const headingTop=y=>c.panels().find(p=>p.year===y).getBoundingClientRect().top;
+  assert.equal(headingTop(2027),100);
   for(const year of [2028,2026]){
-  c.fire('touchstart');c.go(year,10);c.fire('touchend');
-  const before=c.metrics();assert.equal(body(year).getBoundingClientRect().top,130);
-  c.advance(2000);assert.deepEqual(c.metrics(),before);
-  c.end();assert.equal(body(year).getBoundingClientRect().top,100);
-  assert.equal(c.metrics().writes,before.writes+(year===2026?2:1));
-  const stable=c.metrics();c.end();c.advance(10000);assert.deepEqual(c.metrics(),stable);
+   c.fire('touchstart');c.go(year,10);c.fire('touchend');
+   const before=c.metrics();assert.equal(headingTop(year),90);
+   c.advance(2000);assert.deepEqual(c.metrics(),before);
+   c.end();assert.equal(headingTop(year),90);
+   assert.equal(c.metrics().writes,before.writes+(year===2026?1:0));
+   const stable=c.metrics();c.end();c.advance(10000);assert.deepEqual(c.metrics(),stable);
   }
  }
 });

@@ -16,7 +16,8 @@ for(const view of Object.keys(labels))test(`${view}: títol a dalt, eines a l’
   weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg']});
  vm.runInContext(dateHelpers+app.slice(start,end),ctx);
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
- assert.ok(title.includes(`<div class="calendar-title" data-current-period>${labels[view]}</div>`));
+ if(view==='year')assert.equal(title,'');
+ else assert.ok(title.includes(`<div class="calendar-title" data-current-period>${labels[view]}</div>`));
  if(view==='year')ctx.viewYear=2027;
  if(view==='month')ctx.viewMonth=11;
  if(view==='week')ctx.selectedDate='2026-11-09';

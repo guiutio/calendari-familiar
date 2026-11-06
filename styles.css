@@ -1055,6 +1055,9 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
   .calendar-layout .calendar-sticky-bar {grid-row:2;top:var(--calendar-controls-height);}
   .calendar-layout .main-area {grid-row:3;}
   .calendar-layout .sidebar {grid-row:1 / span 3;}
+  .calendar-layout:has(.year-sequence) {grid-template-rows:var(--calendar-controls-height) 1fr;}
+  .calendar-layout:has(.year-sequence) .main-area {grid-row:2;}
+  .calendar-layout:has(.year-sequence) .sidebar {grid-row:1 / span 2;}
   .calendar-layout.calendar-week-layout,.calendar-layout.calendar-day-layout {grid-template-rows:var(--calendar-controls-height) auto minmax(0,1fr);padding-bottom:0;}
   .calendar-layout:not(.calendar-week-layout):not(.calendar-day-layout) .main-area {padding-bottom:64px;}
 }
