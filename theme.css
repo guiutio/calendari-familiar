@@ -95,7 +95,7 @@
 :root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;}
 :root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
 :root[data-theme] .month-grid .day-cell.today .change-dot {background:currentColor;}
-:root[data-theme] .calendar-title[data-current-month],
+:root[data-theme] :is(.calendar-title,.year-section-title)[data-current-period],
 :root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
 :root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
 :root[data-theme] :is(.month-mini-column,.mini-band-empty,.legend-empty,.agenda-cell.is-empty) {background:var(--control-background);border-color:var(--separator);box-shadow:none;}
@@ -109,10 +109,11 @@
 :root[data-theme] .day-time-column {border-color:var(--grid-line);background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hour-height,48px) - 1px),var(--grid-line) calc(var(--hour-height,48px) - 1px),var(--grid-line) var(--hour-height,48px));}
 :root[data-theme] .school-timeline-column {border-color:var(--grid-line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 53px,var(--grid-line) 53px,var(--grid-line) 54px);}
 :root[data-theme] .week-day-header.today,
-:root[data-theme] .week-day-header.today :is(.week-child-headers,.week-date-button) {background:var(--selection-background);color:var(--text-primary);}
-:root[data-theme] .week-day-header.today .week-child-label {color:var(--text-primary);}
-:root[data-theme] .week-date-columns.today .day-time-column {background:repeating-linear-gradient(to bottom,var(--selection-background) 0,var(--selection-background) calc(var(--hour-height,48px) - 1px),var(--separator) calc(var(--hour-height,48px) - 1px),var(--separator) var(--hour-height,48px));border-color:var(--accent);}
-:root[data-theme] .week-date-columns.today {box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent);}
+:root[data-theme] .week-day-header.today .week-date-button,
+:root[data-theme] .week-date-columns.today,
+:root[data-theme] .calendar-day-layout:has(.calendar-title[data-current-period]) :is(.day-timeline-headers,.day-timeline-grid) {background:var(--calendar-current);color:#fff;}
+:root[data-theme] .week-day-header.today .week-child-label,
+:root[data-theme] .calendar-day-layout:has(.calendar-title[data-current-period]) :is(.day-timeline-headers span,.day-time-tick) {color:#fff;}
 :root[data-theme] .day-night-block {background:color-mix(in srgb,var(--night-color) 52%,var(--surface));border-color:color-mix(in srgb,var(--night-color) 60%,var(--surface));}
 :root[data-theme] .day-school-block {background:color-mix(in srgb,var(--school-event-color) 49%,var(--surface));}
 :root[data-theme] .school-timeline-event {background:color-mix(in srgb,var(--activity-color) 44%,var(--surface));}

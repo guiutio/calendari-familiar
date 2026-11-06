@@ -36,12 +36,11 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(ts,/class="day-cell[^\n]+\$\{date===today\?'today':''\}/);
  assert.match(ts,/\$\{date===today\?'aria-current="date"':''\}/);
  assert.match(theme,/\.month-grid \.day-cell\.today,\s*:root\[data-theme\] \.year-day\.today \{background:var\(--calendar-current\);color:#fff;/);
- assert.match(theme,/\.calendar-title\[data-current-month\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
+ assert.match(theme,/\[data-current-period\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
- assert.match(css,/\.week-day-header\.today[\s\S]*?background:#285782;/);
- assert.match(css,/\.week-date-columns\.today \.day-time-column[\s\S]*?background:repeating-linear-gradient/);
- assert.match(html,/styles\.css\?v=0\.16\.15/);
- assert.match(sw,/calendari-familiar-v0\.16\.15/);
+ assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.week-date-columns\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
+ assert.match(html,/styles\.css\?v=0\.16\.16/);
+ assert.match(sw,/calendari-familiar-v0\.16\.16/);
 });
 
 const between=(a,b)=>{

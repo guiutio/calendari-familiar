@@ -696,44 +696,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
   border-radius:0;
 }
 
-/* A la vista Setmana, avui és tota la columna de 24 hores, inclosa la capçalera. */
-.week-day-header.today,
-.week-day-header.today .week-child-headers,
-.week-day-header.today .week-date-button {
-  background:#285782;
-  color:#fff;
-}
-.week-day-header.today .week-child-label {color:#fff;}
-.week-date-columns.today .day-time-column {
-  background:repeating-linear-gradient(
-    to bottom,
-    #285782 0,
-    #285782 calc(var(--hour-height,48px) - 1px),
-    #78a9d6 calc(var(--hour-height,48px) - 1px),
-    #78a9d6 var(--hour-height,48px)
-  );
-  border-left-color:#729dc9;
-}
-.week-date-columns.today {box-shadow:inset 3px 0 0 #285782,inset -3px 0 0 #285782;}
-:root[data-theme="dark"] .week-day-header.today,
-:root[data-theme="dark"] .week-day-header.today .week-child-headers,
-:root[data-theme="dark"] .week-day-header.today .week-date-button {
-  background:#94c5ff;
-  color:#132d4b;
-}
-:root[data-theme="dark"] .week-day-header.today .week-child-label {color:#132d4b;}
-:root[data-theme="dark"] .week-date-columns.today .day-time-column {
-  background:repeating-linear-gradient(
-    to bottom,
-    #94c5ff 0,
-    #94c5ff calc(var(--hour-height,48px) - 1px),
-    #477aa8 calc(var(--hour-height,48px) - 1px),
-    #477aa8 var(--hour-height,48px)
-  );
-  border-left-color:#88baff;
-}
-:root[data-theme="dark"] .week-date-columns.today {box-shadow:inset 3px 0 0 #94c5ff,inset -3px 0 0 #94c5ff;}
-
 /* v0.6.0 · Rotacions independents, hores per dia i franges editables. */
 .extra-rotation-section {display:flex;flex-direction:column;gap:12px;margin-top:16px;}
 .extra-rotation-section>.panel-header {padding:5px 3px;}

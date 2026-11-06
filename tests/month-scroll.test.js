@@ -6,7 +6,7 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const extract=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
 const dates=extract('function periodTitle()', 'function navButton(');
 const dateHelpers=extract('function localDate(', 'function monthTitle(');
-const currentMonth=extract('function isCurrentMonth()', 'function calendarControls(');
+const currentMonth=extract('function isCurrentPeriod()', 'function calendarControls(');
 class OctoberClock extends Date {
  constructor(...args){super(...(args.length?args:[2026,9,31,12]));}
 }
@@ -69,14 +69,14 @@ test('mesos: conserva el desplaçament parcial en repintar filtres o diàlegs',(
 });
 test('mesos: les fletxes i Avui poden enfocar un mes ja carregat',()=>{
  const c=controller();
- assert.ok(c.title.attributes.has('data-current-month'));
+ assert.ok(c.title.attributes.has('data-current-period'));
  c.scroll(1400);
- assert.ok(!c.title.attributes.has('data-current-month'));
+ assert.ok(!c.title.attributes.has('data-current-period'));
  c.ctx.viewYear=2026;c.ctx.viewMonth=9;c.ctx.monthScrollTarget=true;
  c.ctx.mountCalendarScroll(c.ctx.monthPosition());c.refresh();
  assert.equal(c.ctx.monthPosition().index,c.base);
  assert.equal(c.ctx.monthPosition().top,100);
- assert.ok(c.title.attributes.has('data-current-month'));
+ assert.ok(c.title.attributes.has('data-current-period'));
 });
 test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de traspàs',()=>{
  const context=vm.createContext({calendarView:'month',viewYear:2026,viewMonth:11,selectedDate:'2026-12-31',monthScrollTarget:false,render:()=>{}});

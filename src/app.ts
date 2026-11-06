@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.15';
+const APP_VERSION = '0.16.16';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -569,13 +569,15 @@ function calendarViewButtons(kind:'side'|'mobile'){
   }).join('');
 }
 function calendarNavigation(){
-  const currentMonth=calendarView==='month'&&isCurrentMonth();
-  return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${currentMonth?' data-current-month':''}>${escapeHtml(periodTitle())}</div></div>
+  return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod()?' data-current-period':''}>${escapeHtml(periodTitle())}</div></div>
     ${calendarView==='month'?`<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d=>`<span>${d}</span>`).join('')}</div>`:''}</header>`;
 }
-function isCurrentMonth(){
+function isCurrentPeriod(){
   const today=new Date();
-  return viewYear===today.getFullYear()&&viewMonth===today.getMonth();
+  if(calendarView==='year')return viewYear===today.getFullYear();
+  if(calendarView==='month')return viewYear===today.getFullYear()&&viewMonth===today.getMonth();
+  const todayDate=localDate(today);
+  return calendarView==='week'?weekStart(selectedDate)===weekStart(todayDate):selectedDate===todayDate;
 }
 function calendarControls(){
   const children=activeChildren();
@@ -679,7 +681,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const title=bar.querySelector<HTMLElement>('.calendar-title');
     if(title){
       title.textContent=periodTitle();
-      if(!annual)title.toggleAttribute('data-current-month',isCurrentMonth());
+      title.toggleAttribute('data-current-period',isCurrentPeriod());
     }
   };
   const hideRepeatedTitle=()=>{
@@ -819,7 +821,8 @@ function yearOverview(year:number,children:Child[],today:string):string {
   }).join('')}</div>`;
 }
 function yearPanel(year:number,children:Child[],today:string):string {
-  return `<section class="year-panel" data-year-index="${year}" aria-label="Any ${year}"><h2 class="year-section-title">${year}</h2>${yearOverview(year,children,today)}</section>`;
+  const current=year===Number(today.slice(0,4));
+  return `<section class="year-panel" data-year-index="${year}" aria-label="Any ${year}"><h2 class="year-section-title"${current?' data-current-period':''}>${year}</h2>${yearOverview(year,children,today)}</section>`;
 }
 function calendarLegend():string {
   const personalLegend=state.personTimeOff&&(calendarView==='year'||calendarView==='month')?personalTimeOff.legendMarkup(state):'';

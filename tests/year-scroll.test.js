@@ -28,7 +28,8 @@ function controller({mobile=true,native=true,year=2026,headings=false}={}){
  });
  const first=Math.max(100,year-1),last=Math.min(9999,year+1);
  panels=Array.from({length:last-first+1},(_,i)=>panel(first+i));
- const title={textContent:''},bar={getBoundingClientRect:()=>({bottom:100}),querySelector:()=>title};
+ const title={textContent:'',current:false,toggleAttribute(_,enabled){this.current=enabled;}};
+ const bar={getBoundingClientRect:()=>({bottom:100}),querySelector:()=>title};
  const sequence={isConnected:true,querySelectorAll:()=>panels,
   querySelector:selector=>panels.find(p=>selector.includes('"'+p.year+'"')),
   get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},
@@ -41,10 +42,11 @@ function controller({mobile=true,native=true,year=2026,headings=false}={}){
   setTimeout:(f,delay)=>{timers.set(++serial,{f,due:clock+delay});return serial;},clearTimeout:id=>timers.delete(id)};
  if(native&&!mobile)win.onscrollend=null;
  const ctx=vm.createContext({$app:{querySelector:s=>s==='.main-area'?main:s==='.year-sequence'?sequence:s==='.calendar-sticky-bar'?bar:null},
-  window:win,tab:'calendar',calendarView:'year',viewYear:year,viewMonth:10,selectedDate:`${String(year).padStart(4,'0')}-11-02`,monthScrollTarget:true,
+  window:win,Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,10,2,12]));}},
+  tab:'calendar',calendarView:'year',viewYear:year,viewMonth:10,selectedDate:`${String(year).padStart(4,'0')}-11-02`,monthScrollTarget:true,
   yearRange:{first,last},stopCalendarScroll:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),
   yearPanel:y=>y+',',periodTitle:()=>String(ctx.viewYear)});
- vm.runInContext(section('function monthPosition()', 'function zoomControls('),ctx);
+ vm.runInContext(section('function isCurrentPeriod()', 'function calendarControls(')+section('function monthPosition()', 'function zoomControls('),ctx);
  function flush(){for(let i=0;i<30&&(events.length||frames.size);i++){
   const queue=events.splice(0);for(const f of queue)f();const current=[...frames.values()];frames.clear();for(const f of current)f();
  }}
@@ -65,8 +67,11 @@ test('Any enfoca el mes actual en mòbil i escriptori i Avui el recupera despré
   const c=controller({mobile});
   const current=()=>c.panels().find(p=>p.year===2026).querySelector('.year-month.current-month');
   assert.equal(current().getBoundingClientRect().top,100);
+  assert.equal(c.title.current,true);
   c.go(2027);c.end();assert.equal(c.ctx.viewYear,2027);assert.equal(c.title.textContent,'2027');
+  assert.equal(c.title.current,false);
   c.focus();assert.equal(current().getBoundingClientRect().top,100);
+  assert.equal(c.title.current,true);
   assert.equal(c.ctx.monthScrollTarget,false);
  }
 });
