@@ -54,8 +54,8 @@ test('la nova vista només substitueix la graella de cinc franges al dia',()=>{
  assert.match(app,/dayTimelineUI\.overnightSegments/);
  assert.match(app,/previousTimeline\.getBoundingClientRect\(\)/);
  assert.match(css.slice(css.indexOf('/* v0.5.3')),/\.day-timeline-viewport \{[\s\S]*?height:auto;/);
- assert.match(html,/day-timeline\.js\?v=0\.16\.13/);
- assert.match(sw,/day-timeline\.js\?v=0\.16\.13/);
+ assert.match(html,/day-timeline\.js\?v=0\.16\.14/);
+ assert.match(sw,/day-timeline\.js\?v=0\.16\.14/);
 });
 test('Dia omple l’alçada útil amb la mateixa proporció per a pernoctes i activitats',()=>{
  const segments=ui.overnightSegments('2026-10-28','elna','19:00',nights,prev,guardian,['mare','pare']);

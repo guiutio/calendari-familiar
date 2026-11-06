@@ -943,27 +943,24 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .extra-rotation-section>.panel-header .section-title {flex:1 1 100%;}
 
 /* Vista anual: dotze mesos compactes amb les mateixes miniatures de colors que Mes. */
-.year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:0;}
-.year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:12px 10px;border:1px solid #dce5ef;border-radius:14px;background:#fff;color:#253851;text-align:left;}
-.year-month:hover {border-color:#92b0d4;background:#f7faff;}
-.year-month-title {display:block;margin-bottom:10px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
+.year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:3px;border:0;background:transparent;color:inherit;text-align:left;}
+.year-month-title {display:block;margin-bottom:5px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
+.year-month.current-month .year-month-title {color:var(--accent,#2d5d8a);}
+@media(hover:hover){.year-month:hover .year-month-title {text-decoration:underline;}}
 .year-weekdays,.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
-.year-weekdays {margin-bottom:5px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
-.year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px 0;}
+.year-weekdays {margin-bottom:3px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
+.year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px;}
 .year-day-number {align-self:center;min-width:17px;line-height:16px;text-align:center;border-radius:50%;font-size:calc(10px * var(--font-scale,1));font-weight:650;}
 .year-day.today {background:#285782;color:#fff;}
 .year-day.today .year-day-number {background:transparent;color:inherit;border-radius:0;font-weight:800;}
 .year-day.today .month-mini-column {background:#d9e8f6;}
-.year-month.current-month {border-color:#2d5d8a;box-shadow:inset 0 0 0 2px #2d5d8a;}
 .year-month .month-mini {grid-template-rows:minmax(0,1fr);height:10px;gap:1px;}
 .year-month .month-mini-child {display:none;}
 .year-month .month-mini-column {border-radius:1px;}
-:root[data-theme="dark"] .year-month {background:#192436;border-color:#40536f;color:#dfebfa;}
-:root[data-theme="dark"] .year-month:hover {background:#22334b;border-color:#88baff;}
 :root[data-theme="dark"] .year-weekdays {color:#adbed4;}
 :root[data-theme="dark"] .year-day.today {background:#94c5ff;color:#132d4b;}
-:root[data-theme="dark"] .year-month.current-month {border-color:#94c5ff;box-shadow:inset 0 0 0 2px #94c5ff;}
-@media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0;}.year-month {padding:10px 7px;}}
+@media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 6px;}}
 
 /* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */
 .year-month .month-mini-school {border-left:0;box-shadow:none;}
@@ -998,7 +995,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 :root[data-theme="dark"] .person-record + .person-record {border-color:#40536f;}
 :root[data-theme="dark"] .person-me.selected {background:#2d4f76;border-color:#8ab9ec;color:#e5f0ff;}
 :root[data-theme="dark"] .personal-holiday-pill,:root[data-theme="dark"] .personal-holidays .school-date-cell.selected {background:#542f34;border-color:#ff7777;color:#ffd9da;}
-.year-day {padding:4px 1px;min-height:34px;}
 :root[data-theme="dark"] .personal-holidays .school-date-cell.selected {border-color:var(--personal-holiday-color);}
 
 /* Horari laboral: selectors com els de persones i patrons de jornada partida. */
