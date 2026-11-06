@@ -45,11 +45,9 @@ svg { flex-shrink:0; }
 .day-cell { position:relative;background:#fff;border:0;text-align:left;padding:10px 6px 9px;min-width:0;min-height:99px;display:flex;flex-direction:column;gap:4px;align-items:stretch; color:#324258; transition:background-color .15s; }
 .day-cell:hover { background:#f9fbff; }
 .day-cell.other-month { background:#fafbfc;opacity:.48; }
-.day-cell.today { background:#f7faff; }
 .day-cell.selected { box-shadow:inset 0 0 0 2px #5a86c4;z-index:1; }
 .day-top { display:flex;align-items:center;justify-content:space-between;min-height:23px;padding:0 3px; }
 .day-number { display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:calc(12px * var(--font-scale, 1));font-weight:650; }
-.day-cell.today .day-number { background:#2d5789;color:white; }
 .change-dot { height:5px;width:5px;border-radius:50%;background:#9ca9ba; }
 .assignment { display:flex;align-items:center;justify-content:center;min-width:0;max-width:100%;border-radius:6px;min-height:23px;padding:3px 2px;font-size:calc(10px * var(--font-scale, 1));font-weight:700;color:#25334a;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .assignment.muted { opacity:.3; }
@@ -212,8 +210,6 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 :root[data-theme="dark"] .day-cell { background:#1b2a3d;color:#e4ecf8; }
 :root[data-theme="dark"] .day-cell:hover { background:#253950; }
 :root[data-theme="dark"] .day-cell.other-month { background:#172336;opacity:.68; }
-:root[data-theme="dark"] .day-cell.today { background:#274363; }
-:root[data-theme="dark"] .day-cell.today .day-number { background:#86b9f3;color:#111c2c; }
 :root[data-theme="dark"] .month-grid { background:#33445c;border-color:#33445c; }
 :root[data-theme="dark"] .weekdays span,:root[data-theme="dark"] .rotation-week-title,:root[data-theme="dark"] .rotation-cell .small-day { color:#b3c0d2; }
 :root[data-theme="dark"] .change-dot { background:#bbcadb; }
@@ -694,37 +690,11 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .calendar-empty-state p {margin:0;font-size:calc(13px * var(--font-scale,1));line-height:1.55;}
 :root[data-theme="dark"] .calendar-empty-state {color:#d0dbee;}
 
-/* v0.5.10 · El dia d'avui es distingeix per tota la superfície, no pel cercle del número. */
-.month-grid .day-cell.today,
-.month-grid .day-cell.today:hover,
-.month-grid .day-cell.today.other-month {
-  background:#285782;
-  color:#fff;
-  opacity:1;
-}
 .month-grid .day-cell.today .day-number {
   background:transparent;
   color:inherit;
   border-radius:0;
 }
-.month-grid .day-cell.today .month-mini-child,
-.month-grid .day-cell.today .mini-birthday {color:#fff;}
-.month-grid .day-cell.today .change-dot {background:#fff;}
-.month-grid .day-cell.today .month-mini-column {background:#d9e8f6;}
-:root[data-theme="dark"] .month-grid .day-cell.today,
-:root[data-theme="dark"] .month-grid .day-cell.today:hover,
-:root[data-theme="dark"] .month-grid .day-cell.today.other-month {
-  background:#94c5ff;
-  color:#132d4b;
-}
-:root[data-theme="dark"] .month-grid .day-cell.today .day-number {
-  background:transparent;
-  color:inherit;
-  border-radius:0;
-}
-:root[data-theme="dark"] .month-grid .day-cell.today .month-mini-child,
-:root[data-theme="dark"] .month-grid .day-cell.today .mini-birthday {color:#132d4b;}
-:root[data-theme="dark"] .month-grid .day-cell.today .change-dot {background:#132d4b;}
 
 /* A la vista Setmana, avui és tota la columna de 24 hores, inclosa la capçalera. */
 .week-day-header.today,
@@ -946,20 +916,16 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
 .year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:3px;border:0;background:transparent;color:inherit;text-align:left;}
 .year-month-title {display:block;margin-bottom:5px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
-.year-month.current-month .year-month-title {color:var(--accent,#2d5d8a);}
 @media(hover:hover){.year-month:hover .year-month-title {text-decoration:underline;}}
 .year-weekdays,.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
 .year-weekdays {margin-bottom:3px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
 .year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px;}
 .year-day-number {align-self:center;min-width:17px;line-height:16px;text-align:center;border-radius:50%;font-size:calc(10px * var(--font-scale,1));font-weight:650;}
-.year-day.today {background:#285782;color:#fff;}
 .year-day.today .year-day-number {background:transparent;color:inherit;border-radius:0;font-weight:800;}
-.year-day.today .month-mini-column {background:#d9e8f6;}
 .year-month .month-mini {grid-template-rows:minmax(0,1fr);height:10px;gap:1px;}
 .year-month .month-mini-child {display:none;}
 .year-month .month-mini-column {border-radius:1px;}
 :root[data-theme="dark"] .year-weekdays {color:#adbed4;}
-:root[data-theme="dark"] .year-day.today {background:#94c5ff;color:#132d4b;}
 @media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 6px;}}
 
 /* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */

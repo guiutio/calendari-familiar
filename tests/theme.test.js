@@ -22,6 +22,9 @@ test('els textos i les accions conserven contrast en les dues aparences',()=>{
       }
     }
     assert.ok(contrast(palette['on-accent'],palette.accent)>=4.5);
+    assert.ok(contrast('#ffffff',palette['calendar-current'])>=4.5);
+    assert.ok(contrast(palette['calendar-current'],palette['app-background'])>=4.5);
+    assert.ok(contrast(palette['calendar-current'],palette.surface)>=3);
   }
 });
 

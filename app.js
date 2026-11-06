@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.14';
+const APP_VERSION = '0.16.15';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -648,8 +648,13 @@ function calendarViewButtons(kind) {
     }).join('');
 }
 function calendarNavigation() {
-    return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title">${escapeHtml(periodTitle())}</div></div>
+    const currentMonth = calendarView === 'month' && isCurrentMonth();
+    return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${currentMonth ? ' data-current-month' : ''}>${escapeHtml(periodTitle())}</div></div>
     ${calendarView === 'month' ? `<div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div>` : ''}</header>`;
+}
+function isCurrentMonth() {
+    const today = new Date();
+    return viewYear === today.getFullYear() && viewMonth === today.getMonth();
 }
 function calendarControls() {
     const children = activeChildren();
@@ -769,8 +774,11 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (selected.getFullYear() !== viewYear || selected.getMonth() !== viewMonth)
             selectedDate = localDate(new Date(viewYear, viewMonth, 1, 12));
         const title = bar.querySelector('.calendar-title');
-        if (title)
+        if (title) {
             title.textContent = periodTitle();
+            if (!annual)
+                title.toggleAttribute('data-current-month', isCurrentMonth());
+        }
     };
     const hideRepeatedTitle = () => {
         const anchor = monthPosition();

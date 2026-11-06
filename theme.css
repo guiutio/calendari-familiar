@@ -13,6 +13,7 @@
   --grid-line:#e5e5ea;
   --accent:#005fc7;
   --on-accent:#ffffff;
+  --calendar-current:#bf242b;
   --selection-background:#e5e5ea;
   --danger:#b3261e;
   --danger-background:#fff0ef;
@@ -35,6 +36,7 @@
   --grid-line:#38383a;
   --accent:#64a8ff;
   --on-accent:#000000;
+  --calendar-current:#dc3434;
   --selection-background:#3a3a3c;
   --danger:#ff6961;
   --danger-background:#361b1b;
@@ -90,14 +92,13 @@
 :root[data-theme] .month-week-number:hover,:root[data-theme] .month-week-number:active {background:var(--selection-background);color:var(--accent);}
 :root[data-theme] .weekdays .month-week-heading {color:var(--text-secondary);}
 :root[data-theme] .month-grid .day-cell.today,
-:root[data-theme] .month-grid .day-cell.today:hover,
-:root[data-theme] .month-grid .day-cell.today.other-month {background:var(--selection-background);color:var(--text-primary);box-shadow:inset 0 0 0 2px var(--accent);}
-:root[data-theme] .month-grid .day-cell.today :is(.day-number,.month-mini-child,.mini-birthday) {color:var(--text-primary);}
-:root[data-theme] .month-grid .day-cell.today .change-dot {background:var(--accent);}
-:root[data-theme] .year-day.today {background:var(--selection-background);color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--accent);}
+:root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;}
+:root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
+:root[data-theme] .month-grid .day-cell.today .change-dot {background:currentColor;}
+:root[data-theme] .calendar-title[data-current-month],
+:root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
+:root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
 :root[data-theme] :is(.month-mini-column,.mini-band-empty,.legend-empty,.agenda-cell.is-empty) {background:var(--control-background);border-color:var(--separator);box-shadow:none;}
-:root[data-theme] .month-grid .day-cell.today .month-mini-column,
-:root[data-theme] .year-day.today .month-mini-column {background:var(--control-background);}
 :root[data-theme] .agenda-cell.is-empty {color:var(--text-secondary);}
 
 :root[data-theme] :is(.day-timeline-viewport,.month-day-timeline,.school-timeline,.week-time-axis) {background:var(--surface);border-color:var(--separator);}

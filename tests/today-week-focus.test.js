@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const ts=readFileSync(new URL('../src/app.ts',import.meta.url),'utf8');
 const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+const theme=readFileSync(new URL('../theme.css',import.meta.url),'utf8');
 const day=readFileSync(new URL('../day-timeline.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
@@ -31,18 +32,16 @@ test('a Setmana es ressalta tota la columna d’avui i la capçalera, no els alt
  assert.match(otherFocus,/class="week-day-header today" data-date="2026-10-29"/);
 });
 
-test('el mes inverteix el fons de tot el requadre i elimina el cercle de la data',()=>{
+test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del mes actual',()=>{
  assert.match(ts,/class="day-cell[^\n]+\$\{date===today\?'today':''\}/);
  assert.match(ts,/\$\{date===today\?'aria-current="date"':''\}/);
- assert.match(css,/\.month-grid \.day-cell\.today\s*,[\s\S]*?background:#285782;/);
+ assert.match(theme,/\.month-grid \.day-cell\.today,\s*:root\[data-theme\] \.year-day\.today \{background:var\(--calendar-current\);color:#fff;/);
+ assert.match(theme,/\.calendar-title\[data-current-month\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
- assert.match(css,/:root\[data-theme="dark"\] \.month-grid \.day-cell\.today[\s\S]*?background:#94c5ff;/);
- assert.match(css,/:root\[data-theme="dark"\] \.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
- assert.match(css,/\.month-grid \.day-cell\.today \.month-mini-child/);
  assert.match(css,/\.week-day-header\.today[\s\S]*?background:#285782;/);
  assert.match(css,/\.week-date-columns\.today \.day-time-column[\s\S]*?background:repeating-linear-gradient/);
- assert.match(html,/styles\.css\?v=0\.16\.14/);
- assert.match(sw,/calendari-familiar-v0\.16\.14/);
+ assert.match(html,/styles\.css\?v=0\.16\.15/);
+ assert.match(sw,/calendari-familiar-v0\.16\.15/);
 });
 
 const between=(a,b)=>{

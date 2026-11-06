@@ -6,6 +6,10 @@ const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const extract=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
 const dates=extract('function periodTitle()', 'function navButton(');
 const dateHelpers=extract('function localDate(', 'function monthTitle(');
+const currentMonth=extract('function isCurrentMonth()', 'function calendarControls(');
+class OctoberClock extends Date {
+ constructor(...args){super(...(args.length?args:[2026,9,31,12]));}
+}
 
 function controller(mobile=true,headerHeight=0){
  let frame,listen,timer;
@@ -15,14 +19,14 @@ function controller(mobile=true,headerHeight=0){
  let panels=[];
  const panel=index=>({querySelector(){return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+headerHeight})};},querySelectorAll:()=>[],dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
- const title={textContent:''};
+ const title={textContent:'',attributes:new Set(),toggleAttribute(name,enabled){if(enabled)this.attributes.add(name);else this.attributes.delete(name);}};
  const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>title};
  const sequence={isConnected:true,querySelectorAll:()=>panels,querySelector:s=>panels.find(p=>s.includes('"'+p.dataset.monthIndex+'"')),get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},insertAdjacentHTML(where,html){const next=html.split(',').map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];}};
  const $app={querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:bar};
- const ctx=vm.createContext({$app,window:win,tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+',',periodTitle:()=>`${ctx.viewYear}-${ctx.viewMonth+1}`});
+ const ctx=vm.createContext({$app,window:win,Date:OctoberClock,tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+',',periodTitle:()=>`${ctx.viewYear}-${ctx.viewMonth+1}`});
  // Use a delimiter only between generated panels, including appends/prepends.
  sequence.insertAdjacentHTML=(where,html)=>{const next=html.split(',').filter(Boolean).map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];};
- vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
+ vm.runInContext(currentMonth+extract('function monthPosition()', 'function calendarPage()'),ctx);
  const flush=()=>{for(let i=0;frame&&i<10;i++){const next=frame;frame=undefined;next();}};
  const idle=()=>{const next=timer;timer=undefined;next?.();flush();};
  ctx.mountCalendarScroll(null);flush();idle();
@@ -64,11 +68,15 @@ test('mesos: conserva el desplaçament parcial en repintar filtres o diàlegs',(
  assert.equal(c.ctx.monthPosition().top,anchor.top);
 });
 test('mesos: les fletxes i Avui poden enfocar un mes ja carregat',()=>{
- const c=controller();c.scroll(1400);
+ const c=controller();
+ assert.ok(c.title.attributes.has('data-current-month'));
+ c.scroll(1400);
+ assert.ok(!c.title.attributes.has('data-current-month'));
  c.ctx.viewYear=2026;c.ctx.viewMonth=9;c.ctx.monthScrollTarget=true;
  c.ctx.mountCalendarScroll(c.ctx.monthPosition());c.refresh();
  assert.equal(c.ctx.monthPosition().index,c.base);
  assert.equal(c.ctx.monthPosition().top,100);
+ assert.ok(c.title.attributes.has('data-current-month'));
 });
 test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de traspàs',()=>{
  const context=vm.createContext({calendarView:'month',viewYear:2026,viewMonth:11,selectedDate:'2026-12-31',monthScrollTarget:false,render:()=>{}});
@@ -173,7 +181,7 @@ function inertialController(nativeScrollEnd=false,headings=false){
   remove(){mutations++;panels=panels.filter(p=>p!==this);nativeTop(rawTop);}
  });
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
- const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>({textContent:''})};
+ const bar={getBoundingClientRect:()=>({bottom:100,height:100}),querySelector:()=>({textContent:'',toggleAttribute:()=>{}})};
  const sequence={isConnected:true,querySelectorAll:()=>panels,
   querySelector:s=>panels.find(p=>s.includes('"'+p.dataset.monthIndex+'"')),
   get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},
@@ -185,7 +193,7 @@ function inertialController(nativeScrollEnd=false,headings=false){
  const ctx=vm.createContext({$app:{querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:bar},window:win,
   tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,
   activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>i+',',periodTitle:()=>''});
- vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
+ vm.runInContext(currentMonth+extract('function monthPosition()', 'function calendarPage()'),ctx);
  const flush=()=>{
   for(let safety=0;events.length||frames.size;safety++){
    assert.ok(safety<30,'No hi pot haver realimentació de scroll');
