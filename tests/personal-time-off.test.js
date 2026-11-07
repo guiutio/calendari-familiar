@@ -112,9 +112,15 @@ test('Any, Mes, Setmana i Dia atenuen les dates lliures de la persona identifica
 test('només els tutors i responsables tenen calendari personal i l’opció Soc jo',()=>{
  const s=setup();s.holidays(['2026-11-03']);
  const html=s.ctx.peoplePage();
- assert.equal((html.match(/data-action="person-time-off"/g)||[]).length,2);
- assert.equal((html.match(/data-action="person-me"/g)||[]).length,2);
- assert.doesNotMatch(html,/data-person="child:same"/);
+ assert.doesNotMatch(html,/<input|data-action="person-time-off"|data-action="person-me"/);
+ s.click('open-person');
+ assert.equal(s.ctx.sheet.type,'personDetails');
+ assert.match(s.ctx.sheetMarkup(),/data-action="person-time-off"/);
+ assert.match(s.ctx.sheetMarkup(),/data-action="person-me"/);
+ s.click('open-person',{person:'child:same'});
+ assert.match(s.ctx.sheetMarkup(),/data-action="child-birth"/);
+ assert.doesNotMatch(s.ctx.sheetMarkup(),/data-action="person-me"|data-action="person-time-off"/);
+ s.ctx.sheet=null;
  assert.equal(s.ctx.personActions('child:same'),'');
  assert.equal(s.api.person(s.state,'child:same'),undefined);
  const before=JSON.stringify(s.state);
@@ -154,9 +160,44 @@ test('Soc jo identifica una única persona, es pot retirar i es reflecteix als f
  const s=setup();s.click('person-me',{person:'child:same'});assert.equal(s.state.preferences.mePerson,'');
  s.click('person-me');assert.equal(s.state.preferences.mePerson,'guardian:same');
  s.holidays(['2026-11-02']);assert.ok(s.api.filterMarkup(s.state).includes('Guiu · Jo'));
- assert.match(s.ctx.peoplePage(),/data-action="person-me" data-person="guardian:same" aria-pressed="true"/);
+ assert.match(s.ctx.peoplePage(),/Guiu<small>Jo<\/small>/);
+ s.click('open-person');
+ assert.match(s.ctx.sheetMarkup(),/data-action="person-me" data-person="guardian:same" aria-pressed="true"/);
  s.click('person-me',{person:'unknown'});assert.equal(s.state.preferences.mePerson,'guardian:same');
  s.click('person-me');assert.equal(s.state.preferences.mePerson,'');
+});
+
+test('Fills i Tutors són llistes reordenables i les dades s’obren a la fitxa de la persona',()=>{
+ const s=setup();
+ s.state.children.push({id:'second',name:'Segon fill',birthDate:'2019-04-02'});
+ s.state.preferences.visibleChildren.push('second');
+ s.state.overrides['2026-11-02|same']='other';
+ s.ctx.$app={querySelectorAll:()=>[]};
+ const before=JSON.stringify({overrides:s.state.overrides,preferences:s.state.preferences});
+ s.click('move-person',{kind:'child',id:'second',step:'-1'});
+ assert.deepEqual(plain(s.state.children.map(p=>p.id)),['second','same']);
+ s.click('move-person',{kind:'guardian',id:'same',step:'1'});
+ assert.deepEqual(plain(s.state.guardians.map(p=>p.id)),['other','same']);
+ assert.equal(JSON.stringify({overrides:s.state.overrides,preferences:s.state.preferences}),before);
+ const stored=JSON.parse(JSON.stringify(s.state));
+ assert.deepEqual(stored.children.map(p=>p.id),['second','same']);
+ assert.deepEqual(stored.guardians.map(p=>p.id),['other','same']);
+ const saves=s.saves;
+ for(const data of [{kind:'child',id:'second',step:'-1'},{kind:'child',id:'missing',step:'1'},{kind:'guardian',id:'same',step:'2'},{kind:'unknown',id:'same',step:'1'}])s.click('move-person',data);
+ assert.equal(s.saves,saves);
+ const html=s.ctx.peoplePage();
+ assert.equal((html.match(/<ol class="people-list"/g)||[]).length,2);
+ assert.doesNotMatch(html,/<input|delete-child|delete-guardian|person-me|person-time-off/);
+ assert.ok(html.indexOf('data-person="child:second"')<html.indexOf('data-person="child:same"'));
+ s.click('open-person',{person:'child:second'});
+ assert.match(s.ctx.sheetMarkup(),/value="2019-04-02"/);
+ s.click('open-person',{person:'guardian:other'});
+ assert.match(s.ctx.sheetMarkup(),/data-action="guardian-name"/);
+ assert.match(s.ctx.sheetMarkup(),/data-action="guardian-color"/);
+ s.click('person-time-off',{person:'guardian:other'});
+ assert.match(s.ctx.sheetMarkup(),/Dades de la persona/);
+ s.click('open-person',{person:'guardian:other'});assert.equal(s.ctx.sheet.type,'personDetails');
+ s.click('open-person',{person:'unknown:other'});assert.equal(s.ctx.sheet.personKey,'guardian:other');
 });
 
 test('els filtres de persones i tipus són independents dels colors de tutors i fills de les franges',()=>{

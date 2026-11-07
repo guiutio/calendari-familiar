@@ -896,6 +896,18 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .person-record + .person-record {border-top:1px solid #e2e8ef;padding-top:14px;margin-top:18px;}
 .person-actions {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 14px;}
 .person-actions button {display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.people-list {list-style:none;margin:0;padding:0;}
+.person-list-row {display:flex;align-items:center;gap:8px;border-top:1px solid var(--separator);}
+.person-list-row:first-child {border-top:0;}
+.person-list-open {display:flex;align-items:center;gap:12px;flex:1;min-width:0;min-height:60px;padding:10px 0;border:0;background:transparent;color:var(--text-primary);text-align:left;}
+.person-list-color {width:20px;height:20px;flex:0 0 20px;border-radius:50%;}
+.person-list-name {flex:1;min-width:0;overflow-wrap:anywhere;font-size:calc(15px * var(--font-scale,1));font-weight:650;}
+.person-list-name small {display:block;font-size:calc(11px * var(--font-scale,1));font-weight:500;color:var(--text-secondary);}
+.person-order {display:flex;gap:4px;flex-shrink:0;}
+.person-order-button {display:grid;place-items:center;width:36px;height:44px;border:0;border-radius:8px;background:var(--control-background);color:var(--text-primary);}
+.person-order-button svg {transform:rotate(90deg);}
+.person-color-field {display:flex;align-items:center;gap:12px;}
+.person-color-field label {margin:0;}
 .person-me.selected {border:1px solid #6595c8;background:#e6f1ff;color:#264f7d;}
 .person-category {display:block;margin-top:3px;font-size:calc(10px * var(--font-scale,1));font-weight:500;opacity:.8;}
 .personal-sheet .panel-header,.personal-sheet .school-schedule-actions {flex-wrap:wrap;}

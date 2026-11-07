@@ -88,6 +88,7 @@ test('es pot afegir el primer fill sense tutors, amb nits sense assignar, i impo
   assert.equal(context.state.children.length,1);
   assert.equal(context.state.guardians.length,0);
   const id=context.state.children[0].id;
+  assert.deepEqual(asJSON(context.sheet),{type:'personDetails',personKey:'child:'+id});
   assert.deepEqual(asJSON(context.state.extraRotations),[]);
   context.raw=asJSON(context.state);
   assert.deepEqual(asJSON(vm.runInContext('cleanState(raw)',context)),context.raw);
@@ -103,6 +104,7 @@ test('es pot eliminar l’únic fill i es netegen les referències',()=>{
   context.state.daySlots['2026-10-30|'+id]=[{id:'s',startTime:'10:00',endTime:'11:00',guardianId:''}];
   context.state.schools=[{childIds:[id],years:[{groups:[{childIds:[id],childSchedules:{[id]:[]},reducedChildSchedules:{[id]:[]}}]}]}];
   vm.runInContext(`removeChild('${id}')`,context);
+  assert.equal(context.sheet,null);
   assert.equal(context.state.children.length,0);
   assert.deepEqual(asJSON(context.state.extraRotations),[]);
   assert.deepEqual(asJSON(context.state.overrides),{});
@@ -157,8 +159,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.16\.27/);
-  assert.match(sw,/calendari-familiar-v0\.16\.27/);
+  assert.match(html,/app\.js\?v=0\.16\.28/);
+  assert.match(sw,/calendari-familiar-v0\.16\.28/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{

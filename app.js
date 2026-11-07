@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.27';
+const APP_VERSION = '0.16.28';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1201,14 +1201,46 @@ function personActions(key) {
     const me = state.preferences.mePerson === key;
     return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar', 15)} Horari laboral</button><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
 }
+function peopleList(kind) {
+    const entries = kind === 'child' ? state.children : state.guardians;
+    const label = kind === 'child' ? 'Fills' : 'Tutors i responsables';
+    if (!entries.length)
+        return `<p class="settings-note">Encara no hi ha ${kind === 'child' ? 'fills' : 'tutors'}. Prem «Afegir» per començar.</p>`;
+    return `<ol class="people-list" aria-label="${label}">${entries.map((person, index) => {
+        const key = kind + ':' + person.id, me = state.preferences.mePerson === key;
+        const avatar = 'color' in person ? `<span class="person-list-color" style="background:${person.color}" aria-hidden="true"></span>` : icon('person', 20);
+        return `<li class="person-list-row"><button type="button" class="person-list-open" data-action="open-person" data-person="${escapeHtml(key)}" aria-label="Obre ${escapeHtml(person.name)}">${avatar}<span class="person-list-name">${escapeHtml(person.name)}${me ? '<small>Jo</small>' : ''}</span>${icon('chevronRight', 18)}</button>
+      <div class="person-order" role="group" aria-label="Ordre de ${escapeHtml(person.name)}">${[-1, 1].map(step => `<button type="button" class="person-order-button" data-action="move-person" data-kind="${kind}" data-id="${escapeHtml(person.id)}" data-step="${step}" aria-label="${step === -1 ? 'Puja' : 'Baixa'} ${escapeHtml(person.name)}" ${index + step < 0 || index + step >= entries.length ? 'disabled' : ''}>${icon(step === -1 ? 'chevronLeft' : 'chevronRight', 16)}</button>`).join('')}</div></li>`;
+    }).join('')}</ol>`;
+}
+function personDetails(key) {
+    const child = key.startsWith('child:') ? childById(key.slice(6)) : undefined;
+    const tutor = key.startsWith('guardian:') ? guardian(key.slice(9)) : undefined;
+    const person = child ?? tutor;
+    if (!person)
+        return '';
+    const id = escapeHtml(person.id);
+    const fields = child ? `<div class="field"><label for="child-name-${id}">Nom</label><input id="child-name-${id}" type="text" maxlength="70" value="${escapeHtml(child.name)}" data-action="child-name" data-child="${id}" /></div>
+    <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p>` :
+        `<div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
+    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}`;
+    return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child ? 'Fill' : 'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+    ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
+}
+function reorderPerson(entries, id, step) {
+    if (step !== -1 && step !== 1)
+        return false;
+    const index = entries.findIndex(person => person.id === id), next = index + step;
+    if (index < 0 || next < 0 || next >= entries.length)
+        return false;
+    const [person] = entries.splice(index, 1);
+    entries.splice(next, 0, person);
+    return true;
+}
 function peoplePage() {
-    return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Gestiona els fills, tutors i responsables.</p></div></header>
-  <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div><p class="section-description">La data de naixement és opcional. Si l’afegeixes, els aniversaris apareixeran al calendari. Pots començar sense cap fill.</p>
-  ${!state.children.length ? '<p class="settings-note">Encara no hi ha fills. Prem «Afegir» per començar.</p>' : ''}
-  ${state.children.map(c => `<div class="person-record"><div class="settings-item"><div class="field"><label for="child-name-${escapeHtml(c.id)}">Nom</label><input id="child-name-${escapeHtml(c.id)}" type="text" maxlength="70" value="${escapeHtml(c.name)}" data-action="child-name" data-child="${escapeHtml(c.id)}" /></div><div class="field"><label for="child-birth-${escapeHtml(c.id)}">Naixement</label><input id="child-birth-${escapeHtml(c.id)}" type="date" value="${escapeHtml(c.birthDate)}" data-action="child-birth" data-child="${escapeHtml(c.id)}" /></div><button class="delete-icon" data-action="delete-child" data-child="${escapeHtml(c.id)}" aria-label="Suprimeix ${escapeHtml(c.name)}" >${icon('trash', 16)}</button></div></div>`).join('')}</section>
-  <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button class="secondary-btn" data-action="add-guardian">${icon('plus', 14)} Afegir</button></div><p class="section-description">Tria un color diferent per identificar cada tutor d’un cop d’ull.</p>
-  ${!state.guardians.length ? '<p class="settings-note">Encara no hi ha tutors. Prem «Afegir» per crear-ne un.</p>' : ''}
-  ${state.guardians.map(g => `<div class="person-record"><div class="settings-item guardian"><input class="color-input" type="color" value="${g.color}" data-action="guardian-color" data-guardian="${escapeHtml(g.id)}" aria-label="Color de ${escapeHtml(g.name)}" /><div class="field"><label for="guardian-name-${escapeHtml(g.id)}">Nom</label><input id="guardian-name-${escapeHtml(g.id)}" type="text" maxlength="70" value="${escapeHtml(g.name)}" data-action="guardian-name" data-guardian="${escapeHtml(g.id)}" /></div><button class="delete-icon" data-action="delete-guardian" data-guardian="${escapeHtml(g.id)}" aria-label="Suprimeix ${escapeHtml(g.name)}" >${icon('trash', 16)}</button></div>${personActions('guardian:' + g.id)}</div>`).join('')}</section>`;
+    return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Toca una persona per editar-la. Les fletxes permeten canviar-ne l’ordre.</p></div></header>
+    <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button type="button" class="secondary-btn" data-action="add-child">${icon('plus', 14)} Afegir</button></div>${peopleList('child')}</section>
+    <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button type="button" class="secondary-btn" data-action="add-guardian">${icon('plus', 14)} Afegir</button></div>${peopleList('guardian')}</section>`;
 }
 function settingsPage() {
     const areas = [
@@ -1239,8 +1271,11 @@ function generalSettingsPage() {
 function returnFromDetail(date) { return detailOrigin === 'day' ? { type: 'day', date: detailReturnDate || date } : null; }
 function sheetMarkup() {
     let contents = '';
-    if (sheet?.type === 'personTimeOff') {
-        contents = personalTimeOff.panel(state, sheet.personKey);
+    if (sheet?.type === 'personDetails') {
+        contents = personDetails(sheet.personKey);
+    }
+    else if (sheet?.type === 'personTimeOff') {
+        contents = `<button type="button" class="school-breadcrumb" data-action="open-person" data-person="${escapeHtml(sheet.personKey)}">${icon('chevronLeft', 17)} Dades de la persona</button>` + personalTimeOff.panel(state, sheet.personKey);
     }
     else if (sheet?.type === 'personWork') {
         contents = workSchedule.form(state, sheet.personKey, sheet.draft);
@@ -1319,7 +1354,7 @@ function sheetMarkup() {
     else if (sheet && ['schoolForm', 'yearForm', 'groupForm', 'schoolDayForm', 'schoolVacationForm', 'reducedWindowForm', 'ordinaryWindowForm', 'scheduleForm'].includes(sheet.type)) {
         contents = schoolFormMarkup();
     }
-    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type === 'legend' ? 'Llegenda' : sheet?.type === 'dayEdit' ? 'Edita el dia' : sheet?.type.startsWith('person') ? 'Horari laboral' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
+    return `<div class="overlay" data-action="close-backdrop"><section class="sheet ${sheet?.type === 'day' ? 'month-day-sheet' : sheet?.type.startsWith('person') ? 'personal-sheet' : ''}" data-sheet-key="${escapeHtml(sheet?.type === 'personWork' ? JSON.stringify([sheet.type, sheet.personKey, sheet.draft.id, sheet.draft.week]) : sheet?.type === 'personHolidays' ? JSON.stringify([sheet.type, sheet.personKey]) : sheet?.type === 'schoolDayForm' ? JSON.stringify([sheet.type, sheet.schoolId, sheet.yearId, sheet.kind]) : JSON.stringify(sheet))}" role="dialog" aria-modal="true" aria-label="${sheet?.type === 'filters' ? 'Filtres' : sheet?.type === 'zoom' ? 'Zoom' : sheet?.type === 'legend' ? 'Llegenda' : sheet?.type === 'dayEdit' ? 'Edita el dia' : sheet?.type === 'personDetails' ? 'Dades de la persona' : sheet?.type.startsWith('person') ? 'Horari laboral' : 'Detall del calendari'}"><div class="sheet-handle"></div>${contents}</section></div>`;
 }
 function filterOption(id, name, selected, kind, color) {
     const symbol = kind === 'child' ? 'person' : kind === 'school' ? 'school' : 'home';
@@ -1481,6 +1516,8 @@ function removeGuardian(id) {
         state.bandOverrides[key] = alternate; });
     monthDayUI.removeGuardian(state.daySlots, id, alternate);
     rotationPatterns.removeGuardian(state, id, alternate);
+    if (sheet?.type === 'personDetails' && sheet.personKey === 'guardian:' + id)
+        sheet = null;
     state.preferences.visibleGuardians = state.preferences.visibleGuardians.filter(x => x !== id);
     extraRotationDrafts = {};
     extraRotationOpen = null;
@@ -1505,6 +1542,8 @@ function removeChild(id) {
         delete state.bandOverrides[key]; });
     monthDayUI.removeChild(state.daySlots, id);
     rotationPatterns.removeChild(state, id);
+    if (sheet?.type === 'personDetails' && sheet.personKey === 'child:' + id)
+        sheet = null;
     state.preferences.visibleChildren = state.preferences.visibleChildren.filter(x => x !== id);
     extraRotationDrafts = {};
     extraRotationOpen = null;
@@ -1597,6 +1636,25 @@ function clickAction(button) {
             if (rotation && confirm(`Vols suprimir «${rotation.name}»?`) && workSchedule.remove(state, key, id)) {
                 update();
                 notify('Rotació de feina eliminada');
+            }
+            break;
+        }
+        case 'open-person': {
+            const key = button.dataset.person ?? '';
+            const exists = key.startsWith('child:') ? childById(key.slice(6)) : key.startsWith('guardian:') ? guardian(key.slice(9)) : undefined;
+            if (exists) {
+                sheet = { type: 'personDetails', personKey: key };
+                render();
+            }
+            break;
+        }
+        case 'move-person': {
+            const kind = button.dataset.kind, id = button.dataset.id ?? '', step = Number(button.dataset.step);
+            const moved = kind === 'child' ? reorderPerson(state.children, id, step) : kind === 'guardian' ? reorderPerson(state.guardians, id, step) : false;
+            if (moved) {
+                update();
+                const controls = Array.from($app.querySelectorAll('[data-action="move-person"]')).filter(el => el.dataset.kind === kind && el.dataset.id === id && !el.disabled);
+                (controls.find(el => el.dataset.step === String(step)) ?? controls[0])?.focus({ preventScroll: true });
             }
             break;
         }
@@ -2276,8 +2334,9 @@ function clickAction(button) {
             }
             extraRotationDrafts = {};
             extraRotationOpen = null;
+            sheet = { type: 'personDetails', personKey: 'child:' + id };
             update();
-            notify('Fill afegit · pots editar-ne el nom');
+            notify('Fill afegit');
             break;
         }
         case 'add-guardian': {
@@ -2285,8 +2344,9 @@ function clickAction(button) {
             const color = palette[state.guardians.length % palette.length] ?? '#aabbcc', id = newId();
             state.guardians.push({ id, name: `Tutor ${state.guardians.length + 1}`, color });
             state.preferences.visibleGuardians.push(id);
+            sheet = { type: 'personDetails', personKey: 'guardian:' + id };
             update();
-            notify('Tutor afegit · pots editar-ne el nom');
+            notify('Tutor afegit');
             break;
         }
         case 'delete-child':
