@@ -105,7 +105,7 @@
 :root[data-theme] .month-week-number:hover,:root[data-theme] .month-week-number:active {background:var(--selection-background);color:var(--accent);}
 :root[data-theme] .weekdays .month-week-heading {color:var(--text-secondary);}
 :root[data-theme] .month-grid .day-cell.today,
-:root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;}
+:root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;border-radius:var(--pto-base-radius,8px);}
 :root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
 :root[data-theme] .month-grid .day-cell.today .change-dot {background:currentColor;}
 :root[data-theme] :is(.calendar-title,.year-section-title)[data-current-period],
