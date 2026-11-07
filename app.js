@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.6';
+const APP_VERSION = '0.17.7';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -673,7 +673,7 @@ function calendarControls() {
     const children = activeChildren();
     const showHolyWeek = state.preferences.showHolyWeek && (calendarView === 'year' || calendarView === 'month');
     const filtered = showHolyWeek || children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || Boolean(state.personTimeOff && personalTimeOff.filtered(state));
-    return `<nav class="calendar-controls" aria-label="Controls del calendari"><div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>${calendarView === 'week' ? `<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'dayEdit'}" title="Edita el dia">${icon('pencil', 18)}</button>` : ''}${calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}</div></nav>`;
+    return `<nav class="calendar-controls" aria-label="Controls del calendari">${calendarView === 'month' ? `<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear === new Date().getFullYear() ? ' data-current-period' : ''}>${viewYear}</span>` : ''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>${calendarView === 'week' ? `<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'dayEdit'}" title="Edita el dia">${icon('pencil', 18)}</button>` : ''}${calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}</div></nav>`;
 }
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}"><aside class="sidebar">
@@ -707,7 +707,7 @@ function monthPanel(index, children, today) {
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}${personalMarks.html}
       </button>`;
     });
-    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year, month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year, month))}</h2><div class="month-grid">${cells.join('')}</div></section>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year, month))}"><h2 class="month-section-title">${escapeHtml(months[month])}</h2><div class="month-grid">${cells.join('')}</div></section>`;
 }
 // Keep loaded months and years in place: removing earlier panels rebases the scroll range
 // and can make Safari jump during momentum. Only prepend after scrolling stops.
@@ -783,6 +783,17 @@ function mountCalendarScroll(position, resetScroll = false) {
             return;
         viewYear = annual ? anchor.index : Math.floor(anchor.index / 12);
         viewMonth = annual ? (anchor.date ? parseDate(anchor.date).getMonth() : viewMonth) : anchor.index - viewYear * 12;
+        if (!annual) {
+            // L'any de la barra segueix el mes visible sense repintar tot el calendari.
+            const yearLabel = $app.querySelector('.calendar-controls-year');
+            if (yearLabel?.dataset?.calendarYear !== undefined) {
+                if (yearLabel.dataset.calendarYear !== String(viewYear)) {
+                    yearLabel.dataset.calendarYear = String(viewYear);
+                    yearLabel.textContent = String(viewYear);
+                }
+                yearLabel.toggleAttribute('data-current-period', viewYear === new Date().getFullYear());
+            }
+        }
         const selected = parseDate(selectedDate);
         if (selected.getFullYear() !== viewYear || selected.getMonth() !== viewMonth)
             selectedDate = localDate(new Date(viewYear, viewMonth, 1, 12));

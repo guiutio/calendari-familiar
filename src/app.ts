@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.6';
+const APP_VERSION = '0.17.7';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -593,7 +593,7 @@ function calendarControls(){
   const children=activeChildren();
   const showHolyWeek=state.preferences.showHolyWeek&&(calendarView==='year'||calendarView==='month');
   const filtered=showHolyWeek||children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
-  return `<nav class="calendar-controls" aria-label="Controls del calendari"><div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></nav>`;
+  return `<nav class="calendar-controls" aria-label="Controls del calendari">${calendarView==='month'?`<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear===new Date().getFullYear()?' data-current-period':''}>${viewYear}</span>`:''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></nav>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}${tab==='calendar'&&calendarView==='week'?' calendar-week-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
@@ -624,7 +624,7 @@ function monthPanel(index:number,children:Child[],today:string):string {
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}${personalMarks.html}
       </button>`;
     });
-    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(monthTitle(year,month))}</h2><div class="month-grid">${cells.join('')}</div></section>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(months[month])}</h2><div class="month-grid">${cells.join('')}</div></section>`;
 }
 // Keep loaded months and years in place: removing earlier panels rebases the scroll range
 // and can make Safari jump during momentum. Only prepend after scrolling stops.
@@ -686,6 +686,17 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     if(!anchor)return;
     viewYear=annual?anchor.index:Math.floor(anchor.index/12);
     viewMonth=annual?(anchor.date?parseDate(anchor.date).getMonth():viewMonth):anchor.index-viewYear*12;
+    if(!annual){
+      // L'any de la barra segueix el mes visible sense repintar tot el calendari.
+      const yearLabel=$app.querySelector<HTMLElement>('.calendar-controls-year');
+      if(yearLabel?.dataset?.calendarYear!==undefined){
+        if(yearLabel.dataset.calendarYear!==String(viewYear)){
+          yearLabel.dataset.calendarYear=String(viewYear);
+          yearLabel.textContent=String(viewYear);
+        }
+        yearLabel.toggleAttribute('data-current-period',viewYear===new Date().getFullYear());
+      }
+    }
     const selected=parseDate(selectedDate);
     if(selected.getFullYear()!==viewYear||selected.getMonth()!==viewMonth)selectedDate=localDate(new Date(viewYear,viewMonth,1,12));
   };

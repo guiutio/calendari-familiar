@@ -105,7 +105,7 @@
 :root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;border-radius:var(--pto-base-radius,8px);}
 :root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
 :root[data-theme] .month-grid .day-cell.today .change-dot {background:currentColor;}
-:root[data-theme] :is(.calendar-title,.year-section-title)[data-current-period],
+:root[data-theme] :is(.calendar-title,.year-section-title,.calendar-controls-year)[data-current-period],
 :root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
 :root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
 :root[data-theme] :is(.day-number.is-day-off,.year-day-number.is-day-off,.week-date-button.is-day-off,.calendar-title[data-day-off]) {color:var(--text-day-off);}
