@@ -121,10 +121,10 @@ test('Dia, Setmana i Mes contenen les franges de rotació i editors',()=>{
  assert.match(ts,/data-action="night-date-time"/);
  assert.match(editorSource,/data-extra-pattern-day-form="true"/);
  assert.match(ts,/rotationEditor\.render\(rotationEditor\.draftState\(state,extraRotationDrafts\),extraRotationOpen,extraRotationUnits\)/);
- assert.match(html,/rotation-patterns\.js\?v=0\.16\.21/);
- assert.match(html,/rotation-editor\.js\?v=0\.16\.21/);
- assert.match(sw,/rotation-patterns\.js\?v=0\.16\.21/);
- assert.match(sw,/rotation-editor\.js\?v=0\.16\.21/);
+ assert.match(html,/rotation-patterns\.js\?v=0\.16\.22/);
+ assert.match(html,/rotation-editor\.js\?v=0\.16\.22/);
+ assert.match(sw,/rotation-patterns\.js\?v=0\.16\.22/);
+ assert.match(sw,/rotation-editor\.js\?v=0\.16\.22/);
 });
 
 test('les rotacions complementàries poden excloure dissabtes, diumenges o dies individuals del patró',()=>{
@@ -213,10 +213,10 @@ test('el posicionament de les barres mensuals i les amplades de Dia/Setmana es d
  // Sense contorns laterals: la superfície de color conserva tota l’amplada.
  assert.match(css,/\.month-mini-extra \{[^\n]*box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #fff;/);
  assert.match(css,/\.month-mini-custom\{[^\n]*box-shadow:inset 0 1px 0 #ffffffaa,inset 0 -1px 0 #ffffffaa;/);
- assert.match(html,/month-day-ui\.js\?v=0\.16\.21/);
- assert.match(html,/day-timeline\.js\?v=0\.16\.21/);
- assert.match(sw,/month-day-ui\.js\?v=0\.16\.21/);
- assert.match(sw,/day-timeline\.js\?v=0\.16\.21/);
+ assert.match(html,/month-day-ui\.js\?v=0\.16\.22/);
+ assert.match(html,/day-timeline\.js\?v=0\.16\.22/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.16\.22/);
+ assert.match(sw,/day-timeline\.js\?v=0\.16\.22/);
 });
 
 

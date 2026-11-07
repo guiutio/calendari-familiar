@@ -9,6 +9,7 @@
   --bar-background:rgba(255,255,255,.96);
   --text-primary:#1c1c1e;
   --text-secondary:#636366;
+  --text-day-off:#66666b;
   --separator:#c7c7cc;
   --grid-line:#e5e5ea;
   --accent:#005fc7;
@@ -34,6 +35,7 @@
   --bar-background:rgba(28,28,30,.96);
   --text-primary:#f5f5f7;
   --text-secondary:#b0b0b8;
+  --text-day-off:#a5a5ad;
   --separator:#48484a;
   --grid-line:#38383a;
   --accent:#64a8ff;
@@ -60,7 +62,7 @@
 :root[data-theme] hr {border-color:var(--separator);}
 :root[data-theme] .brand-mark {background:var(--accent);color:var(--on-accent);box-shadow:none;}
 
-:root[data-theme] :is(.page-subtitle,.eyebrow,.section-description,.duration-help,.duration-row,.settings-note,.sheet-subtitle,.field label,.field-label,.legend-entry,.legend-note,.day-time-tick,.weekdays span,.year-weekdays,.school-meta,.rotation-week-title,.rotation-cell .small-day,.school-date-count,.sheet-section-label,.member-source,.font-size-labels,.loading-state,.empty-state,.calendar-empty-state,.brand-caption,.side-foot,.side-foot strong,.footer,.school-details p,.school-child-choice small,.settings-area-copy>span,.school-time-tick,.school-timeline-details) {color:var(--text-secondary);}
+:root[data-theme] :is(.page-subtitle,.eyebrow,.section-description,.duration-help,.duration-row,.settings-note,.sheet-subtitle,.field label,.field-label,.legend-entry,.legend-note,.day-time-tick,.weekdays span,.school-meta,.rotation-week-title,.rotation-cell .small-day,.school-date-count,.sheet-section-label,.member-source,.font-size-labels,.loading-state,.empty-state,.calendar-empty-state,.brand-caption,.side-foot,.side-foot strong,.footer,.school-details p,.school-child-choice small,.settings-area-copy>span,.school-time-tick,.school-timeline-details) {color:var(--text-secondary);}
 :root[data-theme] :is(.calendar-title,.year-section-title,.month-section-title,.agenda-day-heading,.school-timeline-heading,.school-timeline-corner,.school-timeline-child,.month-mini-child) {color:var(--text-primary);}
 :root[data-theme] :is(.school-breadcrumb,.school-link,.school-details a) {color:var(--accent);}
 :root[data-theme] :focus-visible {outline-color:var(--accent);}
@@ -102,6 +104,9 @@
 :root[data-theme] :is(.calendar-title,.year-section-title)[data-current-period],
 :root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
 :root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
+:root[data-theme] :is(.day-number.is-day-off,.week-date-button.is-day-off,.calendar-title[data-day-off]) {color:var(--text-day-off);}
+:root[data-theme] .month-grid .day-cell.today .day-number.is-day-off,
+:root[data-theme] .week-day-header.today .week-date-button.is-day-off {color:#f1f1f4;}
 :root[data-theme] :is(.month-mini-column,.mini-band-empty,.legend-empty,.agenda-cell.is-empty) {background:var(--control-background);border-color:var(--separator);box-shadow:none;}
 :root[data-theme] .agenda-cell.is-empty {color:var(--text-secondary);}
 

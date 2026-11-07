@@ -83,6 +83,26 @@ function working(s,key='guardian:same',days=[0,1,2,3,4,5,6]){
  assert.equal(s.ctx.workSchedule.save(s.state,key,draft,()=> 'work-for-contours'),'');
 }
 
+test('Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',()=>{
+ const s=setup();working(s,'guardian:same',[0,1,2,3,4]);
+ s.api.setMe(s.state,'guardian:same');s.holidays(['2026-11-03']);
+ const html=s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02');
+ const cell=date=>html.match(new RegExp('data-action="show-calendar-day" data-date="'+date+'"[\\s\\S]*?</button>'))[0];
+ assert.match(cell('2026-11-03'),/class="day-number is-day-off"/);
+ assert.match(cell('2026-11-07'),/class="day-number is-day-off"/);
+ assert.doesNotMatch(cell('2026-11-06'),/is-day-off/);
+ s.ctx.calendarView='day';s.ctx.selectedDate='2026-11-07';
+ assert.match(s.ctx.calendarNavigation(),/class="calendar-title" data-day-off/);
+ s.ctx.selectedDate='2026-11-06';assert.doesNotMatch(s.ctx.calendarNavigation(),/data-day-off/);
+ vm.runInContext(read('day-timeline.js')+section('function weekTimeline(', 'function miniBands('),s.ctx);
+ Object.assign(s.ctx,{dayTimelineUI:s.ctx.window.dayTimelineUI,nightChangeTime:()=> '19:00',assigned:()=>'',schoolActivities:()=>[],extraSlots:()=>[],timelineZoomForView:()=>50});
+ const week=s.ctx.weekTimeline('2026-11-02',s.state.children);
+ assert.match(week,/class="week-date-button is-day-off" data-action="show-calendar-day" data-date="2026-11-07"/);
+ assert.match(week,/class="week-date-button" data-action="show-calendar-day" data-date="2026-11-06"/);
+ s.api.setMe(s.state,'guardian:same');
+ assert.doesNotMatch(s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),/is-day-off/);
+});
+
 
 test('només els tutors i responsables tenen calendari personal i l’opció Soc jo',()=>{
  const s=setup();s.holidays(['2026-11-03']);

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.21';
+const APP_VERSION = '0.16.22';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -578,7 +578,7 @@ function weekTimeline(start, children, minimumHeight = 0) {
         const nightSegments = {};
         for (const c of children)
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, nightChangeTime(date, c.id), assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
+        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, dayOff: Boolean(state.preferences.mePerson && workSchedule.isDayOff(state, date)), activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
     });
     if (!children.length)
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="people"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
@@ -653,7 +653,8 @@ function calendarNavigation() {
     if (calendarView === 'month') {
         return `<header class="calendar-sticky-bar" aria-label="Dies de la setmana"><div class="weekdays"><span class="month-week-heading" title="Número de setmana ISO">Setm.</span>${weekdays.map(d => `<span>${d}</span>`).join('')}</div></header>`;
     }
-    return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod() ? ' data-current-period' : ''}>${escapeHtml(periodTitle())}</div></div></header>`;
+    const dayOff = calendarView === 'day' && state.preferences.mePerson && workSchedule.isDayOff(state, selectedDate);
+    return `<header class="calendar-sticky-bar" aria-label="Títol del calendari"><div class="calendar-toolbar"><div class="calendar-title"${isCurrentPeriod() ? ' data-current-period' : ''}${dayOff ? ' data-day-off' : ''}>${escapeHtml(periodTitle())}</div></div></header>`;
 }
 function isCurrentPeriod() {
     const todayDate = localDate(new Date());
@@ -694,7 +695,7 @@ function monthPanel(index, children, today) {
         const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
         const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
         return `${weekButton}<button type="button" class="day-cell ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${personalMarks.label ? escapeHtml(personalMarks.label) + '. ' : ''}${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Obre la vista Dia.">
-        <span class="day-top"><span class="day-number">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
+        <span class="day-top"><span class="day-number${state.preferences?.mePerson && workSchedule.isDayOff(state, date) ? ' is-day-off' : ''}">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
         ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}${personalMarks.html}
       </button>`;
@@ -935,7 +936,7 @@ function yearOverview(year, children, today) {
             const marks = outlineEntries.length ? personalTimeOff.marks(outlineEntries, date, monthStart, monthEnd) : { html: '', label: '' };
             return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}" ${date === today ? 'aria-current="date"' : ''} ${marks.label ? `title="${escapeHtml(fullDate(date) + '. ' + marks.label)}"` : ''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}${marks.html}</span>`;
         }).join('');
-        return `<button type="button" class="year-month${today >= monthStart && today <= monthEnd ? ' current-month' : ''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" data-focus-date="${monthStart}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-weekdays" aria-hidden="true">${weekdays.map(day => `<span>${day}</span>`).join('')}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
+        return `<button type="button" class="year-month${today >= monthStart && today <= monthEnd ? ' current-month' : ''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" data-focus-date="${monthStart}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
     }).join('')}</div>`;
 }
 function yearPanel(year, children, today) {

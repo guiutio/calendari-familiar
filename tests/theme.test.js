@@ -25,7 +25,10 @@ test('els textos i les accions conserven contrast en les dues aparences',()=>{
     assert.ok(contrast('#ffffff',palette['calendar-current'])>=4.5);
     assert.ok(contrast(palette['calendar-current'],palette['app-background'])>=4.5);
     assert.ok(contrast(palette['calendar-current'],palette.surface)>=3);
+    assert.ok(contrast(palette['text-day-off'],palette['control-background'])>=4.5);
   }
+  assert.ok(luminance(light['text-day-off'])>luminance(light['text-primary']));
+  assert.ok(luminance(dark['text-day-off'])<luminance(dark['text-primary']));
 });
 
 test('les superfícies de nit són negres i grises neutres, amb nivells diferenciats',()=>{

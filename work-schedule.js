@@ -109,6 +109,13 @@
  }
  const slots=(state,key,d)=>calculateSlots(state,key,d,true);
  const scheduledSlots=(state,key,d)=>calculateSlots(state,key,d,false);
+ function isDayOff(state,d){
+  const key=state.preferences.mePerson;
+  if(!owner(state,key)||!validDate(d))return false;
+  if(absence(state,key,d))return true;
+  const known=rotations(state,key).some(r=>d>=r.startDate&&(!r.endDate||d<=r.endDate));
+  return known&&slots(state,key,d).length===0;
+ }
  function listMarkup(state,key){
   const list=rotations(state,key);
   return `<div class="school-period work-rotation-list"><div class="panel-header"><strong>Rotacions de feina (${list.length})</strong><button type="button" class="secondary-btn" data-action="work-add" data-person="${esc(key)}">+ Rotació</button></div>${list.length?list.map(r=>`<div class="school-schedule-row"><div><strong>${esc(r.name)}</strong><span class="school-meta">${fmt(r.startDate)}${r.endDate?' – '+fmt(r.endDate):' · sense data final'} · ${r.weeks===1?'cada setmana':'cicle de '+r.weeks+' setmanes'}</span></div><div class="school-schedule-actions"><button type="button" class="school-schedule-edit" data-action="work-edit" data-person="${esc(key)}" data-rotation="${esc(r.id)}">Edita</button><button type="button" class="delete-icon" data-action="work-delete" data-person="${esc(key)}" data-rotation="${esc(r.id)}" aria-label="Suprimeix ${esc(r.name)}">×</button></div></div>`).join(''):'<p class="settings-note">Afegeix els dies i les hores que treballa aquesta persona, amb tantes franges com necessitis per a una jornada partida.</p>'}</div>`;
@@ -137,5 +144,5 @@
   }).join('');
   return `<section class="work-agenda" aria-label="Horari laboral"><h2 class="section-title">Horari laboral</h2>${rows||'<p class="settings-note">Sense feina programada aquests dies.</p>'}</section>`;
  }
- window.workSchedule={validDate,addDays,monday,clean,normalize,draft,change,edit,readForm,save,remove,rotations,absence,slots,scheduledSlots,listMarkup,form,agenda};
+ window.workSchedule={validDate,addDays,monday,clean,normalize,draft,change,edit,readForm,save,remove,rotations,absence,slots,scheduledSlots,isDayOff,listMarkup,form,agenda};
 })();

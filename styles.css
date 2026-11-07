@@ -879,15 +879,13 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:3px;border:0;background:transparent;color:inherit;text-align:left;}
 .year-month-title {display:block;margin-bottom:5px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
 @media(hover:hover){.year-month:hover .year-month-title {text-decoration:underline;}}
-.year-weekdays,.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
-.year-weekdays {margin-bottom:3px;color:#78899e;text-align:center;font-size:calc(9px * var(--font-scale,1));font-weight:750;}
+.year-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
 .year-day {display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;min-height:28px;padding:1px;}
 .year-day-number {align-self:center;min-width:17px;line-height:16px;text-align:center;border-radius:50%;font-size:calc(10px * var(--font-scale,1));font-weight:650;}
 .year-day.today .year-day-number {background:transparent;color:inherit;border-radius:0;font-weight:800;}
 .year-month .month-mini {grid-template-rows:minmax(0,1fr);height:10px;gap:1px;}
 .year-month .month-mini-child {display:none;}
 .year-month .month-mini-column {border-radius:1px;}
-:root[data-theme="dark"] .year-weekdays {color:#adbed4;}
 @media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 6px;}}
 
 /* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */

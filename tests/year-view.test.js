@@ -52,6 +52,7 @@ test('l’any mostra dotze mesos, totes les dates una sola vegada i sis files pe
  assert.match(html,/class="year-month current-month"[^>]+data-year="2026" data-month="10"/);
  assert.match(html,/class="year-day today" data-year-date="2026-11-02" aria-current="date"/);
  assert.match(html,/aria-label="Obre novembre de 2026"/);
+ assert.doesNotMatch(html,/year-weekdays/);
  assert.match(html,/class="year-days" aria-hidden="true"><span class="year-empty-day"><\/span><span class="year-empty-day"><\/span><span class="year-empty-day"><\/span><span class="year-day [^"]*" data-year-date="2026-01-01"/);
 });
 

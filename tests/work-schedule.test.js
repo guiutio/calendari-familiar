@@ -169,3 +169,22 @@ test('el patró laboral original permet valorar vacances sense tornar a aplicar 
  assert.equal(s.api.slots(s.state,s.key,'2026-11-03').length,0);assert.equal(s.api.scheduledSlots(s.state,s.key,'2026-11-03')[0].endTime,'06:00');
  assert.equal(s.api.scheduledSlots(s.state,s.key,'2026-11-04').length,0);
 });
+
+test('els dies lliures de Soc jo respecten torns nocturns, absències i dates conegudes',()=>{
+ const s=setup();
+ assert.equal(s.api.isDayOff(s.state,'2026-11-03'),false);
+ const d=s.draft();d.days[0]=[s.shift('22:00','06:00')];d.endDate='2026-11-15';
+ assert.equal(s.save(d),'');
+ assert.equal(s.api.isDayOff(s.state,'2026-11-02'),false);
+ assert.equal(s.api.isDayOff(s.state,'2026-11-03'),false);
+ assert.equal(s.api.isDayOff(s.state,'2026-11-04'),true);
+ assert.equal(s.api.isDayOff(s.state,'2026-11-01'),false);
+ assert.equal(s.api.isDayOff(s.state,'2026-11-16'),false);
+ s.personal.setHolidays(s.state,s.key,['2026-11-02']);
+ s.personal.saveVacation(s.state,s.key,'',new Map([['name','Descans'],['startDate','2026-11-09'],['endDate','2026-11-10']]),()=> 'leave');
+ s.state.preferences.showWorkSchedules=false;s.state.preferences.showPersonalHolidays=false;s.state.preferences.showPersonalVacations=false;
+ assert.equal(s.api.isDayOff(s.state,'2026-11-02'),true);
+ assert.equal(s.api.isDayOff(s.state,'2026-11-09'),true);
+ s.state.preferences.mePerson='guardian:r';assert.equal(s.api.isDayOff(s.state,'2026-11-04'),false);
+ s.state.preferences.mePerson='';assert.equal(s.api.isDayOff(s.state,'2026-11-02'),false);
+});
