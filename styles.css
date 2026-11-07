@@ -1088,7 +1088,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Dies de la setmana: selector estable i gestos entre setmanes completes. */
 .calendar-sticky-bar.week-day-strip {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:8px 4px 10px;touch-action:pan-y;}
 .week-strip-day {display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;min-height:64px;padding:2px 0;border:0;background:transparent;color:var(--text-primary);cursor:pointer;}
-.week-strip-label,.calendar-sticky-bar .weekdays .week-strip-label {font-size:calc(11px * var(--font-scale,1));font-weight:600;line-height:1.2;color:inherit;}
+.week-strip-label,.calendar-layout .calendar-sticky-bar .weekdays .week-strip-label {font-size:calc(11px * var(--font-scale,1));font-weight:600;line-height:1.2;color:inherit;}
 /* El cercle és fix: limitem la lletra ampliada perquè hi càpiguen dues xifres. */
 .week-strip-number {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-size:min(calc(21px * var(--font-scale,1)),26px);font-weight:500;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .week-strip-day.is-day-off {color:var(--text-day-off);}
