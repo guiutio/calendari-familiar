@@ -993,7 +993,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Any i Mes: el contingut i els dies de la capçalera comparteixen tota l’amplada. */
 .calendar-layout:has(.year-sequence,.month-sequence) .main-area {padding-inline:0;}
 .calendar-layout:has(.year-sequence,.month-sequence) .content {width:100%;max-width:none;}
-.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {width:100%;max-width:none;padding-block:6px;}
+.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {width:100%;max-width:none;padding:10px 0 10px;}
 .calendar-layout:has(.month-sequence) .calendar-card {border-inline:0;border-radius:0;}
 
 /* Setmana: tota la zona entre les barres, amb scroll vertical de pàgina. */
@@ -1086,8 +1086,8 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .calendar-title::first-letter,.month-section-title::first-letter,.year-month-title::first-letter,.school-date-nav h3::first-letter {text-transform:uppercase;}
 
 /* Dies de la setmana: selector estable i gestos entre setmanes completes. */
-.calendar-sticky-bar.week-day-strip {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:8px 4px 10px;touch-action:pan-y;}
-.week-strip-day {display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;min-height:64px;padding:2px 0;border:0;background:transparent;color:var(--text-primary);cursor:pointer;}
+.calendar-sticky-bar.week-day-strip {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:10px 0 10px;touch-action:pan-y;}
+.week-strip-day {display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;min-height:64px;padding:0;border:0;background:transparent;color:var(--text-primary);cursor:pointer;}
 .week-strip-label,:root .calendar-layout .calendar-sticky-bar .weekdays .week-strip-label {font-size:calc(11px * var(--font-scale,1));font-weight:600;line-height:1.2;color:inherit;}
 /* El cercle és fix: limitem la lletra ampliada perquè hi càpiguen dues xifres. */
 .week-strip-number {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-size:min(calc(21px * var(--font-scale,1)),26px);font-weight:500;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -1097,3 +1097,5 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .week-strip-day:focus-visible {outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px;}
 .calendar-week-layout .week-timeline-viewport {touch-action:pan-y;}
 @media(max-width:360px){.week-strip-number {width:36px;height:36px;font-size:min(calc(20px * var(--font-scale,1)),24px);}}
+
+/* Mes i Setmana: les etiquetes tenen el mateix origen (x, y), sense desplaçament lateral. */
