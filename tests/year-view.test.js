@@ -166,3 +166,29 @@ test('Any mostra tres anys consecutius, conserva els visitats als filtres i Avui
   assert.ok(years.every(y=>y>=100&&y<=9999));
  }
 });
+
+
+test('tornar a tocar el mode actiu situa Any, Mes, Setmana i Dia en el període actual',()=>{
+ for(const view of ['year','month','week','day']){
+  const s=setup();Object.assign(s.ctx,{calendarView:view,viewYear:2028,viewMonth:1,selectedDate:'2028-02-29',monthScrollTarget:false,sheet:{type:'filters'}});
+  s.click('calendar-view',{view});
+  assert.equal(s.ctx.calendarView,view);
+  assert.equal(s.ctx.selectedDate,'2026-11-02');
+  assert.equal(s.ctx.viewYear,2026);assert.equal(s.ctx.viewMonth,10);
+  assert.equal(s.ctx.monthScrollTarget,true);assert.equal(s.ctx.sheet,null);assert.equal(s.paints,1);
+  s.ctx.monthScrollTarget=false;
+  s.click('calendar-view',{view});
+  assert.equal(s.ctx.monthScrollTarget,true);assert.equal(s.paints,2);
+ }
+});
+
+test('canviar de mode o tornar des de Configuració conserva la data seleccionada',()=>{
+ for(const view of ['year','month','week','day']){
+  for(const fromSettings of [false,true]){
+   const s=setup();Object.assign(s.ctx,{calendarView:fromSettings?view:view==='day'?'month':'day',tab:fromSettings?'settings':'calendar',selectedDate:'2028-02-29'});
+   s.click('calendar-view',{view});
+   assert.equal(s.ctx.tab,'calendar');assert.equal(s.ctx.calendarView,view);
+   assert.equal(s.ctx.selectedDate,'2028-02-29');assert.equal(s.ctx.viewYear,2028);assert.equal(s.ctx.viewMonth,1);
+  }
+ }
+});

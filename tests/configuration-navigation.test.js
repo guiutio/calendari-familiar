@@ -75,7 +75,6 @@ test('els botons de vista tornen al calendari des de Configuració, també quan 
   assert.equal(s.ctx.selectedDate,'2026-11-03');assert.equal(s.ctx.viewYear,2026);assert.equal(s.ctx.viewMonth,10);
   assert.match(s.html,new RegExp('class="mobile-tab active" data-action="calendar-view" data-view="'+view+'" aria-current="page"'));
   assert.equal((s.html.match(/class="mobile-tab active"/g)||[]).length,1);
-  const paints=s.paints;s.ctx.clickAction({dataset:{action:'calendar-view',view}});assert.equal(s.paints,paints);
  }
  s.ctx.clickAction({dataset:{action:'calendar-view',view:'year'}});
  assert.equal(s.ctx.calendarView,'year');assert.equal(s.ctx.selectedDate,'2026-11-03');

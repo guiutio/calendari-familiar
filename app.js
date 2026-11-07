@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.31';
+const APP_VERSION = '0.16.32';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -2049,7 +2049,7 @@ function clickAction(button) {
             const v = button.dataset.view;
             if (v === 'year' || v === 'month' || v === 'week' || v === 'day') {
                 if (v === calendarView && tab === 'calendar')
-                    break;
+                    selectedDate = localDate(new Date());
                 tab = 'calendar';
                 sheet = null;
                 calendarView = v;
