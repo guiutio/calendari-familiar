@@ -17,7 +17,11 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  vm.runInContext(dateHelpers+app.slice(start,end),ctx);
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
   if(view==='month')assert.match(controls,/class="calendar-controls-year" data-calendar-year="2026" data-current-period>2026<\/span><div class="calendar-tools">/);
-  else assert.doesNotMatch(controls,/calendar-controls-year/);
+  else if(view==='week'){
+    assert.match(controls,/class="calendar-controls-year calendar-controls-week-title"/);
+    assert.match(controls,/class="calendar-controls-week-month" data-current-period>novembre<\/span>/);
+    assert.match(controls,/class="calendar-controls-week-year" data-current-period>2026<\/span>/);
+  } else assert.doesNotMatch(controls,/calendar-controls-year/);
  if(view==='year')assert.equal(title,'');
  else if(view==='month'){
   assert.match(title,/<div class="weekdays"><span class="week-strip-label">dl\.<\/span>.*<span class="week-strip-label">dg\.<\/span>/);
@@ -75,5 +79,11 @@ test('el títol de l’any mensual és a l’esquerra i segueix el color de l’
  const theme=readFileSync(new URL('../theme.css',import.meta.url),'utf8');
  assert.match(css,/\.calendar-controls:has\(\.calendar-controls-year\) \{padding-left:3px;\}/);
  assert.match(css,/\.calendar-controls-year \{margin-right:auto;/);
- assert.match(theme,/\.year-section-title,\.calendar-controls-year\)\[data-current-period\]/);
+ assert.match(theme,/\.year-section-title,\.calendar-controls-year,\.calendar-controls-week-month,\.calendar-controls-week-year\)\[data-current-period\]/);
+});
+
+test('el mes i l’any de Setmana comparteixen barra i destaquen el període actual',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ assert.ok(css.includes('.calendar-controls-week-title {display:flex;align-items:baseline;'));
+ assert.ok(css.includes('.calendar-controls-week-month {text-transform:capitalize;}'));
 });

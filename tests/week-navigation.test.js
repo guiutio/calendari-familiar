@@ -76,8 +76,11 @@ test('els gestos canvien de setmana sencera en creuar l’any i el focus actuali
  const weekStart=value=>addDays(value,-((parseDate(value).getUTCDay()+6)%7));
  const buttons=Array.from({length:7},(_,i)=>({dataset:{date:addDays('2026-12-28',i)},classList:{toggle(_name,value){this.selected=value;}},setAttribute(name,value){this[name]=value;}}));
  const strip={querySelectorAll:()=>buttons},viewport={};
+ const monthLabel={textContent:'desembre',toggleAttribute(name,active){this[name]=active;}};
+ const yearLabel={textContent:'2026',toggleAttribute(name,active){this[name]=active;}};
+ const title={querySelector:selector=>selector==='.calendar-controls-week-month'?monthLabel:yearLabel};
  const ctx=vm.createContext({weekNavigation:{mount(v,s,options){assert.equal(v,viewport);assert.equal(s,strip);callbacks=options;return ()=>newCleanups++;}},
-  $app:{querySelector:selector=>selector==='.week-day-strip'?strip:viewport},stopCalendarScroll:()=>oldCleanups++,selectedDate:'2026-12-31',
+  $app:{querySelector:selector=>selector==='.week-day-strip'?strip:selector==='.calendar-controls-week-title'?title:viewport},months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],stopCalendarScroll:()=>oldCleanups++,selectedDate:'2026-12-31',
   parseDate,addDays,weekStart,isValidDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),render:()=>paints++});
  vm.runInContext(app.slice(start,end),ctx);ctx.mountWeekNavigation();
  callbacks.navigate(1);assert.equal(ctx.selectedDate,'2027-01-04');assert.equal(ctx.viewYear,2027);assert.equal(ctx.viewMonth,0);assert.equal(ctx.weekFocusTarget,true);
@@ -86,5 +89,8 @@ test('els gestos canvien de setmana sencera en creuar l’any i el focus actuali
  callbacks.navigate(1);assert.equal(ctx.selectedDate,'2026-12-28');assert.equal(paints,4);
  callbacks.focus('2026-12-30');assert.equal(ctx.selectedDate,'2026-12-30');assert.equal(buttons[2]['aria-pressed'],'true');assert.equal(buttons[2].classList.selected,true);
  callbacks.focus('2027-01-05');assert.equal(ctx.selectedDate,'2026-12-30');
+ callbacks.focus('2027-01-01');assert.equal(ctx.selectedDate,'2027-01-01');
+ assert.equal(monthLabel.textContent,'gener');assert.equal(yearLabel.textContent,'2027');
+ assert.equal(ctx.viewYear,2027);assert.equal(ctx.viewMonth,0);
  ctx.stopCalendarScroll();assert.equal(oldCleanups,1);assert.equal(newCleanups,1);
 });

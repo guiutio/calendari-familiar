@@ -36,7 +36,10 @@ test('les superfícies de nit són negres i grises neutres, amb nivells diferenc
     const channels=rgb(dark[role]);
     assert.ok(Math.max(...channels)-Math.min(...channels)<.015,role);
   }
-  assert.ok(luminance(dark['app-background'])<luminance(dark.surface));
+  assert.equal(light['app-background'],'#ffffff');
+  assert.equal(light.surface,'#ffffff');
+  assert.equal(dark['app-background'],'#000000');
+  assert.equal(dark.surface,'#000000');
   assert.ok(luminance(dark.surface)<luminance(dark['surface-elevated']));
 });
 
@@ -63,4 +66,10 @@ test('la paleta i Roboto Condensed es carreguen i es conserven fora de línia',(
   assert.match(sw,/assets\/fonts\/RobotoCondensed-ExtraBold\.woff/);
   assert.equal(readFileSync(new URL('../assets/fonts/RobotoCondensed-ExtraBold.woff',import.meta.url)).subarray(0,4).toString(),'wOFF');
   assert.match(readFileSync(new URL('../assets/fonts/OFL-RobotoCondensed.txt',import.meta.url),'utf8'),/SIL OPEN FONT LICENSE/);
+});
+
+test('els fons de calendari i les barres són blancs o negres purs en les dues aparences',()=>{
+ assert.equal(light['app-background'],'#ffffff');
+ assert.equal(dark['app-background'],'#000000');
+ assert.ok(css.includes(':root[data-theme="dark"] :is(.app-layout,.sidebar,.main-area,.calendar-sticky-bar,.calendar-controls,.mobile-tabs) {background:var(--app-background);}'));
 });

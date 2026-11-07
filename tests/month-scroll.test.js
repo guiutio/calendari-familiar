@@ -134,6 +134,7 @@ test('mesos consecutius: cada data apareix una vegada i les capçaleres separen 
   assert.equal(actual.at(-1),ctx.localDate(new Date(year,month,count,12)));
   assert.ok(panel.indexOf('month-section-title')<panel.indexOf('show-calendar-day'));
   const offset=(new Date(year,month,1,12).getDay()+6)%7;
+  assert.ok(panel.includes('class="month-section-name" style="grid-column:'+(offset+1)+'"'),'El nom del mes queda a la columna del dia 1');
   assert.equal((panel.match(/class="month-empty-cell"/g)||[]).length,Math.ceil((offset+count)/7)*7-count);
  }
 });
@@ -149,9 +150,10 @@ test('octubre acaba al 31 i novembre comença a l’1 amb una capçalera al mig'
  assert.match(cell('2026-11-01'),/month-edge-right/);
  assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-10-31"/g)||[]).length,1);
  assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-11-01"/g)||[]).length,1);
- const split=html.indexOf('<h2 class="month-section-title">novembre</h2>');
+ const split=html.indexOf('<h2 class="month-section-title"><span class="month-section-name" style="grid-column:7">nov.</span></h2>');
   assert.ok(split>=0,'El títol del mes no conté l’any');
   assert.doesNotMatch(html,/class="month-section-title">[^<]*\d{4}/);
+  assert.match(html,/class="month-section-name" style="grid-column:7">nov\.<\/span>/);
  assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-10-31"')<split);
  assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-11-01"')>split);
 });
