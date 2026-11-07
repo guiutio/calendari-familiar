@@ -16,16 +16,17 @@ function controller(mobile=true,headerHeight=0){
  const panel=index=>({querySelector(){return {getBoundingClientRect:()=>({top:this.getBoundingClientRect().top+headerHeight})};},querySelectorAll:()=>[],dataset:{monthIndex:String(index)},getBoundingClientRect:()=>({top:200+(index-base+1)*700-main.scrollTop,bottom:900+(index-base+1)*700-main.scrollTop}),remove(){panels=panels.filter(p=>p!==this);}});
  panels=Array.from({length:7},(_,i)=>base-3+i).map(panel);
  const bar={getBoundingClientRect:()=>({bottom:100,height:100})};
+ const yearLabel={dataset:{calendarYear:'2026'},textContent:'2026',current:true,toggleAttribute(name,on){assert.equal(name,'data-current-period');this.current=on;}};
  const sequence={isConnected:true,querySelectorAll:()=>panels,querySelector:s=>panels.find(p=>s.includes('"'+p.dataset.monthIndex+'"')),get firstElementChild(){return panels[0];},get lastElementChild(){return panels.at(-1);},insertAdjacentHTML(where,html){const next=html.split(',').map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];}};
- const $app={querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:bar};
- const ctx=vm.createContext({$app,window:win,tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+','});
+ const $app={querySelector:s=>s==='.main-area'?main:s==='.month-sequence'?sequence:s==='.calendar-controls-year'?yearLabel:bar};
+ const ctx=vm.createContext({$app,window:win,Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,9,31,12]));}},tab:'calendar',calendarView:'month',viewYear:2026,viewMonth:9,selectedDate:'2026-10-31',monthScrollTarget:true,stopCalendarScroll:null,monthRange:null,activeChildren:()=>[],localDate:d=>d.toISOString().slice(0,10),parseDate:d=>new Date(d+'T12:00:00Z'),monthPanel:i=>String(i)+','});
  // Use a delimiter only between generated panels, including appends/prepends.
  sequence.insertAdjacentHTML=(where,html)=>{const next=html.split(',').filter(Boolean).map(Number).map(panel);panels=where==='afterbegin'?[...next,...panels]:[...panels,...next];};
  vm.runInContext(extract('function monthPosition()', 'function calendarPage()'),ctx);
  const flush=()=>{for(let i=0;frame&&i<10;i++){const next=frame;frame=undefined;next();}};
  const idle=()=>{const next=timer;timer=undefined;next?.();flush();};
  ctx.mountCalendarScroll(null);flush();idle();
- return {ctx,main,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();flush();idle();},refresh(){flush();idle();},base};
+ return {ctx,main,yearLabel,panels:()=>panels,scroll(delta){main.scrollTop+=delta;listen();flush();idle();},refresh(){flush();idle();},base};
 }
 
 test('mesos: la càrrega inicial enfoca el mes actual en mòbil i escriptori',()=>{
@@ -45,6 +46,7 @@ test('mesos: recorre anys en ambdues direccions sense retirar els mesos visitats
   assert.ok(c.panels().some(p=>Number(p.dataset.monthIndex)===c.base),'Els mesos ja visitats no es retiren');
  }
  assert.equal(c.ctx.viewYear,2028);assert.equal(c.ctx.viewMonth,11);
+  assert.equal(c.yearLabel.textContent,'2028');assert.equal(c.yearLabel.current,false);
  for(let i=0;i<40;i++){
   c.scroll(-700);
   assert.equal(c.ctx.monthPosition().index,c.base+25-i);
@@ -52,7 +54,10 @@ test('mesos: recorre anys en ambdues direccions sense retirar els mesos visitats
   assert.ok(c.panels().some(p=>Number(p.dataset.monthIndex)===c.base),'Els mesos ja visitats no es retiren');
  }
  assert.equal(c.ctx.viewYear,2025);assert.equal(c.ctx.viewMonth,7);
+  assert.equal(c.yearLabel.textContent,'2025');assert.equal(c.yearLabel.current,false);
  assert.equal(c.ctx.selectedDate,'2025-08-01');
+  for(let i=0;i<5;i++)c.scroll(700);
+  assert.equal(c.yearLabel.textContent,'2026');assert.equal(c.yearLabel.current,true);
 });
 test('mesos: conserva el desplaçament parcial en repintar filtres o diàlegs',()=>{
  const c=controller();c.scroll(923);
@@ -101,7 +106,7 @@ function continuousRenderer(){
  vm.runInNewContext(readFileSync(new URL('../month-day-ui.js',import.meta.url),'utf8'),uiContext);
  const context=vm.createContext({
   state:{},birthdays:()=>[],monthData:()=>({activities:[],nights:{},slots:{},extra:[]}),
-  escapeHtml:String,fullDate:String,monthTitle:(y,m)=>`${y}-${m+1}`,
+  escapeHtml:String,fullDate:String,months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],monthTitle:(y,m)=>`${y}-${m+1}`,
   monthDayUI:{...uiContext.window.monthDayUI,hasChanges:()=>false,mini:()=>''}
  });
  vm.runInContext(dateHelpers+extract('function weekStart(', 'function fullAgenda(')+extract('function monthPanel(', '// Keep loaded months'),context);
@@ -144,7 +149,9 @@ test('octubre acaba al 31 i novembre comença a l’1 amb una capçalera al mig'
  assert.match(cell('2026-11-01'),/month-edge-right/);
  assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-10-31"/g)||[]).length,1);
  assert.equal((html.match(/data-action="show-calendar-day" data-date="2026-11-01"/g)||[]).length,1);
- const split=html.indexOf('<h2 class="month-section-title">2026-11</h2>');
+ const split=html.indexOf('<h2 class="month-section-title">novembre</h2>');
+  assert.ok(split>=0,'El títol del mes no conté l’any');
+  assert.doesNotMatch(html,/class="month-section-title">[^<]*\d{4}/);
  assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-10-31"')<split);
  assert.ok(html.indexOf('data-action="show-calendar-day" data-date="2026-11-01"')>split);
 });

@@ -9,13 +9,15 @@ const dateHelpers=app.slice(app.indexOf('function localDate('),app.indexOf('func
  app.slice(app.indexOf('function weekStart('),app.indexOf('function fullAgenda('));
 const labels={year:'',month:'',week:'2 de Novembre – 8 de Novembre'};
 for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i controls de navegació`,()=>{
- const ctx=vm.createContext({calendarView:view,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
+ const ctx=vm.createContext({calendarView:view,viewYear:2026,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
   Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]));}},
   state:{children:[],guardians:[],schools:[],preferences:{visibleGuardians:[],visibleSchools:[]}},
   icon:()=>'',escapeHtml:String,periodTitle:()=>labels[view],timelineZoomForView:()=>50,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg']});
  vm.runInContext(dateHelpers+app.slice(start,end),ctx);
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
+  if(view==='month')assert.match(controls,/class="calendar-controls-year" data-calendar-year="2026" data-current-period>2026<\/span><div class="calendar-tools">/);
+  else assert.doesNotMatch(controls,/calendar-controls-year/);
  if(view==='year')assert.equal(title,'');
  else if(view==='month'){
   assert.match(title,/<div class="weekdays"><span class="week-strip-label">dl\.<\/span>.*<span class="week-strip-label">dg\.<\/span>/);
@@ -66,4 +68,12 @@ test('el títol de cada any s’alinea amb els títols dels mesos',()=>{
  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
  assert.match(css,/\.year-month \{[^}]*padding:3px;/);
  assert.match(css,/\.year-section-title \{padding-inline:3px;\}/);
+});
+
+test('el títol de l’any mensual és a l’esquerra i segueix el color de l’any actual',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ const theme=readFileSync(new URL('../theme.css',import.meta.url),'utf8');
+ assert.match(css,/\.calendar-controls:has\(\.calendar-controls-year\) \{padding-left:3px;\}/);
+ assert.match(css,/\.calendar-controls-year \{margin-right:auto;/);
+ assert.match(theme,/\.year-section-title,\.calendar-controls-year\)\[data-current-period\]/);
 });
