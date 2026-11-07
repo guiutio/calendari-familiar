@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.29';
+const APP_VERSION = '0.16.30';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1199,7 +1199,7 @@ function personActions(key) {
     if (!personalTimeOff.person(state, key))
         return '';
     const me = state.preferences.mePerson === key;
-    return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar', 15)} Horari laboral</button><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
+    return `<div class="person-actions"><button class="soft-btn person-me ${me ? 'selected' : ''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me ? icon('check', 15) : icon('person', 15)} ${me ? 'Jo' : 'Soc jo'}</button></div>`;
 }
 function peopleList(kind) {
     const entries = kind === 'child' ? state.children : state.guardians;
@@ -1223,7 +1223,7 @@ function personDetails(key) {
     const fields = child ? `<div class="field"><label for="child-name-${id}">Nom</label><input id="child-name-${id}" type="text" maxlength="70" value="${escapeHtml(child.name)}" data-action="child-name" data-child="${id}" /></div>
     <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p>` :
         `<div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
-    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}`;
+    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}<h3 class="sheet-section-label">Horari laboral</h3>${personalTimeOff.sections(state, key)}`;
     return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child ? 'Fill' : 'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
 }
@@ -1273,9 +1273,6 @@ function sheetMarkup() {
     let contents = '';
     if (sheet?.type === 'personDetails') {
         contents = personDetails(sheet.personKey);
-    }
-    else if (sheet?.type === 'personTimeOff') {
-        contents = `<button type="button" class="school-breadcrumb" data-action="open-person" data-person="${escapeHtml(sheet.personKey)}">${icon('chevronLeft', 17)} Dades de la persona</button>` + personalTimeOff.panel(state, sheet.personKey);
     }
     else if (sheet?.type === 'personWork') {
         contents = workSchedule.form(state, sheet.personKey, sheet.draft);
@@ -1615,7 +1612,7 @@ function clickAction(button) {
         case 'work-cancel': {
             const key = sheet?.type === 'personWork' ? sheet.personKey : button.dataset.person ?? '';
             if (personalTimeOff.person(state, key)) {
-                sheet = { type: 'personTimeOff', personKey: key };
+                sheet = { type: 'personDetails', personKey: key };
                 render();
             }
             break;
@@ -1669,7 +1666,7 @@ function clickAction(button) {
             const key = button.dataset.person ?? '';
             if (!personalTimeOff.person(state, key))
                 break;
-            sheet = { type: 'personTimeOff', personKey: key };
+            sheet = { type: 'personDetails', personKey: key };
             render();
             break;
         }
@@ -1712,7 +1709,7 @@ function clickAction(button) {
                 notify(error);
                 break;
             }
-            sheet = { type: 'personTimeOff', personKey: key };
+            sheet = { type: 'personDetails', personKey: key };
             update();
             notify('Festius desats');
             break;
@@ -2401,7 +2398,7 @@ document.addEventListener('submit', event => {
             notify(error);
             return;
         }
-        sheet = { type: 'personTimeOff', personKey: key };
+        sheet = { type: 'personDetails', personKey: key };
         update();
         notify('Rotació de feina desada');
         return;
@@ -2413,7 +2410,7 @@ document.addEventListener('submit', event => {
             notify(error);
             return;
         }
-        sheet = { type: 'personTimeOff', personKey: key };
+        sheet = { type: 'personDetails', personKey: key };
         update();
         notify('Vacances desades');
         return;

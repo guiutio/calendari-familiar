@@ -93,10 +93,10 @@ type ExtraException = {startTime:string;endTime:string;guardianId:string;disable
 type ExtraSlot = ExtraException & {rotationId:string;rotationName:string;childId:string;date:string;key:string;overridden:boolean;id:string;from:number;to:number;name:string;color:string;guardianName:string;visible:boolean};
 type AppState = { version: number; personTimeOff:Record<string,PersonTimeOff>; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'general';
-type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.29';
+const APP_VERSION = '0.16.30';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -1035,7 +1035,7 @@ function schoolInfoForDay(date:string):string {
 function personActions(key:string):string {
  if(!personalTimeOff.person(state,key))return '';
  const me=state.preferences.mePerson===key;
- return `<div class="person-actions"><button class="secondary-btn" data-action="person-time-off" data-person="${escapeHtml(key)}">${icon('calendar',15)} Horari laboral</button><button class="soft-btn person-me ${me?'selected':''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me?icon('check',15):icon('person',15)} ${me?'Jo':'Soc jo'}</button></div>`;
+ return `<div class="person-actions"><button class="soft-btn person-me ${me?'selected':''}" data-action="person-me" data-person="${escapeHtml(key)}" aria-pressed="${me}">${me?icon('check',15):icon('person',15)} ${me?'Jo':'Soc jo'}</button></div>`;
 }
 function peopleList(kind:'child'|'guardian'):string {
   const entries=kind==='child'?state.children:state.guardians;
@@ -1057,7 +1057,7 @@ function personDetails(key:string):string {
   const fields=child?`<div class="field"><label for="child-name-${id}">Nom</label><input id="child-name-${id}" type="text" maxlength="70" value="${escapeHtml(child.name)}" data-action="child-name" data-child="${id}" /></div>
     <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p>`:
     `<div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor!.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
-    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor!.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}`;
+    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor!.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}<h3 class="sheet-section-label">Horari laboral</h3>${personalTimeOff.sections(state,key)}`;
   return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child?'Fill':'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child?'delete-child':'delete-guardian'}" data-${child?'child':'guardian'}="${id}">${icon('trash',16)} Suprimeix ${child?'el fill':'el tutor'}</button></div>`;
 }
@@ -1104,8 +1104,6 @@ function returnFromDetail(date:string):Sheet{return detailOrigin==='day'?{type:'
 function sheetMarkup(){
   let contents='';
   if(sheet?.type==='personDetails'){contents=personDetails(sheet.personKey);
-  } else if(sheet?.type==='personTimeOff'){
-    contents=`<button type="button" class="school-breadcrumb" data-action="open-person" data-person="${escapeHtml(sheet.personKey)}">${icon('chevronLeft',17)} Dades de la persona</button>`+personalTimeOff.panel(state,sheet.personKey);
   } else if(sheet?.type==='personWork'){contents=workSchedule.form(state,sheet.personKey,sheet.draft);
   } else if(sheet?.type==='personHolidays'){contents=personalTimeOff.holidayPicker(state,sheet);
   } else if(sheet?.type==='personVacation'){contents=personalTimeOff.vacationForm(state,sheet.personKey,sheet.periodId,localDate(new Date()));
@@ -1340,7 +1338,7 @@ function clickAction(button:HTMLElement){
     }
     case 'work-cancel':{
       const key=sheet?.type==='personWork'?sheet.personKey:button.dataset.person??'';
-      if(personalTimeOff.person(state,key)){sheet={type:'personTimeOff',personKey:key};render();}break;
+      if(personalTimeOff.person(state,key)){sheet={type:'personDetails',personKey:key};render();}break;
     }
     case 'work-week':case 'work-shift-add':case 'work-shift-remove':case 'work-copy':{
       if(sheet?.type!=='personWork')break;
@@ -1372,7 +1370,7 @@ function clickAction(button:HTMLElement){
     }
     case 'person-time-off':{
       const key=button.dataset.person??'';if(!personalTimeOff.person(state,key))break;
-      sheet={type:'personTimeOff',personKey:key};render();break;
+      sheet={type:'personDetails',personKey:key};render();break;
     }
     case 'person-holidays':{
       const key=button.dataset.person??'';if(!personalTimeOff.person(state,key))break;
@@ -1392,7 +1390,7 @@ function clickAction(button:HTMLElement){
     }
     case 'person-holidays-save':{
       if(sheet?.type!=='personHolidays')break;const key=sheet.personKey,error=personalTimeOff.setHolidays(state,key,sheet.dates);
-      if(error){notify(error);break;}sheet={type:'personTimeOff',personKey:key};update();notify('Festius desats');break;
+      if(error){notify(error);break;}sheet={type:'personDetails',personKey:key};update();notify('Festius desats');break;
     }
     case 'person-holiday-delete':{
       const key=button.dataset.person??'',data=personalTimeOff.get(state,key),error=personalTimeOff.setHolidays(state,key,data.holidays.filter((d:string)=>d!==button.dataset.date));
@@ -1659,11 +1657,11 @@ document.addEventListener('submit',event=>{
     event.preventDefault();if(sheet?.type!=='personWork')return;
     workSchedule.readForm(sheet.draft,new FormData(form));
     const key=sheet.personKey,error=workSchedule.save(state,key,sheet.draft,newId);
-    if(error){notify(error);return;}sheet={type:'personTimeOff',personKey:key};update();notify('Rotació de feina desada');return;
+    if(error){notify(error);return;}sheet={type:'personDetails',personKey:key};update();notify('Rotació de feina desada');return;
   }
   if(form.dataset.personVacationForm){
     event.preventDefault();const key=form.dataset.person??'',error=personalTimeOff.saveVacation(state,key,form.dataset.period??'',new FormData(form),newId);
-    if(error){notify(error);return;}sheet={type:'personTimeOff',personKey:key};update();notify('Vacances desades');return;
+    if(error){notify(error);return;}sheet={type:'personDetails',personKey:key};update();notify('Vacances desades');return;
   }
   if(form.dataset.extraPatternDayForm){
     event.preventDefault();

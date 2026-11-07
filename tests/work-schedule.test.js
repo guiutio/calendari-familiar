@@ -104,10 +104,10 @@ test('els controls de patrons permeten copiar una jornada partida a laborables i
 test('cancel·lar descarta l’esborrany; Desa els canvis llegeix els camps i confirma tota la rotació',()=>{
  const s=setup();s.click('work-add');assert.equal(s.ctx.sheet.type,'personWork');
  s.click('work-shift-add',{day:'0'});assert.deepEqual(s.state.personTimeOff,{});
- s.click('work-cancel');assert.equal(s.ctx.sheet.type,'personTimeOff');assert.equal(s.saves,0);
+ s.click('work-cancel');assert.equal(s.ctx.sheet.type,'personDetails');assert.equal(s.saves,0);
  s.click('work-add');s.click('work-shift-add',{day:'0'});
  s.ctx.submitWork({dataset:{workRotationForm:'true'},fields:{name:'Jornada partida',startDate:'2026-11-02',endDate:'',weeks:'1','work-0-0-startTime':'09:30','work-0-0-endTime':'13:30'}},{preventDefault(){}});
- assert.equal(s.saves,1);assert.equal(s.ctx.sheet.type,'personTimeOff');assert.equal(s.api.slots(s.state,s.key,'2026-11-02')[0].startTime,'09:30');
+ assert.equal(s.saves,1);assert.equal(s.ctx.sheet.type,'personDetails');assert.equal(s.api.slots(s.state,s.key,'2026-11-02')[0].startTime,'09:30');
  s.click('work-edit',{rotation:s.api.rotations(s.state,s.key)[0].id});s.click('work-shift-remove',{day:'0',slot:'0'});
  s.ctx.submitWork({dataset:{workRotationForm:'true'},fields:{}},{preventDefault(){}});assert.equal(s.ctx.sheet.type,'personWork');assert.equal(s.saves,1);
 });

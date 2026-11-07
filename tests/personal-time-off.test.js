@@ -115,11 +115,16 @@ test('només els tutors i responsables tenen calendari personal i l’opció Soc
  assert.doesNotMatch(html,/<input|data-action="person-time-off"|data-action="person-me"/);
  s.click('open-person');
  assert.equal(s.ctx.sheet.type,'personDetails');
- assert.match(s.ctx.sheetMarkup(),/data-action="person-time-off"/);
+ const detail=s.ctx.sheetMarkup();
+ assert.match(detail,/data-action="work-add"/);
+ assert.match(detail,/data-action="person-holidays"/);
+ assert.match(detail,/data-action="person-vacation-add"/);
+ assert.equal((detail.match(/class="sheet-heading"/g)||[]).length,1);
+ assert.doesNotMatch(detail,/data-action="person-time-off"/);
  assert.match(s.ctx.sheetMarkup(),/data-action="person-me"/);
  s.click('open-person',{person:'child:same'});
  assert.match(s.ctx.sheetMarkup(),/data-action="child-birth"/);
- assert.doesNotMatch(s.ctx.sheetMarkup(),/data-action="person-me"|data-action="person-time-off"/);
+ assert.doesNotMatch(s.ctx.sheetMarkup(),/data-action="person-me"|data-action="work-add"|data-action="person-holidays"|data-action="person-vacation-add"/);
  s.ctx.sheet=null;
  assert.equal(s.ctx.personActions('child:same'),'');
  assert.equal(s.api.person(s.state,'child:same'),undefined);
@@ -140,13 +145,15 @@ test('multiselecció de festius entre mesos i anys, inclosos caps de setmana, se
  assert.equal(s.saves,0);assert.deepEqual(s.state.personTimeOff,{});
  s.click('person-time-off');assert.equal(s.saves,0);s.click('person-holidays');assert.deepEqual(plain(s.ctx.sheet.dates),[]);
  for(const date of ['2026-11-07','2026-11-08','2027-01-01'])s.click('person-holiday-toggle',{date});
- s.click('person-holidays-save');assert.equal(s.saves,1);assert.equal(s.ctx.sheet.type,'personTimeOff');
+ s.click('person-holidays-save');assert.equal(s.saves,1);assert.equal(s.ctx.sheet.type,'personDetails');
  assert.deepEqual(plain(s.api.get(s.state,'guardian:same').holidays),['2026-11-07','2026-11-08','2027-01-01']);
  assert.ok(s.state.preferences.visibleTimeOffPeople.includes('guardian:same'));
 });
 
 test('afegir, editar i eliminar vacances valida tot el període i conserva els altres calendaris',()=>{
  const s=setup();s.vacation(leave);assert.equal(s.saves,1);
+ assert.equal(s.ctx.sheet.type,'personDetails');
+ assert.equal(s.ctx.sheet.personKey,'guardian:same');
  const period=s.api.get(s.state,'guardian:same').vacations[0];assert.equal(period.name,leave.name);
  s.holidays(['2026-11-02'],'guardian:other');const before=JSON.stringify(s.state);
  s.vacation({...leave,endDate:'2026-12-01'},'guardian:same',period.id);assert.equal(JSON.stringify(s.state),before);assert.equal(s.saves,1);
@@ -195,7 +202,8 @@ test('Fills i Tutors són llistes reordenables i les dades s’obren a la fitxa 
  assert.match(s.ctx.sheetMarkup(),/data-action="guardian-name"/);
  assert.match(s.ctx.sheetMarkup(),/data-action="guardian-color"/);
  s.click('person-time-off',{person:'guardian:other'});
- assert.match(s.ctx.sheetMarkup(),/Dades de la persona/);
+ assert.equal(s.ctx.sheet.type,'personDetails');
+ assert.match(s.ctx.sheetMarkup(),/data-action="work-add"/);
  s.click('open-person',{person:'guardian:other'});assert.equal(s.ctx.sheet.type,'personDetails');
  s.click('open-person',{person:'unknown:other'});assert.equal(s.ctx.sheet.personKey,'guardian:other');
 });
