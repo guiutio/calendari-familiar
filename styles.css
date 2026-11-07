@@ -1037,10 +1037,10 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Títol uniforme a dalt i controls independents del scroll, sobre les vistes. */
 .calendar-layout {--calendar-controls-height:calc(52px * var(--font-scale,1));--calendar-period-title-size:calc(22px * var(--font-scale,1));--calendar-title-inset:14px;}
 .calendar-sticky-bar .calendar-toolbar {padding:12px var(--calendar-title-inset);}
-.year-section-title {padding-inline:var(--calendar-title-inset);}
+.year-section-title {padding-inline:3px;}
 .calendar-sticky-bar .calendar-title {min-width:0;}
 .calendar-sticky-bar .calendar-title,.year-section-title,.month-section-title {font-size:var(--calendar-period-title-size);font-weight:780;line-height:1.25;}
-.calendar-controls {display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;height:var(--calendar-controls-height);min-width:0;padding:8px 9px;border-top:1px solid #e8ebef;background:#fff;z-index:26;overscroll-behavior:none;touch-action:pan-x;}
+.calendar-controls {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto;height:var(--calendar-controls-height);min-width:0;padding:8px 9px;border-top:1px solid #e8ebef;background:#fff;z-index:26;overscroll-behavior:none;touch-action:pan-x;}
 .calendar-tools {display:flex;align-items:center;gap:4px;}
 .calendar-controls .filter-button {position:relative;justify-content:center;width:32px;min-width:32px;min-height:32px;padding:0;}
 .calendar-controls .filter-copy {display:none;}

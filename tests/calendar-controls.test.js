@@ -54,3 +54,16 @@ test('Mes i Setmana comparteixen les coordenades de les abreviatures dels dies',
   assert.ok(week.includes('grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:10px 0 10px;'));
   assert.ok(day.includes('padding:0;'));
 });
+
+// La capçalera del calendari té un únic grup de botons, alineat al marge dret a totes les vistes.
+test('els botons de la barra superior són a la dreta en totes les vistes',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.calendar-controls \{display:flex;align-items:center;justify-content:flex-end;/);
+ assert.match(css,/\.calendar-tools \{display:flex;align-items:center;gap:4px;/);
+});
+
+test('el títol de cada any s’alinea amb els títols dels mesos',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.year-month \{[^}]*padding:3px;/);
+ assert.match(css,/\.year-section-title \{padding-inline:3px;\}/);
+});
