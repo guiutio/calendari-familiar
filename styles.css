@@ -906,9 +906,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .person-order {display:flex;gap:4px;flex-shrink:0;}
 .person-order-button {display:grid;place-items:center;width:36px;height:44px;border:0;border-radius:8px;background:var(--control-background);color:var(--text-primary);}
 .person-order-button svg {transform:rotate(90deg);}
-.person-color-field {display:flex;align-items:center;gap:12px;}
-.person-color-field label {margin:0;flex:1;min-width:0;}
-.person-color-field .color-input {flex:0 0 40px;width:40px;max-width:40px;height:40px;padding:3px;}
 .person-me.selected {border:1px solid #6595c8;background:#e6f1ff;color:#264f7d;}
 .person-category {display:block;margin-top:3px;font-size:calc(10px * var(--font-scale,1));font-weight:500;opacity:.8;}
 .personal-sheet .panel-header,.personal-sheet .school-schedule-actions {flex-wrap:wrap;}

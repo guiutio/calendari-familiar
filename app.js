@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.30';
+const APP_VERSION = '0.16.31';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1222,8 +1222,8 @@ function personDetails(key) {
     const id = escapeHtml(person.id);
     const fields = child ? `<div class="field"><label for="child-name-${id}">Nom</label><input id="child-name-${id}" type="text" maxlength="70" value="${escapeHtml(child.name)}" data-action="child-name" data-child="${id}" /></div>
     <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p>` :
-        `<div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
-    <div class="field person-color-field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" class="color-input" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div>${personActions(key)}<h3 class="sheet-section-label">Horari laboral</h3>${personalTimeOff.sections(state, key)}`;
+        `<div class="school-form-fields"><div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
+    <div class="field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div></div>${personActions(key)}<h3 class="sheet-section-label">Horari laboral</h3>${personalTimeOff.sections(state, key)}`;
     return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child ? 'Fill' : 'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
 }
