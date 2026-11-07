@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.0';
+const APP_VERSION = '0.17.1';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1425,7 +1425,7 @@ function mountWeekNavigation() {
     const strip = $app.querySelector('.week-day-strip');
     const stop = weekNavigation.mount(viewport, strip, {
         navigate: (step) => {
-            const next = addDays(weekStart(selectedDate), step < 0 ? -7 : 7), date = parseDate(next);
+            const next = addDays(weekStart(selectedDate), step < 0 ? -1 : 7), date = parseDate(next);
             if (date.getFullYear() < 100 || date.getFullYear() > 9999)
                 return;
             selectedDate = next;

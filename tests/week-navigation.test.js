@@ -81,7 +81,9 @@ test('els gestos canvien de setmana sencera en creuar l’any i el focus actuali
   parseDate,addDays,weekStart,isValidDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),render:()=>paints++});
  vm.runInContext(app.slice(start,end),ctx);ctx.mountWeekNavigation();
  callbacks.navigate(1);assert.equal(ctx.selectedDate,'2027-01-04');assert.equal(ctx.viewYear,2027);assert.equal(ctx.viewMonth,0);assert.equal(ctx.weekFocusTarget,true);
- callbacks.navigate(-1);assert.equal(ctx.selectedDate,'2026-12-28');assert.equal(paints,2);
+ callbacks.navigate(-1);assert.equal(ctx.selectedDate,'2027-01-03');assert.equal(ctx.viewYear,2027);assert.equal(ctx.viewMonth,0);assert.equal(paints,2);
+ callbacks.navigate(-1);assert.equal(ctx.selectedDate,'2026-12-27');
+ callbacks.navigate(1);assert.equal(ctx.selectedDate,'2026-12-28');assert.equal(paints,4);
  callbacks.focus('2026-12-30');assert.equal(ctx.selectedDate,'2026-12-30');assert.equal(buttons[2]['aria-pressed'],'true');assert.equal(buttons[2].classList.selected,true);
  callbacks.focus('2027-01-05');assert.equal(ctx.selectedDate,'2026-12-30');
  ctx.stopCalendarScroll();assert.equal(oldCleanups,1);assert.equal(newCleanups,1);

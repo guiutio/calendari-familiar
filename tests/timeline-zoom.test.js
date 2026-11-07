@@ -73,8 +73,8 @@ test('gradients horaris segueixen el zoom, i PWA actualitzada',()=>{
  assert.match(css,/data-zoom="25"/);
  assert.match(css,/\.week-timeline-viewport \{/);
  assert.match(css,/overflow-y:hidden;/);
- assert.match(html,/app\.js\?v=0\.17\.0/);
- assert.match(sw,/app\.js\?v=0\.17\.0/);
+ assert.match(html,/app\.js\?v=0\.17\.1/);
+ assert.match(sw,/app\.js\?v=0\.17\.1/);
 });
 
 test('Setmana conserva el seu zoom i les preferències diàries de les còpies antigues',()=>{
