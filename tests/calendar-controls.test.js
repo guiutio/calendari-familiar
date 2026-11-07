@@ -41,12 +41,16 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
 // La posició dels dies ha de coincidir exactament entre les capçaleres Mes i Setmana.
 test('Mes i Setmana comparteixen les coordenades de les abreviatures dels dies',()=>{
   const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
-  const month=css.match(/\\.calendar-layout:has\\(\\.month-sequence\\) \\.calendar-sticky-bar \\.weekdays\\s*\\{([^}]+)\\}/)?.[1];
-  const week=css.match(/\\.calendar-sticky-bar\\.week-day-strip\\s*\\{([^}]+)\\}/)?.[1];
-  const day=css.match(/\\.week-strip-day\\s*\\{([^}]+)\\}/)?.[1];
-  assert.ok(month&&week&&day,'Les tres regles de la capçalera han d’existir');
-  assert.match(css,/\\.weekdays,\\.month-grid \\{grid-template-columns:repeat\\(7,minmax\\(0,1fr\\)\\);\\}/);
-  assert.match(month,/width:100%;max-width:none;padding:10px 0 10px;/);
-  assert.match(week,/grid-template-columns:repeat\\(7,minmax\\(0,1fr\\)\\);gap:0;padding:10px 0 10px;/);
-  assert.match(day,/padding:0;/);
+  const rule=(selector)=>{
+    const start=css.lastIndexOf(selector);
+    assert.ok(start>=0,'Regla CSS no trobada: '+selector);
+    return css.slice(start,css.indexOf('}',start)+1);
+  };
+  const month=rule('.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {');
+  const week=rule('.calendar-sticky-bar.week-day-strip {');
+  const day=rule('.week-strip-day {');
+  assert.ok(css.includes('.weekdays,.month-grid {grid-template-columns:repeat(7,minmax(0,1fr));}'));
+  assert.ok(month.includes('width:100%;max-width:none;padding:10px 0 10px;'));
+  assert.ok(week.includes('grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:10px 0 10px;'));
+  assert.ok(day.includes('padding:0;'));
 });
