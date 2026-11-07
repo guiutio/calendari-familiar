@@ -12,7 +12,7 @@ function setup(){
  const state={children,guardians,schools:[],daySlots:{},bandOverrides:{},overrides:{},nightDateTimes:{},extraExceptions:{},
   extraRotations:children.map((c,i)=>({id:'n'+i,kind:'night',name:'Nit '+i,startDate:'2026-01-01',length:1,startTime:'19:00',childIds:[c.id],assignments:{[c.id]:['g'+(i+1)]},activeDays:[true]})),
   preferences:{visibleChildren:['a','b'],visibleGuardians:['g1','g2'],visibleSchools:[]}};
- const ctx=vm.createContext({Date:Clock,window:{},state,calendarView:'year',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',
+ const ctx=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},Date:Clock,window:{},state,calendarView:'year',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',
   monthRange:null,yearRange:null,monthScrollTarget:true,tab:'calendar',sheet:null,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],
   weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
@@ -168,8 +168,8 @@ test('Any mostra tres anys consecutius, conserva els visitats als filtres i Avui
 });
 
 
-test('tornar a tocar el mode actiu situa Any, Mes, Setmana i Dia en el període actual',()=>{
- for(const view of ['year','month','week','day']){
+test('tornar a tocar el mode actiu situa Any, Mes i Setmana en el període actual',()=>{
+ for(const view of ['year','month','week']){
   const s=setup();Object.assign(s.ctx,{calendarView:view,viewYear:2028,viewMonth:1,selectedDate:'2028-02-29',monthScrollTarget:false,sheet:{type:'filters'}});
   s.click('calendar-view',{view});
   assert.equal(s.ctx.calendarView,view);
@@ -183,12 +183,24 @@ test('tornar a tocar el mode actiu situa Any, Mes, Setmana i Dia en el període 
 });
 
 test('canviar de mode o tornar des de Configuració conserva la data seleccionada',()=>{
- for(const view of ['year','month','week','day']){
+ for(const view of ['year','month','week']){
   for(const fromSettings of [false,true]){
-   const s=setup();Object.assign(s.ctx,{calendarView:fromSettings?view:view==='day'?'month':'day',tab:fromSettings?'settings':'calendar',selectedDate:'2028-02-29'});
+   const s=setup();Object.assign(s.ctx,{calendarView:fromSettings?view:view==='week'?'month':'week',tab:fromSettings?'settings':'calendar',selectedDate:'2028-02-29'});
    s.click('calendar-view',{view});
    assert.equal(s.ctx.tab,'calendar');assert.equal(s.ctx.calendarView,view);
    assert.equal(s.ctx.selectedDate,'2028-02-29');assert.equal(s.ctx.viewYear,2028);assert.equal(s.ctx.viewMonth,1);
   }
  }
+});
+
+
+test('tocar un dia d’Any o Mes enfoca aquella data a Setmana i el mode Dia ja no existeix',()=>{
+ const s=setup();s.ctx.isValidDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value);
+ for(const date of ['2026-12-31','2027-01-01','2028-02-29']){
+  s.click('show-calendar-day',{date});
+  assert.equal(s.ctx.calendarView,'week');assert.equal(s.ctx.selectedDate,date);assert.equal(s.ctx.weekFocusTarget,true);
+  assert.equal(s.ctx.viewYear,Number(date.slice(0,4)));assert.equal(s.ctx.viewMonth,Number(date.slice(5,7))-1);
+  s.click('open-day-edit');assert.equal(s.ctx.sheet.type,'dayEdit');assert.equal(s.ctx.sheet.date,date);
+ }
+ const before=s.paints;s.click('calendar-view',{view:'day'});assert.equal(s.paints,before);assert.equal(s.ctx.calendarView,'week');
 });

@@ -70,16 +70,16 @@ test('mesos: les fletxes i Avui poden enfocar un mes ja carregat',()=>{
  assert.equal(c.ctx.monthPosition().index,c.base);
  assert.equal(c.ctx.monthPosition().top,100);
 });
-test('fletxes: mes, setmana i dia creuen correctament any, febrer i dia de traspàs',()=>{
+test('fletxes: mes i setmana creuen correctament any, febrer i dia de traspàs',()=>{
  const context=vm.createContext({calendarView:'month',viewYear:2026,viewMonth:11,selectedDate:'2026-12-31',monthScrollTarget:false,render:()=>{}});
  vm.runInContext(dateHelpers+dates,context);
  context.navigateCalendar(1);assert.equal(context.selectedDate,'2027-01-01');
  context.calendarView='week';context.selectedDate='2026-12-28';context.navigateCalendar(1);
  assert.equal(context.selectedDate,'2027-01-04');
- context.calendarView='day';context.selectedDate='2028-02-28';context.navigateCalendar(1);
- assert.equal(context.selectedDate,'2028-02-29');context.navigateCalendar(1);
- assert.equal(context.selectedDate,'2028-03-01');context.navigateCalendar(-1);
- assert.equal(context.selectedDate,'2028-02-29');
+ context.calendarView='week';context.selectedDate='2028-02-28';context.navigateCalendar(1);
+ assert.equal(context.selectedDate,'2028-03-06');context.navigateCalendar(1);
+ assert.equal(context.selectedDate,'2028-03-13');context.navigateCalendar(-1);
+ assert.equal(context.selectedDate,'2028-03-06');
 });
 
 

@@ -10,7 +10,7 @@ function setup(){
  let saves=0;const messages=[];
  const year={id:'y',startDate:'2026-09-01',endDate:'2027-06-30',holidays:['2026-09-11','2026-12-25'],reducedDays:['2027-06-21'],vacations:[{id:'v',name:'Nadal',startDate:'2026-12-22',endDate:'2027-01-07'}]};
  const school={id:'s',years:[year]};
- const ctx=vm.createContext({sheet:null,window:{},state:{schools:[school]},
+ const ctx=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},sheet:null,window:{},state:{schools:[school]},
   weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],
   schoolById:id=>id===school.id?school:undefined,yearById:(s,id)=>s?.years.find(y=>y.id===id),groupById:()=>undefined,

@@ -47,7 +47,7 @@ test('setmana i dia fan servir la mateixa escala de zoom',()=>{
  assert.match(week(150),/height:1728px/);
 });
 test('el control està només en Dia i Setmana i és accessible',()=>{
- assert.match(ts,/calendarView==='day'\|\|calendarView==='week'/);
+ assert.match(ts,/case 'open-zoom':if\(calendarView==='week'\)/);
  assert.match(ts,/data-action="timeline-zoom"/);
  assert.match(ts,/data-action="timeline-zoom-step"/);
  assert.match(ts,/id="timeline-zoom"/);
@@ -73,30 +73,21 @@ test('gradients horaris segueixen el zoom, i PWA actualitzada',()=>{
  assert.match(css,/data-zoom="25"/);
  assert.match(css,/\.week-timeline-viewport \{/);
  assert.match(css,/overflow-y:hidden;/);
- assert.match(html,/app\.js\?v=0\.16\.32/);
- assert.match(sw,/app\.js\?v=0\.16\.32/);
+ assert.match(html,/app\.js\?v=0\.17\.0/);
+ assert.match(sw,/app\.js\?v=0\.17\.0/);
 });
 
-test('Dia i Setmana desen i recuperen zooms independents en canviar de vista i reobrir',()=>{
+test('Setmana conserva el seu zoom i les preferències diàries de les còpies antigues',()=>{
  const start=js.indexOf('function validTimelineZoom('),end=js.indexOf('function isValidDate(',start);
  const writes=[];
- const ctx=vm.createContext({state:{preferences:{timelineZoom:75}},calendarView:'day',
+ const ctx=vm.createContext({state:{preferences:{timelineZoom:75,timelineZooms:{day:25,week:75}}},calendarView:'week',
   TIMELINE_ZOOM_LEVELS:[25,50,75,100,125,150],update:()=>writes.push(JSON.stringify(ctx.state)),sheet:{type:'zoom'}});
  vm.runInContext(js.slice(start,end),ctx);
  vm.runInContext(js.slice(js.indexOf('function clickAction(button)'),js.indexOf("document.addEventListener('click'")),ctx);
- assert.equal(ctx.timelineZoomForView(),75);
- ctx.setTimelineZoomForView(25);
- ctx.calendarView='week';assert.equal(ctx.timelineZoomForView(),75);
- ctx.setTimelineZoomForView(125);
- ctx.calendarView='day';assert.equal(ctx.timelineZoomForView(),25);
- assert.equal(writes.length,2);
+ assert.equal(ctx.timelineZoomForView(),75);ctx.setTimelineZoomForView(125);
+ assert.equal(ctx.timelineZoomForView(),125);assert.equal(ctx.timelineZoomForView('day'),25);
  ctx.state=JSON.parse(writes.at(-1));
- assert.equal(ctx.timelineZoomForView('day'),25);assert.equal(ctx.timelineZoomForView('week'),125);
- ctx.calendarView='week';
- ctx.clickAction({dataset:{action:'timeline-zoom-step',step:'1'}});
- assert.equal(ctx.timelineZoomForView('week'),150);
- assert.equal(ctx.timelineZoomForView('day'),25);
- ctx.clickAction({dataset:{action:'timeline-zoom-step',step:'1'}});assert.equal(writes.length,3);
- ctx.calendarView='day';ctx.clickAction({dataset:{action:'timeline-zoom-step',step:'-1'}});assert.equal(writes.length,3);
- ctx.calendarView='month';ctx.setTimelineZoomForView(100);assert.equal(writes.length,3);
+ ctx.clickAction({dataset:{action:'timeline-zoom-step',step:'1'}});assert.equal(ctx.timelineZoomForView(),150);
+ ctx.clickAction({dataset:{action:'timeline-zoom-step',step:'1'}});assert.equal(writes.length,2);
+ ctx.calendarView='month';ctx.setTimelineZoomForView(100);assert.equal(writes.length,2);
 });

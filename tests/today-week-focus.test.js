@@ -22,7 +22,7 @@ test('a Setmana es ressalta tota la columna d’avui i la capçalera, no els alt
  assert.match(output,/data-timeline-key="week:2026-10-26" data-focus-date="2026-10-29"/);
  assert.match(output,/class="week-day-header today" data-date="2026-10-29"/);
  assert.match(output,/class="week-date-columns today" data-date="2026-10-29"/);
- assert.match(output,/data-action="show-calendar-day" data-date="2026-10-29" aria-current="date"/);
+ assert.match(output,/data-action="focus-week-day" data-date="2026-10-29" aria-current="date"/);
  assert.match(output,/class="week-day-header" data-date="2026-10-28"/);
  assert.match(output,/class="week-date-columns" data-date="2026-10-28"/);
  assert.equal((output.match(/class="week-date-columns today"/g)||[]).length,1);
@@ -39,8 +39,8 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(theme,/\[data-current-period\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.week-date-columns\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
- assert.match(html,/styles\.css\?v=0\.16\.32/);
- assert.match(sw,/calendari-familiar-v0\.16\.32/);
+ assert.match(html,/styles\.css\?v=0\.17\.0/);
+ assert.match(sw,/calendari-familiar-v0\.17\.0/);
 });
 
 const between=(a,b)=>{
@@ -80,7 +80,7 @@ function simulateRender({oldFocus='',oldLeft=0,focusDate='2026-10-29',start='202
    },
    set innerHTML(value){assert.equal(value,'layout');painted=true;}
  };
- const context=vm.createContext({
+ const context=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},
    deferRenderForNativePicker:()=>false,monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},$app,tab:'calendar',calendarView:'week',selectedDate:focusDate,
    weekStart:()=>start,schoolNav:{},sheet:null,fitCalendarTimeline:()=>{},
    layout:()=> 'layout',calendarPage:()=> '',rotationPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',
@@ -104,7 +104,7 @@ test('amb la mateixa setmana i dia es conserva el scroll manual en editar o canv
 
 test('tocar una setmana actual enfoca avui; altres setmanes enfoquen el dilluns',()=>{
  const source=between('function clickAction(button) {',"document.addEventListener('click'");
- const context=vm.createContext({
+ const context=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},
    sheet:null,calendarView:'month',selectedDate:'2026-10-01',
    isValidDate:s=>/^\d{4}-\d{2}-\d{2}$/.test(s),
    weekStart:s=>s,
@@ -120,6 +120,6 @@ test('tocar una setmana actual enfoca avui; altres setmanes enfoquen el dilluns'
    assert.equal(context.calendarView,'week');
  }
  assert.match(ts,/calendarView==='week'\?selectedDate/);
- assert.match(app,/const keepHorizontalScroll = keepTimeline &&/);
+ assert.match(app,/const keepHorizontalScroll = !weekFocusTarget && keepTimeline &&/);
  assert.match(app,/timeline\.scrollLeft = Math\.max\(0, Math\.min\(timeline\.scrollWidth - timeline\.clientWidth, offset\)\)/);
 });

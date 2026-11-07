@@ -12,7 +12,7 @@ function setup(){
  const state={version:2,children:[{id:'same',name:'Fill',birthDate:''}],guardians:[{id:'same',name:'Guiu',color:'#112233'},{id:'other',name:'Rebeca',color:'#445566'}],schools:[],personTimeOff:{},
   extraRotations:[],extraExceptions:{},overrides:{},bandOverrides:{},daySlots:{},nightDateTimes:{},
   preferences:{mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,showWorkSchedules:true,visibleChildren:['same'],visibleGuardians:['same','other'],visibleSchools:[]}};
- const ctx=vm.createContext({window:{},Date:Clock,state,sheet:null,schoolNav:{},tab:'people',calendarView:'month',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',monthRange:null,yearRange:null,monthScrollTarget:true,
+ const ctx=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},window:{},Date:Clock,state,sheet:null,schoolNav:{},tab:'people',calendarView:'month',viewYear:2026,viewMonth:10,selectedDate:'2026-11-02',monthRange:null,yearRange:null,monthScrollTarget:true,
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],
   icon:()=>'',activeChildren:()=>state.children.filter(c=>state.preferences.visibleChildren.includes(c.id)),
   childById:id=>state.children.find(c=>c.id===id),guardian:id=>state.guardians.find(g=>g.id===id),defaultGuardian:()=>state.guardians[0]?.id??'',
@@ -83,7 +83,7 @@ function working(s,key='guardian:same',days=[0,1,2,3,4,5,6]){
  assert.equal(s.ctx.workSchedule.save(s.state,key,draft,()=> 'work-for-contours'),'');
 }
 
-test('Any, Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',()=>{
+test('Any, Mes i Setmana atenuen les dates lliures de la persona identificada',()=>{
  const s=setup();working(s,'guardian:same',[0,1,2,3,4]);
  s.api.setMe(s.state,'guardian:same');s.holidays(['2026-11-03']);
  const html=s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02');
@@ -95,14 +95,13 @@ test('Any, Mes, Setmana i Dia atenuen les dates lliures de la persona identifica
  const annualCell=date=>annual.match(new RegExp('data-year-date="'+date+'"[^>]*><span class="([^"]+)"'))[1];
  assert.equal(annualCell('2026-11-07'),'year-day-number is-day-off');
  assert.equal(annualCell('2026-11-06'),'year-day-number');
- s.ctx.calendarView='day';s.ctx.selectedDate='2026-11-07';
- assert.match(s.ctx.calendarNavigation(),/class="calendar-title" data-day-off/);
- s.ctx.selectedDate='2026-11-06';assert.doesNotMatch(s.ctx.calendarNavigation(),/data-day-off/);
+ s.ctx.calendarView='week';s.ctx.selectedDate='2026-11-07';
+ assert.match(s.ctx.calendarNavigation(),/week-strip-day is-day-off selected[^>]+data-date="2026-11-07"/);
  vm.runInContext(read('day-timeline.js')+section('function weekTimeline(', 'function miniBands('),s.ctx);
  Object.assign(s.ctx,{dayTimelineUI:s.ctx.window.dayTimelineUI,nightChangeTime:()=> '19:00',assigned:()=>'',schoolActivities:()=>[],extraSlots:()=>[],timelineZoomForView:()=>50});
  const week=s.ctx.weekTimeline('2026-11-02',s.state.children);
- assert.match(week,/class="week-date-button is-day-off" data-action="show-calendar-day" data-date="2026-11-07"/);
- assert.match(week,/class="week-date-button" data-action="show-calendar-day" data-date="2026-11-06"/);
+ assert.match(week,/class="week-date-button is-day-off" data-action="focus-week-day" data-date="2026-11-07"/);
+ assert.match(week,/class="week-date-button" data-action="focus-week-day" data-date="2026-11-06"/);
  s.api.setMe(s.state,'guardian:same');
  assert.doesNotMatch(s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),/is-day-off/);
  assert.doesNotMatch(s.ctx.yearOverview(2026,s.state.children,'2026-11-02'),/is-day-off/);
@@ -365,7 +364,7 @@ test('marcar festius conserva el desplaçament i el focus del selector personal'
 test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
  const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-02',endDate:'2026-11-03'});
  Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
- for(const view of ['week','day']){
+ for(const view of ['week']){
   s.ctx.calendarView=view;assert.doesNotMatch(s.ctx.calendarPage(),/personal-outline|Festius personals|Vacances personals/);
  }
  for(const view of ['year','month','week','day']){
@@ -446,7 +445,7 @@ test('l’agenda laboral es conserva al diàleg de Dia i respecta els filtres',(
  const draft=s.ctx.sheet.draft;draft.days[0]=[{startTime:'09:00',endTime:'13:00'},{startTime:'15:00',endTime:'18:00'}];
  assert.equal(s.ctx.workSchedule.save(s.state,'guardian:same',draft,()=> 'job'),'');s.ctx.sheet=null;
  Object.assign(s.ctx,{weekTimeline:()=>'<div>Setmana</div>',dayTimeline:()=>'<div>Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50});
- for(const view of ['week','day']){
+ for(const view of ['week']){
   s.ctx.calendarView=view;html=s.ctx.calendarPage();
   assert.doesNotMatch(html,/Horari laboral|09:00–13:00|15:00–18:00/);
  }
@@ -458,7 +457,7 @@ test('l’agenda laboral es conserva al diàleg de Dia i respecta els filtres',(
 
 test('el llapis obre les accions del dia i conserva els editors, la data i la restauració',()=>{
  const s=setup(),date=s.ctx.selectedDate;
- Object.assign(s.ctx,{tab:'calendar',calendarView:'day',dayTimeline:()=>'<div class="day-timeline">Dia</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50,detailOrigin:'calendar',detailReturnDate:date});
+ Object.assign(s.ctx,{tab:'calendar',calendarView:'week',weekTimeline:()=>'<div class="week-timeline">Setmana</div>',schoolInfoForDay:()=>'',timelineZoomForView:()=>50,detailOrigin:'calendar',detailReturnDate:date});
  assert.doesNotMatch(s.ctx.calendarPage(),/calendar-card|daily-agenda|day-edit-actions|day-slot-add/);
  assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/);
  s.click('open-day-edit');let html=s.ctx.sheetMarkup();
@@ -468,7 +467,7 @@ test('el llapis obre les accions del dia i conserva els editors, la data i la re
  assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-expanded="true"/);
  s.ctx.clickAction({dataset:{action:'day-slot-add',date},closest:()=>null});
  assert.equal(s.ctx.sheet.type,'daySlotForm');assert.equal(s.ctx.sheet.childId,'same');
- assert.equal(s.ctx.calendarView,'day');assert.equal(s.ctx.selectedDate,date);
+ assert.equal(s.ctx.calendarView,'week');assert.equal(s.ctx.selectedDate,date);
  assert.equal(s.ctx.monthDayUI.save(s.state,date,'same','',new Map([['startTime','16:30'],['endTime','18:00'],['guardianId','same']]),()=> 'slot'),'');
  s.state.extraRotations.push({id:'pickup',name:'Recollida',startDate:date,length:1,startTime:'16:30',endTime:'19:00',childIds:['same'],assignments:{same:['same']},activeDays:[true]});
  s.click('open-day-edit');html=s.ctx.sheetMarkup();
@@ -476,7 +475,7 @@ test('el llapis obre les accions del dia i conserva els editors, la data i la re
  s.click('extra-date-choose',{date});assert.equal(s.ctx.sheet.type,'extraDate');assert.equal(s.ctx.sheet.date,date);
  s.click('open-day-edit');s.click('day-restore',{date});
  assert.equal(s.ctx.monthDayUI.hasChanges(s.state,date),false);assert.equal(s.ctx.sheet,null);
- assert.equal(s.ctx.calendarView,'day');assert.equal(s.ctx.selectedDate,date);
+ assert.equal(s.ctx.calendarView,'week');assert.equal(s.ctx.selectedDate,date);
  s.ctx.calendarView='month';s.click('open-day-edit');assert.equal(s.ctx.sheet,null);
 });
 

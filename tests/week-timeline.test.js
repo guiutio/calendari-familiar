@@ -38,7 +38,7 @@ test('set dies, amb dues subcolumnes per dia i un sol eix de 24 hores',()=>{
 });
 test('capçaleres navegables amb dates, horaris independents i dades filtrables',()=>{
  const markup=ui.renderWeek(dates[0],days,children);
- for(const date of dates)assert.ok(markup.includes(`data-action="show-calendar-day" data-date="${date}"`));
+ for(const date of dates)assert.ok(markup.includes(`data-action="focus-week-day" data-date="${date}"`));
  assert.equal((markup.match(/data-session="matematiques"/g)||[]).length,1);
  assert.ok(markup.includes('data-child="elna"'));
  assert.ok(markup.includes('data-child="blai"'));
@@ -60,7 +60,7 @@ test('les 24 hores omplen l’alçada útil i tots els esdeveniments mantenen la
  assert.match(quarter,/data-px-per-minute="0.5"/);
  assert.match(quarter,/top:720px">24:00/);
 });
-for(const calendarView of ['week','day'])test(`${calendarView}: l’ajust descompta la capçalera, respon als canvis de mida i es cancel·la en sortir`,()=>{
+for(const calendarView of ['week'])test(`${calendarView}: l’ajust descompta la capçalera, respon als canvis de mida i es cancel·la en sortir`,()=>{
  const fitted=[];let callback,disconnected=false,pending,cancelled;
  const content={innerHTML:''};
  const main={clientWidth:402,clientHeight:780,querySelector:selector=>selector==='.content'?content:{offsetHeight:60}};

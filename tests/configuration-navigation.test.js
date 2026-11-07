@@ -13,7 +13,7 @@ function setup(){
  let html='',paints=0;const scrolls=[];
  const main={dataset:{},scrollTop:0};
  const state={preferences:{theme:'auto',fontSize:'normal'}};
- const ctx=vm.createContext({tab:'calendar',calendarView:'month',selectedDate:'2026-11-03',schoolNav:{},sheet:null,state,
+ const ctx=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},tab:'calendar',calendarView:'month',selectedDate:'2026-11-03',schoolNav:{},sheet:null,state,
   icon:()=>'<svg></svg>',escapeHtml:String,storageMode:'indexeddb',APP_VERSION:'test',
   validTheme:value=>value,validFontSize:value=>value,FONT_SIZE_LABELS:{normal:'Normal'},FONT_SIZE_OPTIONS:['normal','large','xlarge'],
   calendarNavigation:()=>'<header class="calendar-sticky-bar">Calendari</header>',calendarControls:()=>'<nav class="calendar-controls">Controls</nav>',
@@ -33,10 +33,10 @@ const navTargets=(html,kind)=>{
  return [...nav.matchAll(/data-(?:tab|view)="([^"]+)"/g)].map(match=>match[1]);
 };
 
-test('Configuració conserva les quatre àrees i la navegació inclou les quatre vistes del calendari',()=>{
+test('Configuració conserva les quatre àrees i la navegació inclou les tres vistes del calendari',()=>{
  const s=setup();s.ctx.changeTab('settings');
- assert.deepEqual(navTargets(s.html,'side-nav'),['year','month','week','day','settings']);
- assert.deepEqual(navTargets(s.html,'mobile-tabs'),['year','month','week','day','settings']);
+ assert.deepEqual(navTargets(s.html,'side-nav'),['year','month','week','settings']);
+ assert.deepEqual(navTargets(s.html,'mobile-tabs'),['year','month','week','settings']);
  assert.deepEqual([...s.html.matchAll(/settings-area-link[^>]+data-tab="([^"]+)"/g)].map(match=>match[1]),['general','people','rotation','schools']);
  assert.deepEqual([...s.html.matchAll(/settings-area-copy"><strong>([^<]+)/g)].map(match=>match[1]),['General','Persones','Rotacions','Escoles']);
  assert.doesNotMatch(s.html,/>Ajustos<|settings-back/);
@@ -68,7 +68,7 @@ test('cada àrea té retorn a Configuració i General conserva els ajustos sense
 
 test('els botons de vista tornen al calendari des de Configuració, també quan la vista no canvia',()=>{
  const s=setup();
- for(const area of ['settings','general','people','rotation','schools'])for(const view of ['year','month','week','day']){
+ for(const area of ['settings','general','people','rotation','schools'])for(const view of ['year','month','week']){
   s.ctx.changeTab(area);s.ctx.calendarView=view;s.ctx.sheet={type:'filters'};
   s.ctx.clickAction({dataset:{action:'calendar-view',view}});
   assert.equal(s.ctx.tab,'calendar');assert.equal(s.ctx.calendarView,view);assert.equal(s.ctx.sheet,null);

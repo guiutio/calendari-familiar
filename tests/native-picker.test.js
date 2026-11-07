@@ -15,7 +15,7 @@ function setup(){
  class Select{};class Textarea{};
  const win={setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)};
  const child={id:'c',birthDate:''};
- const ctx=vm.createContext({document:doc,window:win,HTMLInputElement:Input,HTMLSelectElement:Select,HTMLTextAreaElement:Textarea,
+ const ctx=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},document:doc,window:win,HTMLInputElement:Input,HTMLSelectElement:Select,HTMLTextAreaElement:Textarea,
   $app:{querySelector:()=>null,set innerHTML(_html){paints++;}},
   monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},tab:'people',calendarView:'day',selectedDate:'2026-10-31',
   schoolNav:{},sheet:null,weekStart:d=>d,layout:()=>'',peoplePage:()=>'',calendarPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',rotationPage:()=>'',

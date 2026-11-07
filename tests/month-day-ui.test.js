@@ -110,8 +110,8 @@ test('les franges noves són visibles també a dia/setmana sense canviar la lòg
  assert.doesNotMatch(plain,/day-slot-block/);
 });
 test('la PWA registra el nou mòdul i la vista de mes no depèn de les cinc franges',()=>{
- assert.match(html,/month-day-ui\.js\?v=0\.16\.32/);
- assert.match(sw,/month-day-ui\.js\?v=0\.16\.32/);
+ assert.match(html,/month-day-ui\.js\?v=0\.17\.0/);
+ assert.match(sw,/month-day-ui\.js\?v=0\.17\.0/);
  assert.match(ts,/monthDayUI\.mini\(children,snapshot\.nights,snapshot\.activities,snapshot\.slots,snapshot\.extra\)/);
  assert.match(ts,/monthDayUI\.detail\(/);
  assert.match(app,/case 'day-restore'/);
@@ -144,20 +144,14 @@ test('les setmanes ISO es numeren correctament al límit de l’any',()=>{
   assert.deepEqual({...ui.isoWeek(day)},{week,year},day);
  }
 });
-test('el mes inclou el número de setmana a la primera columna i obre les vistes reals',()=>{
- assert.match(ts,/const iso=offset%7===0\?monthDayUI\.isoWeek\(date\):null/);
- assert.match(ts,/class="month-week-number" data-action="show-calendar-week" data-date="\$\{date\}"/);
+test('el mes té només set columnes i tocar un dia obre la setmana enfocada en aquella data',()=>{
+ assert.doesNotMatch(ts,/class="month-week-number"|class="month-week-heading"/);
  assert.match(ts,/class="day-cell[^\n]+data-action="show-calendar-day" data-date="\$\{date\}"/);
- assert.match(ts,/class="month-week-heading"/);
-  assert.match(ts,/case 'show-calendar-week':\{[\s\S]*?const start=weekStart\(date\),today=localDate\(new Date\(\)\);[\s\S]*?selectedDate=today>=start&&today<=addDays\(start,6\)\?today:start;calendarView='week';sheet=null;render\(\);break;/);
  assert.match(ts,/case 'show-calendar-day':\s*case 'open-day':\{/);
- assert.match(ts,/selectedDate=date;calendarView='day';sheet=null/);
- assert.match(app,/case 'show-calendar-week':/);
-  assert.match(app,/selectedDate = today >= start && today <= addDays\(start, 6\) \? today : start;/);
- assert.match(css,/\.weekdays,\.month-grid \{grid-template-columns:38px repeat\(7,minmax\(0,1fr\)\);\}/);
- assert.match(css,/\.month-week-number:focus-visible/);
- assert.doesNotMatch(ts,/case 'open-day':\{[^\n]*sheet=\{type:'day'/);
+ assert.match(ts,/selectedDate=date;calendarView='week';weekFocusTarget=true;sheet=null/);
+ assert.match(css,/\.weekdays,\.month-grid \{grid-template-columns:repeat\(7,minmax\(0,1fr\)\);\}/);
 });
+
 test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/class="day-edit-actions"/);
  assert.match(ts,/data-action="day-slot-add" data-date="\$\{date\}"/);
@@ -165,8 +159,8 @@ test('en obrir Dia es mantenen les opcions d’editar i restaurar franges',()=>{
  assert.match(ts,/data-action="day-restore" data-date="\$\{date\}"/);
  assert.match(ts,/monthDayUI\.restore\(state,date\);rotationPatterns\.clearDate\(state,date\);sheet=null;update\(\)/);
  assert.match(app,/monthDayUI\.restore\(state, date\);\s*rotationPatterns\.clearDate\(state, date\);\s*sheet = null;/);
- assert.match(html,/app\.js\?v=0\.16\.32/);
- assert.match(sw,/calendari-familiar-v0\.16\.32/);
+ assert.match(html,/app\.js\?v=0\.17\.0/);
+ assert.match(sw,/calendari-familiar-v0\.17\.0/);
 });
 
 test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',()=>{
@@ -177,8 +171,8 @@ test('al mes no hi ha pictograma escolar i el número del dia es veu més gran',
  assert.match(css,/@media\(max-width:360px\)\s*\{[\s\S]*?\.month-grid \.day-number\s*\{\s*width:24px;\s*height:24px;\s*font-size:calc\(15px/);
  assert.doesNotMatch(ts,/school-month-count/);
  assert.doesNotMatch(app,/school-month-count/);
- assert.match(html,/styles\.css\?v=0\.16\.32/);
- assert.match(sw,/calendari-familiar-v0\.16\.32/);
+ assert.match(html,/styles\.css\?v=0\.17\.0/);
+ assert.match(sw,/calendari-familiar-v0\.17\.0/);
 });
 
 test('el perímetre mensual segueix els dies reals i exclou altres mesos',()=>{
@@ -202,8 +196,8 @@ test('el mes no mostra cap comptador escolar ni perímetre ressaltat',()=>{
  assert.doesNotMatch(app,/class="school-month-count"/);
  assert.doesNotMatch(css,/\.month-grid \.day-cell\.month-current::after/);
  assert.match(css,/\.month-grid\s*\{--month-outline-width:4px;\}/);
- assert.match(html,/styles\.css\?v=0\.16\.32/);
- assert.match(sw,/calendari-familiar-v0\.16\.32/);
+ assert.match(html,/styles\.css\?v=0\.17\.0/);
+ assert.match(sw,/calendari-familiar-v0\.17\.0/);
 });
 
 test('mes: comprimeix 22:00–06:00 però manté les hores diürnes proporcionals',()=>{

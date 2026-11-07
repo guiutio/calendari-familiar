@@ -138,7 +138,7 @@ test('el diàleg de Dia mostra el resultat laboral amb filtres i les graelles qu
  s.personal.showAll(s.state);s.click('person-off-filter');assert.equal(s.api.agenda(s.state,['2026-11-02']),'');
  s.personal.showAll(s.state);assert.ok(s.personal.filterMarkup(s.state).includes('Franges de feina'));
  assert.doesNotMatch(app,/content = weekTimeline[^;]+workSchedule.agenda/);
- assert.match(app,/return dayTimeline\(selectedDate, children\);/);
+ assert.match(app,/return weekTimeline\(weekStart\(selectedDate\), children\);/);
  assert.match(app,/sheet\?\.type === 'dayEdit'[\s\S]*?workSchedule\.agenda\(state, \[date\]\)/);
 });
 

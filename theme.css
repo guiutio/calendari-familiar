@@ -101,9 +101,6 @@
 :root[data-theme] .day-cell {background:var(--app-background);color:var(--text-primary);}
 :root[data-theme] .day-cell:hover {background:var(--surface-secondary);}
 :root[data-theme] :is(.month-empty-cell,.day-cell.other-month) {background:var(--app-background);}
-:root[data-theme] .month-week-number {background:var(--app-background);color:var(--text-secondary);border-color:transparent;}
-:root[data-theme] .month-week-number:hover,:root[data-theme] .month-week-number:active {background:var(--selection-background);color:var(--accent);}
-:root[data-theme] .weekdays .month-week-heading {color:var(--text-secondary);}
 :root[data-theme] .month-grid .day-cell.today,
 :root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;border-radius:var(--pto-base-radius,8px);}
 :root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
