@@ -33,10 +33,7 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  if(view!=='week')assert.doesNotMatch(title,/<button|data-action=/);
  assert.equal(title.includes('class="weekdays"'),view==='month');
  const tools=controls.match(/class="calendar-tools">([\s\S]*?)<\/div>/)[1];
- const period=controls.match(/class="calendar-nav calendar-period-nav">([\s\S]*?)<\/div>/)[1];
  assert.deepEqual([...tools.matchAll(/data-action="([^"]+)"/g)].map(match=>match[1]),
   ['open-filters','open-legend',...(view==='week'?['open-day-edit']:[]),...(['day','week'].includes(view)?['open-zoom']:[])]);
- assert.deepEqual([...period.matchAll(/data-action="([^"]+)"(?: data-step="([^"]+)")?/g)].map(match=>[match[1],match[2]]),
-  [['calendar-navigate','-1'],['today',undefined],['calendar-navigate','1']]);
- assert.doesNotMatch(tools,/data-action="today"|data-action="calendar-navigate"/);
+ assert.doesNotMatch(controls,/data-action="today"|data-action="calendar-navigate"|calendar-period-nav/);
 });
