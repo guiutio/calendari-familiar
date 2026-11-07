@@ -1,12 +1,12 @@
 /* Colors semàntics per a les dues aparences, inspirats en les superfícies d’Apple. */
 :root {
-  --app-background:#f2f2f7;
+  --app-background:#ffffff;
   --surface:#ffffff;
   --surface-elevated:#ffffff;
   --surface-secondary:#f2f2f7;
   --control-background:#e5e5ea;
   --field-background:#f2f2f7;
-  --bar-background:rgba(255,255,255,.96);
+  --bar-background:#ffffff;
   --text-primary:#1c1c1e;
   --text-secondary:#636366;
   --text-day-off:#66666b;
@@ -27,12 +27,12 @@
 }
 :root[data-theme="dark"] {
   --app-background:#000000;
-  --surface:#1c1c1e;
+  --surface:#000000;
   --surface-elevated:#2c2c2e;
   --surface-secondary:#1c1c1e;
   --control-background:#3a3a3c;
   --field-background:#2c2c2e;
-  --bar-background:rgba(28,28,30,.96);
+  --bar-background:#000000;
   --text-primary:#f5f5f7;
   --text-secondary:#b0b0b8;
   --text-day-off:#a5a5ad;
@@ -96,7 +96,7 @@
 
 /* El calendari conserva els colors de responsabilitat i neutralitza les superfícies. */
 :root[data-theme] .calendar-card:has(.month-sequence) {background:var(--app-background);border:0;box-shadow:none;}
-:root[data-theme] .month-section-title {background:var(--app-background);border-color:transparent;box-shadow:none;}
+:root[data-theme] .month-section-title {background:var(--app-background);border-color:transparent;border-bottom:1px solid var(--separator);box-shadow:none;}
 :root[data-theme] .month-grid {background:var(--app-background);border-color:transparent;}
 :root[data-theme] .day-cell {background:var(--app-background);color:var(--text-primary);}
 :root[data-theme] .day-cell:hover {background:var(--surface-secondary);}
@@ -105,7 +105,7 @@
 :root[data-theme] .year-day.today {background:var(--calendar-current);color:#fff;border-radius:var(--pto-base-radius,8px);}
 :root[data-theme] .month-grid .day-cell.today :is(.month-mini-child,.mini-birthday) {color:inherit;}
 :root[data-theme] .month-grid .day-cell.today .change-dot {background:currentColor;}
-:root[data-theme] :is(.calendar-title,.year-section-title,.calendar-controls-year)[data-current-period],
+:root[data-theme] :is(.calendar-title,.year-section-title,.calendar-controls-year,.calendar-controls-week-month,.calendar-controls-week-year)[data-current-period],
 :root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
 :root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
 :root[data-theme] :is(.day-number.is-day-off,.year-day-number.is-day-off,.week-date-button.is-day-off,.calendar-title[data-day-off]) {color:var(--text-day-off);}
@@ -132,3 +132,7 @@
 :root[data-theme] .day-school-block {background:color-mix(in srgb,var(--school-event-color) 49%,var(--surface));}
 :root[data-theme] .school-timeline-event {background:color-mix(in srgb,var(--activity-color) 44%,var(--surface));}
 :root[data-theme] .day-extra-block {background:color-mix(in srgb,var(--extra-color) 58%,var(--surface));border-color:var(--surface);}
+
+/* Fons principal completament blanc o negre, incloent-hi les barres fixes. */
+:root[data-theme="light"] :is(.app-layout,.sidebar,.main-area,.calendar-sticky-bar,.calendar-controls,.mobile-tabs),
+:root[data-theme="dark"] :is(.app-layout,.sidebar,.main-area,.calendar-sticky-bar,.calendar-controls,.mobile-tabs) {background:var(--app-background);}

@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.7';
+const APP_VERSION = '0.17.8';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -362,7 +362,7 @@ function applyTheme(){
   const effective=mode==='auto'?(themeMedia.matches?'dark':'light'):mode;
   document.documentElement.dataset.theme=effective;
   document.documentElement.style.colorScheme=effective;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',effective==='dark'?'#1c1c1e':'#ffffff');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',effective==='dark'?'#000000':'#ffffff');
   try{localStorage.setItem('calendari-familiar-theme',mode);}catch{/* Emmagatzematge opcional */}
 }
 function applyFontSize(){document.documentElement.dataset.fontSize=validFontSize(state.preferences.fontSize);}
@@ -590,10 +590,11 @@ function isCurrentPeriod(){
   return calendarView==='week'?weekStart(selectedDate)===weekStart(todayDate):selectedDate===todayDate;
 }
 function calendarControls(){
+  const chosen=calendarView==='week'?parseDate(selectedDate):null,now=new Date();
   const children=activeChildren();
   const showHolyWeek=state.preferences.showHolyWeek&&(calendarView==='year'||calendarView==='month');
   const filtered=showHolyWeek||children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
-  return `<nav class="calendar-controls" aria-label="Controls del calendari">${calendarView==='month'?`<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear===new Date().getFullYear()?' data-current-period':''}>${viewYear}</span>`:''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></nav>`;
+  return `<nav class="calendar-controls" aria-label="Controls del calendari">${calendarView==='month'?`<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear===new Date().getFullYear()?' data-current-period':''}>${viewYear}</span>`:''}${chosen?`<span class="calendar-controls-year calendar-controls-week-title"><span class="calendar-controls-week-month"${chosen.getFullYear()===now.getFullYear()&&chosen.getMonth()===now.getMonth()?' data-current-period':''}>${escapeHtml(months[chosen.getMonth()])}</span><span class="calendar-controls-week-year"${chosen.getFullYear()===now.getFullYear()?' data-current-period':''}>${chosen.getFullYear()}</span></span>`:''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></nav>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}${tab==='calendar'&&calendarView==='week'?' calendar-week-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">El teu espai familiar</div></span></div>
@@ -624,7 +625,7 @@ function monthPanel(index:number,children:Child[],today:string):string {
         ${bdays.length?'<span class="mini-birthday" title="Aniversari">Aniv.</span>':''}${personalMarks.html}
       </button>`;
     });
-    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title">${escapeHtml(months[month])}</h2><div class="month-grid">${cells.join('')}</div></section>`;
+    return `<section class="month-panel" data-month-index="${index}" aria-label="${escapeHtml(monthTitle(year,month))}"><h2 class="month-section-title"><span class="month-section-name" style="grid-column:${firstDay+1}">${escapeHtml(['gen.','feb.','març','abr.','maig','juny','jul.','ag.','set.','oct.','nov.','des.'][month])}</span></h2><div class="month-grid">${cells.join('')}</div></section>`;
 }
 // Keep loaded months and years in place: removing earlier panels rebases the scroll range
 // and can make Safari jump during momentum. Only prepend after scrolling stops.
@@ -1247,6 +1248,13 @@ function mountWeekNavigation(){
     focus:(date:string)=>{
       if(!isValidDate(date)||weekStart(date)!==weekStart(selectedDate))return;
       selectedDate=date;
+      const chosen=parseDate(date),now=new Date();
+      viewYear=chosen.getFullYear();viewMonth=chosen.getMonth();
+      const title=$app.querySelector<HTMLElement>('.calendar-controls-week-title');
+      const monthLabel=title?.querySelector?.<HTMLElement>('.calendar-controls-week-month');
+      const yearLabel=title?.querySelector?.<HTMLElement>('.calendar-controls-week-year');
+      if(monthLabel){monthLabel.textContent=months[chosen.getMonth()]??'';monthLabel.toggleAttribute('data-current-period',viewYear===now.getFullYear()&&viewMonth===now.getMonth());}
+      if(yearLabel){yearLabel.textContent=String(viewYear);yearLabel.toggleAttribute('data-current-period',viewYear===now.getFullYear());}
       strip?.querySelectorAll<HTMLButtonElement>('.week-strip-day').forEach(button=>{
         const active=button.dataset.date===date;button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));
       });
