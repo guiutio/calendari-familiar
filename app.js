@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.16.22';
+const APP_VERSION = '0.16.23';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -934,7 +934,7 @@ function yearOverview(year, children, today) {
                 return '<span class="year-empty-day"></span>';
             const date = localDate(new Date(year, month, day, 12)), snapshot = monthData(date, children);
             const marks = outlineEntries.length ? personalTimeOff.marks(outlineEntries, date, monthStart, monthEnd) : { html: '', label: '' };
-            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}" ${date === today ? 'aria-current="date"' : ''} ${marks.label ? `title="${escapeHtml(fullDate(date) + '. ' + marks.label)}"` : ''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}${marks.html}</span>`;
+            return `<span class="year-day ${date === today ? 'today' : ''}" data-year-date="${date}" ${date === today ? 'aria-current="date"' : ''} ${marks.label ? `title="${escapeHtml(fullDate(date) + '. ' + marks.label)}"` : ''}><span class="year-day-number${state.preferences?.mePerson && workSchedule.isDayOff(state, date) ? ' is-day-off' : ''}">${day}</span>${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra, 'year')}${marks.html}</span>`;
         }).join('');
         return `<button type="button" class="year-month${today >= monthStart && today <= monthEnd ? ' current-month' : ''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" data-focus-date="${monthStart}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
     }).join('')}</div>`;

@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personWork';personKey:string;draft:WorkDraft}|{type:'personTimeOff';personKey:string}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.16.22';
+const APP_VERSION = '0.16.23';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -800,7 +800,7 @@ function yearOverview(year:number,children:Child[],today:string):string {
       const day=index-firstDay+1;if(day<1||day>count)return '<span class="year-empty-day"></span>';
       const date=localDate(new Date(year,month,day,12)),snapshot=monthData(date,children);
       const marks=outlineEntries.length?personalTimeOff.marks(outlineEntries,date,monthStart,monthEnd):{html:'',label:''};
-      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${date===today?'aria-current="date"':''} ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
+      return `<span class="year-day ${date===today?'today':''}" data-year-date="${date}" ${date===today?'aria-current="date"':''} ${marks.label?`title="${escapeHtml(fullDate(date)+'. '+marks.label)}"`:''}><span class="year-day-number${state.preferences?.mePerson&&workSchedule.isDayOff(state,date)?' is-day-off':''}">${day}</span>${monthDayUI.mini(children,snapshot.nights,snapshot.activities,snapshot.slots,snapshot.extra,'year')}${marks.html}</span>`;
     }).join('');
     return `<button type="button" class="year-month${today>=monthStart&&today<=monthEnd?' current-month':''}" data-action="show-calendar-month" data-year="${year}" data-month="${month}" data-focus-date="${monthStart}" aria-label="Obre ${escapeHtml(name)} de ${year}"><span class="year-month-title">${escapeHtml(name)}</span><span class="year-days" aria-hidden="true">${cells}</span></button>`;
   }).join('')}</div>`;

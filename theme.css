@@ -104,8 +104,9 @@
 :root[data-theme] :is(.calendar-title,.year-section-title)[data-current-period],
 :root[data-theme] .month-panel:has(.day-cell.today) .month-section-title,
 :root[data-theme] .year-month.current-month .year-month-title {color:var(--calendar-current);}
-:root[data-theme] :is(.day-number.is-day-off,.week-date-button.is-day-off,.calendar-title[data-day-off]) {color:var(--text-day-off);}
+:root[data-theme] :is(.day-number.is-day-off,.year-day-number.is-day-off,.week-date-button.is-day-off,.calendar-title[data-day-off]) {color:var(--text-day-off);}
 :root[data-theme] .month-grid .day-cell.today .day-number.is-day-off,
+:root[data-theme] .year-day.today .year-day-number.is-day-off,
 :root[data-theme] .week-day-header.today .week-date-button.is-day-off {color:#f1f1f4;}
 :root[data-theme] :is(.month-mini-column,.mini-band-empty,.legend-empty,.agenda-cell.is-empty) {background:var(--control-background);border-color:var(--separator);box-shadow:none;}
 :root[data-theme] .agenda-cell.is-empty {color:var(--text-secondary);}

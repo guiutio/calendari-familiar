@@ -83,7 +83,7 @@ function working(s,key='guardian:same',days=[0,1,2,3,4,5,6]){
  assert.equal(s.ctx.workSchedule.save(s.state,key,draft,()=> 'work-for-contours'),'');
 }
 
-test('Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',()=>{
+test('Any, Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',()=>{
  const s=setup();working(s,'guardian:same',[0,1,2,3,4]);
  s.api.setMe(s.state,'guardian:same');s.holidays(['2026-11-03']);
  const html=s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02');
@@ -91,6 +91,10 @@ test('Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',(
  assert.match(cell('2026-11-03'),/class="day-number is-day-off"/);
  assert.match(cell('2026-11-07'),/class="day-number is-day-off"/);
  assert.doesNotMatch(cell('2026-11-06'),/is-day-off/);
+ const annual=s.ctx.yearOverview(2026,s.state.children,'2026-11-02');
+ const annualCell=date=>annual.match(new RegExp('data-year-date="'+date+'"[^>]*><span class="([^"]+)"'))[1];
+ assert.equal(annualCell('2026-11-07'),'year-day-number is-day-off');
+ assert.equal(annualCell('2026-11-06'),'year-day-number');
  s.ctx.calendarView='day';s.ctx.selectedDate='2026-11-07';
  assert.match(s.ctx.calendarNavigation(),/class="calendar-title" data-day-off/);
  s.ctx.selectedDate='2026-11-06';assert.doesNotMatch(s.ctx.calendarNavigation(),/data-day-off/);
@@ -101,6 +105,7 @@ test('Mes, Setmana i Dia atenuen les dates lliures de la persona identificada',(
  assert.match(week,/class="week-date-button" data-action="show-calendar-day" data-date="2026-11-06"/);
  s.api.setMe(s.state,'guardian:same');
  assert.doesNotMatch(s.ctx.monthPanel(2026*12+10,s.state.children,'2026-11-02'),/is-day-off/);
+ assert.doesNotMatch(s.ctx.yearOverview(2026,s.state.children,'2026-11-02'),/is-day-off/);
 });
 
 
