@@ -911,7 +911,14 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
   --pto-inset:calc(var(--pto-layer,0) * var(--pto-stroke) - 1px);
   --pto-radius:max(var(--pto-stroke),calc(var(--pto-base-radius,8px) - var(--pto-layer,0) * var(--pto-stroke)));
 }
-.personal-fill {inset:0;z-index:0;background:color-mix(in srgb,var(--pto-color) var(--pto-fill-strength,17%),transparent);}
+.personal-fill {
+  inset:-1px;z-index:0;
+  background:color-mix(in srgb,var(--pto-color) var(--pto-fill-strength,17%),var(--app-background));
+}
+.personal-fill.pto-top {top:var(--pto-inset);}
+.personal-fill.pto-right {right:var(--pto-inset);}
+.personal-fill.pto-bottom {bottom:var(--pto-inset);}
+.personal-fill.pto-left {left:var(--pto-inset);}
 .today > .personal-fill {display:none;}
 :is(.day-cell,.year-day):has(> .personal-fill) > :is(.month-mini,.mini-birthday) {position:relative;z-index:1;}
 .personal-outline,.personal-corner {z-index:9;border:0 solid var(--pto-color);}
