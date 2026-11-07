@@ -53,6 +53,11 @@
 }
 
 :root[data-theme],:root[data-theme] body {background:var(--app-background);color:var(--text-primary);}
+:root[data-theme] .calendar-layout {
+  --app-background:var(--surface);
+  --bar-background:var(--surface);
+  background:var(--surface);
+}
 :root[data-theme] .sidebar {background:var(--surface);border-color:var(--separator);}
 :root[data-theme] :is(.calendar-card,.card,.month-section-title) {background:var(--surface);color:var(--text-primary);border-color:var(--separator);box-shadow:var(--surface-shadow);}
 :root[data-theme] :is(.calendar-sticky-bar,.calendar-controls,.mobile-tabs) {background:var(--bar-background);border-color:var(--separator);}
