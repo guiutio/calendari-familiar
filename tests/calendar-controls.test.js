@@ -18,7 +18,7 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
  if(view==='year')assert.equal(title,'');
  else if(view==='month'){
-  assert.match(title,/<div class="weekdays"><span>Dl<\/span>.*<span>Dg<\/span>/);
+  assert.match(title,/<div class="weekdays"><span class="week-strip-label">dl\.<\/span>.*<span class="week-strip-label">dg\.<\/span>/);
   assert.doesNotMatch(title,/calendar-title|calendar-toolbar/);
  }
  else {

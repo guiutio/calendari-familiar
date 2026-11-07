@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.2';
+const APP_VERSION = '0.17.3';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -571,13 +571,14 @@ function calendarViewButtons(kind:'side'|'mobile'){
   }).join('');
 }
 function calendarNavigation(){
+  const calendarWeekdays = ['dl.','dt.','dc.','dj.','dv.','ds.','dg.'];
   if(calendarView==='year')return '';
   if(calendarView==='month'){
-    return `<header class="calendar-sticky-bar" aria-label="Dies de la setmana"><div class="weekdays">${weekdays.map(d=>`<span>${d}</span>`).join('')}</div></header>`;
+    return `<header class="calendar-sticky-bar" aria-label="Dies de la setmana"><div class="weekdays">${calendarWeekdays.map(d=>`<span class="week-strip-label">${d}</span>`).join('')}</div></header>`;
   }
   if(calendarView==='week'){
-    const start=weekStart(selectedDate),today=localDate(new Date()),labels=['dl.','dt.','dc.','dj.','dv.','ds.','dg.'];
-    return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}">${labels.map((label,index)=>{
+    const start=weekStart(selectedDate),today=localDate(new Date());
+    return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}">${calendarWeekdays.map((label,index)=>{
       const date=addDays(start,index),dayOff=Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date));
       return `<button type="button" class="week-strip-day${dayOff?' is-day-off':''}${date===selectedDate?' selected':''}${date===today?' today':''}" data-action="focus-week-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}" aria-pressed="${date===selectedDate}" ${date===today?'aria-current="date"':''}><span class="week-strip-label">${label}</span><span class="week-strip-number">${parseDate(date).getDate()}</span></button>`;
     }).join('')}</header>`;
