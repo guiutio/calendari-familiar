@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.9';
+const APP_VERSION = '0.17.10';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -1589,7 +1589,23 @@ function clickAction(button:HTMLElement){
       break;
     }
     case 'calendar-view':{const v=button.dataset.view;if(v==='year'||v==='month'||v==='week'){
-      if(v===calendarView&&tab==='calendar'){selectedDate=localDate(new Date());weekFocusTarget=true;}
+      if(v===calendarView&&tab==='calendar'){
+        // Repetir el botó del mode actiu és l'únic gest de barra que torna a avui.
+        selectedDate=localDate(new Date());weekFocusTarget=true;
+      } else if(tab==='calendar'&&(calendarView==='month'||calendarView==='year')){
+        // En canviar de mode, partim del mes/any realment visible, no d'una data antiga.
+        const anchor=monthPosition();
+        if(anchor){
+          const year=calendarView==='year'?anchor.index:Math.floor(anchor.index/12);
+          const anchored=anchor.date&&isValidDate(anchor.date)?parseDate(anchor.date):null;
+          const month=calendarView==='year'?(anchored?.getMonth()??viewMonth):anchor.index-year*12;
+          const selected=parseDate(selectedDate);
+          if(selected.getFullYear()!==year||selected.getMonth()!==month){
+            selectedDate=anchored&&anchored.getFullYear()===year&&anchored.getMonth()===month
+              ?anchor.date!:localDate(new Date(year,month,1,12));
+          }
+        }
+      }
       tab='calendar';sheet=null;calendarView=v;const d=parseDate(selectedDate);viewYear=d.getFullYear();viewMonth=d.getMonth();monthScrollTarget=true;render();
     }break;}
     case 'calendar-navigate':navigateCalendar(Number(button.dataset.step)===-1?-1:1);break;

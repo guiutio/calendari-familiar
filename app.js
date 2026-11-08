@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.9';
+const APP_VERSION = '0.17.10';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -2111,8 +2111,23 @@ function clickAction(button) {
             const v = button.dataset.view;
             if (v === 'year' || v === 'month' || v === 'week') {
                 if (v === calendarView && tab === 'calendar') {
+                    // Repetir el botó del mode actiu és l'únic gest de barra que torna a avui.
                     selectedDate = localDate(new Date());
                     weekFocusTarget = true;
+                }
+                else if (tab === 'calendar' && (calendarView === 'month' || calendarView === 'year')) {
+                    // En canviar de mode, partim del mes/any realment visible, no d'una data antiga.
+                    const anchor = monthPosition();
+                    if (anchor) {
+                        const year = calendarView === 'year' ? anchor.index : Math.floor(anchor.index / 12);
+                        const anchored = anchor.date && isValidDate(anchor.date) ? parseDate(anchor.date) : null;
+                        const month = calendarView === 'year' ? (anchored?.getMonth() ?? viewMonth) : anchor.index - year * 12;
+                        const selected = parseDate(selectedDate);
+                        if (selected.getFullYear() !== year || selected.getMonth() !== month) {
+                            selectedDate = anchored && anchored.getFullYear() === year && anchored.getMonth() === month
+                                ? anchor.date : localDate(new Date(year, month, 1, 12));
+                        }
+                    }
                 }
                 tab = 'calendar';
                 sheet = null;
