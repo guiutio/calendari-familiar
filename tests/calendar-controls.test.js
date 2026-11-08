@@ -84,6 +84,6 @@ test('el títol de l’any mensual és a l’esquerra i segueix el color de l’
 
 test('el mes i l’any de Setmana comparteixen barra i destaquen el període actual',()=>{
  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
- assert.ok(css.includes('.calendar-controls-week-title {display:flex;align-items:baseline;'));
+ assert.ok(css.includes('.calendar-controls-week-title {display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;font-size:var(--calendar-period-title-size);}'));
  assert.ok(css.includes('.calendar-controls-week-month {text-transform:capitalize;}'));
 });
