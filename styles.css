@@ -1106,5 +1106,5 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .month-section-title {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:center;min-height:42px;padding:7px 0 5px;border:0;border-bottom:1px solid var(--separator);font-size:calc(15px * var(--font-scale,1));}
 .month-section-name {justify-self:center;min-width:0;text-align:center;line-height:1.2;white-space:nowrap;text-transform:capitalize;}
 /* El període de Setmana conviu amb quatre eines sense desplaçar-les de la dreta. */
-.calendar-controls-week-title {display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;font-size:min(var(--calendar-period-title-size),19px);}
+.calendar-controls-week-title {display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;font-size:var(--calendar-period-title-size);}
 .calendar-controls-week-month {text-transform:capitalize;}
