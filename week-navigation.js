@@ -1,25 +1,32 @@
-/* Whole weeks when they fit; continuous days in narrower viewports. */
+/* Continuous days with a fixed single-day selector or a synchronized date strip. */
 (() => {
  let wheelLocked=false,lastWheel=0,suppressClickUntil=0;
- function fitsWeek(viewport){
-  if(!viewport||window.matchMedia?.('(max-width:560px)').matches)return false;
-  const width=viewport.querySelectorAll('.week-day-header')[0]?.getBoundingClientRect().width;
-  return width>0&&width*7<=viewport.clientWidth-52+1;
- }
- function mount(viewport,strip,{navigate,focus,extend}){
+ const singleDay=()=>Boolean(window.matchMedia?.('(max-width:560px)').matches);
+ function mount(viewport,strip,{navigate,focus,extend,sync}){
   const cleanups=[];let touch=null,interacted=false,distance=0,filling=false,lastFocusedDate=viewport?.dataset?.focusDate??'';
-  const wholeGrid=fitsWeek(viewport);
-  if(viewport?.dataset)viewport.dataset.weekMode=wholeGrid?'week':'day';
+  const initialSingleDay=singleDay();
+  if(viewport?.dataset)viewport.dataset.weekMode=initialSingleDay?'day':'multi';
+  let snapTimer;
+  const pauseSnap=()=>{if(viewport?.style)viewport.style.scrollSnapType='none';};
+  const snap=()=>{
+   if(!viewport)return;
+   if(viewport.style)viewport.style.scrollSnapType='';
+   const days=Array.from(viewport.querySelectorAll('.week-day-header')),edge=viewport.getBoundingClientRect().left+52;
+   const closest=days.reduce((best,day)=>!best||Math.abs(day.getBoundingClientRect().left-edge)<Math.abs(best.getBoundingClientRect().left-edge)?day:best,null);
+   if(!closest)return;
+   const offset=Math.max(0,Math.min(maxScroll(),left()+closest.getBoundingClientRect().left-edge));
+   if(viewport.scrollTo)viewport.scrollTo({left:offset,behavior:'smooth'});else viewport.scrollLeft=offset;
+  };
+  const queueSnap=()=>{clearTimeout(snapTimer);snapTimer=setTimeout(snap,120);};
   const listen=(target,type,handler,options)=>{
    if(!target)return;
    target.addEventListener(type,handler,options);
    cleanups.push(()=>target.removeEventListener(type,handler,options));
   };
-  const singleDay=()=>Boolean(window.matchMedia?.('(max-width:560px)').matches);
   const maxScroll=()=>Math.max(0,(viewport?.scrollWidth??0)-(viewport?.clientWidth??0));
   const left=()=>Math.max(0,Math.min(maxScroll(),viewport?.scrollLeft??0));
   const fill=()=>{
-   if(!viewport||!extend||filling||wholeGrid)return;
+   if(!viewport||!extend||filling)return;
    filling=true;
    try{
     for(const direction of [-1,1]){
@@ -42,27 +49,25 @@
   };
   const scrolled=()=>{
    // Un canvi d'amplada pot emetre scroll abans que ResizeObserver torni a muntar la vista.
-   if(filling||wholeGrid||fitsWeek(viewport))return;
+   if(filling||initialSingleDay!==singleDay())return;
    interacted=true;
    // Actualitza la barra en el mateix esdeveniment, també durant la inèrcia.
    selectVisible();
    fill();
+   sync?.();
   };
   const wheel=(event,wholeWeek)=>{
    if(event.ctrlKey||event.metaKey)return;
-   wholeWeek=wholeWeek||wholeGrid;
    const mouseWheel=!singleDay()&&window.matchMedia?.('(pointer:fine)').matches;
-   if(viewport&&mouseWheel&&!wholeGrid&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX)){
-    event.preventDefault();
-    fill();
-    const scale=event.deltaMode===1?16:event.deltaMode===2?viewport.clientWidth:1;
-    viewport.scrollLeft=Math.max(0,Math.min(maxScroll(),left()+event.deltaY*scale));
-    scrolled();
-    return;
-   }
-   const verticalWheel=wholeGrid&&mouseWheel&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX);
+   const verticalWheel=mouseWheel&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX);
    const raw=verticalWheel?event.deltaY:event.deltaX||(event.shiftKey?event.deltaY:0);
    if(!raw||(!verticalWheel&&!event.shiftKey&&Math.abs(raw)<=Math.abs(event.deltaY)))return;
+   if(viewport&&(verticalWheel||wholeWeek&&!singleDay())){
+    event.preventDefault();pauseSnap();fill();
+    const scale=event.deltaMode===1?16:event.deltaMode===2?viewport.clientWidth:1;
+    viewport.scrollLeft=Math.max(0,Math.min(maxScroll(),left()+raw*scale));
+    scrolled();queueSnap();return;
+   }
    if(extend&&!wholeWeek){interacted=true;fill();return;}
    const now=Date.now();if(now-lastWheel>200){wheelLocked=false;distance=0;}lastWheel=now;
    if(wheelLocked){event.preventDefault();return;}
@@ -76,7 +81,7 @@
   const start=(event,wholeWeek)=>{
    if(event.touches.length!==1){touch=null;return;}
    const point=event.touches[0];
-   touch={x:point.clientX,y:point.clientY,scroll:left(),horizontal:false,vertical:false,excess:0,wholeWeek:wholeWeek||wholeGrid};
+   touch={x:point.clientX,y:point.clientY,scroll:left(),horizontal:false,vertical:false,excess:0,wholeWeek:wholeWeek&&singleDay(),fromStrip:wholeWeek};
   };
   const move=event=>{
    if(!touch||event.touches.length!==1)return;
@@ -91,9 +96,9 @@
    const wanted=touch.scroll+dx,max=maxScroll();
    touch.excess=touch.wholeWeek?dx:wanted<0?wanted:wanted>max?wanted-max:0;
    // El mòbil deixa el desplaçament als gestos nadius i al snap CSS.
-   if(singleDay()&&!touch.wholeWeek)return;
+   if(singleDay()&&!touch.wholeWeek&&!touch.fromStrip)return;
    event.preventDefault();
-   if(viewport&&!touch.wholeWeek)viewport.scrollLeft=Math.max(0,Math.min(max,wanted));
+   if(viewport&&!touch.wholeWeek){pauseSnap();viewport.scrollLeft=Math.max(0,Math.min(max,wanted));if(extend)scrolled();else sync?.();}
   };
   const end=()=>{
    if(!touch)return;
@@ -102,11 +107,11 @@
    suppressClickUntil=Date.now()+350;
    if(Math.abs(excess)>=64&&(wholeWeek||!extend)){interacted=false;navigate(Math.sign(excess));}
    else if(singleDay()&&!wholeWeek)scrolled();
-   else selectVisible();
+   else {selectVisible();snap();sync?.();}
   };
-  const cancel=()=>{touch=null;interacted=false;};
+  const cancel=()=>{touch=null;interacted=false;if(viewport?.style)viewport.style.scrollSnapType='';};
   const click=event=>{if(Date.now()<suppressClickUntil){event.preventDefault();event.stopPropagation();}};
-  fill();
+  fill();sync?.();
   for(const [target,wholeWeek] of [[viewport,false],[strip,true]]){
    listen(target,'wheel',event=>wheel(event,wholeWeek),{passive:false});
    listen(target,'touchstart',event=>start(event,wholeWeek),{passive:true});
@@ -119,12 +124,9 @@
   listen(viewport,'scrollend',selectVisible,{passive:true});
   listen(viewport,'keydown',event=>{
    if(event.altKey&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
-   else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
-    if(wholeGrid){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
-    else interacted=true;
-   }
+   else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){interacted=true;}
   });
-  return ()=>{cleanups.forEach(cleanup=>cleanup());};
+  return ()=>{cleanups.forEach(cleanup=>cleanup());clearTimeout(snapTimer);if(viewport?.style)viewport.style.scrollSnapType='';};
  }
- window.weekNavigation={mount,fitsWeek};
+ window.weekNavigation={mount,singleDay};
 })();

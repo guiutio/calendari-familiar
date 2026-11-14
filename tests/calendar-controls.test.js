@@ -48,6 +48,9 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
   assert.equal((title.match(/data-action="focus-week-day"/g)||[]).length,7);
   assert.match(title,/week-strip-day today[^>]+data-date="2026-11-04"/);
   assert.match(title,/week-strip-label">dl\.</);
+  const staticDay=ctx.weekStripDay('2026-11-04',false);
+  assert.match(staticDay,/<span class="week-strip-day today" data-date="2026-11-04"/);
+  assert.doesNotMatch(staticDay,/<button|data-action=|aria-pressed=/,'Les dates de la barra que segueix la graella no són controls');
  }
  if(view==='week')ctx.selectedDate='2026-11-09';
  if(view==='day')ctx.selectedDate='2026-11-03';
@@ -80,7 +83,7 @@ test('Mes i Setmana comparteixen les coordenades de les abreviatures dels dies',
     return css.slice(start,css.indexOf('}',start)+1);
   };
   const month=rule('.calendar-layout:has(.month-sequence) .calendar-sticky-bar .weekdays {');
-  const week=rule('.calendar-sticky-bar.week-day-strip {');
+  const week=rule('.week-fixed-strip {display:none;');
   const day=rule('.week-strip-day {');
   assert.ok(css.includes('.weekdays,.month-grid {grid-template-columns:repeat(7,minmax(0,1fr));}'));
   assert.ok(month.includes('width:100%;max-width:none;padding:10px 0 10px;'));

@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.19.1';
+const APP_VERSION = '0.19.2';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -581,13 +581,16 @@ function calendarNavigation(){
     return `<header class="calendar-sticky-bar" aria-label="Dies de la setmana"><div class="weekdays">${calendarWeekdays.map(d=>`<span class="week-strip-label">${d}</span>`).join('')}</div></header>`;
   }
   if(calendarView==='week'){
-    const start=weekStart(selectedDate),today=localDate(new Date());
-    return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}"><button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start,-1)}" aria-label="Setmana anterior">&lt;</button>${calendarWeekdays.map((label,index)=>{
-      const date=addDays(start,index),dayOff=Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date));
-      return `<button type="button" class="week-strip-day${dayOff?' is-day-off':''}${date===selectedDate?' selected':''}${date===today?' today':''}" data-action="focus-week-day" data-date="${date}" aria-label="${escapeHtml(fullDate(date))}" aria-pressed="${date===selectedDate}" ${date===today?'aria-current="date"':''}><span class="week-strip-label">${label}</span><span class="week-strip-number">${parseDate(date).getDate()}</span></button>`;
-    }).join('')}<button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start,7)}" aria-label="Setmana següent">&gt;</button></header>`;
+    const start=weekStart(selectedDate);
+    return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}"><div class="week-fixed-strip"><button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start,-1)}" aria-label="Setmana anterior">&lt;</button>${calendarWeekdays.map((_,index)=>weekStripDay(addDays(start,index))).join('')}<button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start,7)}" aria-label="Setmana següent">&gt;</button></div><div class="week-scroll-strip"><div class="week-scroll-track"></div></div></header>`;
   }
   return '';
+}
+function weekStripDay(date:string,interactive=true){
+  const day=parseDate(date),label=['dg.','dl.','dt.','dc.','dj.','dv.','ds.'][day.getDay()];
+  const today=localDate(new Date()),dayOff=Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date));
+  const tag=interactive?'button':'span';
+  return `<${tag}${interactive?' type="button"':''} class="week-strip-day${dayOff?' is-day-off':''}${date===selectedDate?' selected':''}${date===today?' today':''}"${interactive?' data-action="focus-week-day"':''} data-date="${date}" aria-label="${escapeHtml(fullDate(date))}"${interactive?` aria-pressed="${date===selectedDate}"`:''} ${date===today?'aria-current="date"':''}><span class="week-strip-label">${label}</span><span class="week-strip-number">${day.getDate()}</span></${tag}>`;
 }
 function isCurrentPeriod(){
   const todayDate=localDate(new Date());
@@ -671,6 +674,27 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const el=sequence.querySelector<HTMLElement>(panelSelector(anchor.index));
     if(el)shift(el.getBoundingClientRect().top-anchor.top);
   };
+  if(annual){
+    // Mesurem els anys amb l'amplada real, abans de la primera pintada i d'enfocar el mes.
+    // Una pantalla ampla té menys files de mesos i necessita més anys carregats.
+    const panels=Array.from(sequence.querySelectorAll<HTMLElement>('.year-panel'));
+    const first=panels[0],last=panels.at(-1);
+    const target=sequence.querySelector<HTMLElement>(panelSelector(position&&!monthScrollTarget?position.index:viewYear));
+    if(first&&last&&target){
+      const start=monthScrollTarget||!position?target.querySelector<HTMLElement>('.year-month.current-month')??target:target;
+      const top=Math.max(0,main.getBoundingClientRect().top),bottom=mobile()?main.getBoundingClientRect().bottom:window.innerHeight;
+      const step=panels.length>1?panels[1]!.getBoundingClientRect().top-first.getBoundingClientRect().top:last.getBoundingClientRect().bottom-last.getBoundingClientRect().top+24;
+      if(step>0){
+        const firstIndex=Number(first.dataset.yearIndex),lastIndex=Number(last.dataset.yearIndex);
+        const before=Math.min(firstIndex-100,Math.max(0,Math.ceil((700-(start.getBoundingClientRect().top-first.getBoundingClientRect().top))/step)));
+        const after=Math.min(9999-lastIndex,Math.max(0,Math.ceil((bottom-top+700-(last.getBoundingClientRect().bottom-start.getBoundingClientRect().top))/step)));
+        const children=activeChildren(),today=localDate(new Date());
+        if(before)sequence.insertAdjacentHTML('afterbegin',Array.from({length:before},(_,i)=>yearPanel(firstIndex-before+i,children,today)).join(''));
+        if(after)sequence.insertAdjacentHTML('beforeend',Array.from({length:after},(_,i)=>yearPanel(lastIndex+i+1,children,today)).join(''));
+        yearRange={first:firstIndex-before,last:lastIndex+after};
+      }
+    }
+  }
   if(monthScrollTarget||!position){
     const target=sequence.querySelector<HTMLElement>(panelSelector(annual?viewYear:viewYear*12+viewMonth));
     if(target){
@@ -726,7 +750,9 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     }
     if(last.getBoundingClientRect().bottom<bottom+700){
       if(annual){
-        while(lastIndex<9999&&(sequence.lastElementChild as HTMLElement).getBoundingClientRect().bottom<bottom+700){sequence.insertAdjacentHTML('beforeend',yearPanel(lastIndex+1,children,today));lastIndex++;changed=true;}
+        const rect=last.getBoundingClientRect(),step=Math.max(1,rect.bottom-rect.top+24);
+        const count=Math.min(9999-lastIndex,Math.max(0,Math.ceil((bottom+700-rect.bottom)/step)));
+        if(count){sequence.insertAdjacentHTML('beforeend',Array.from({length:count},(_,i)=>yearPanel(lastIndex+i+1,children,today)).join(''));lastIndex+=count;changed=true;}
       } else {
         sequence.insertAdjacentHTML('beforeend',monthPanel(lastIndex+1,children,today)+monthPanel(lastIndex+2,children,today));
         lastIndex+=2;changed=true;
@@ -791,7 +817,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const anchor=monthPosition();
     if(!annual&&fitMonthRows(main,sequence,bar,mobile())&&anchor)restore(anchor);
     schedule();
-    if(annual)settle();
+    if(annual)extendMonths();
   };
   window.addEventListener('resize',resize);
   window.visualViewport?.addEventListener('resize',resize);
@@ -1246,6 +1272,26 @@ function fitCalendarTimeline(main:HTMLElement){
 function mountWeekNavigation(){
   const viewport=$app.querySelector<HTMLElement>('.week-timeline-viewport');
   const strip=$app.querySelector<HTMLElement>('.week-day-strip');
+  const syncStrip=()=>{
+    if(!viewport||!strip||weekNavigation.singleDay())return;
+    const scroller=strip.querySelector<HTMLElement>('.week-scroll-strip'),track=strip.querySelector<HTMLElement>('.week-scroll-track');
+    const inner=viewport.querySelector<HTMLElement>('.week-timeline-inner');
+    if(!scroller||!track||!inner)return;
+    const headers=Array.from(viewport.querySelectorAll<HTMLElement>('.week-day-header'));
+    const key=`${headers[0]?.dataset.date}:${headers.at(-1)?.dataset.date}`;
+    if(track.dataset.range!==key){
+      const arrows=Array.from(strip.querySelectorAll('.week-fixed-strip .week-arrow')).map(button=>button.outerHTML).join('');
+      track.innerHTML=`<span class="week-strip-corner">${arrows}</span>${headers.map(header=>weekStripDay(header.dataset.date!,false)).join('')}`;
+      track.dataset.range=key;
+      // Les dates només són navegables quan es mostra un sol dia.
+      viewport.querySelectorAll<HTMLButtonElement>('.week-date-button').forEach(button=>button.disabled=true);
+    }
+    scroller.style.width=`${viewport.clientWidth}px`;
+    track.style.width=`${inner.getBoundingClientRect().width}px`;
+    track.style.gridTemplateColumns=`52px repeat(${headers.length},minmax(0,1fr))`;
+    scroller.scrollLeft=viewport.scrollLeft;
+    track.querySelectorAll<HTMLElement>('.week-arrow').forEach((button,index)=>button.dataset.date=addDays(weekStart(selectedDate),index?7:-1));
+  };
   const extend=(direction:number)=>{
     if(!viewport||!dayTimelineUI||!weekDayRange)return false;
     const first=direction<0?addDays(weekDayRange.first,-7):addDays(weekDayRange.last,1),last=addDays(first,6);
@@ -1274,6 +1320,7 @@ function mountWeekNavigation(){
   };
   const stop=weekNavigation.mount(viewport,strip,{
     extend,
+    sync:syncStrip,
     navigate:(step:number)=>{
       const next=addDays(weekStart(selectedDate),step<0?-1:7),date=parseDate(next);
       if(date.getFullYear()<100||date.getFullYear()>9999)return;
@@ -1284,11 +1331,12 @@ function mountWeekNavigation(){
       const changedWeek=weekStart(date)!==weekStart(selectedDate);
       selectedDate=date;
       if(viewport){viewport.dataset.focusDate=date;viewport.dataset.timelineKey=`week:${weekStart(date)}`;}
-      if(changedWeek&&strip){
+      if(changedWeek&&strip&&weekNavigation.singleDay()){
         const template=document.createElement('template');template.innerHTML=calendarNavigation();
         const next=template.content.firstElementChild!;
         strip.innerHTML=next.innerHTML;strip.setAttribute('aria-label',periodTitle());
       }
+      strip?.setAttribute('aria-label',periodTitle());
       const chosen=parseDate(date),now=new Date();
       viewYear=chosen.getFullYear();viewMonth=chosen.getMonth();
       const title=$app.querySelector<HTMLElement>('.calendar-controls-week-title');
@@ -1296,8 +1344,9 @@ function mountWeekNavigation(){
       const yearLabel=title?.querySelector?.<HTMLElement>('.calendar-controls-week-year');
       if(monthLabel){monthLabel.textContent=months[chosen.getMonth()]??'';monthLabel.toggleAttribute('data-current-period',viewYear===now.getFullYear()&&viewMonth===now.getMonth());}
       if(yearLabel){yearLabel.textContent=String(viewYear);yearLabel.toggleAttribute('data-current-period',viewYear===now.getFullYear());}
-      strip?.querySelectorAll<HTMLButtonElement>('.week-strip-day').forEach(button=>{
-        const active=button.dataset.date===date;button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));
+      strip?.querySelectorAll<HTMLElement>('.week-strip-day').forEach(button=>{
+        const active=button.dataset.date===date;button.classList.toggle('selected',active);
+        if(button.tagName==='BUTTON')button.setAttribute('aria-pressed',String(active));
       });
     }
   });
@@ -1340,11 +1389,11 @@ function render(){
     // Les 24 hores formen part del scroll principal, no d'un scroll intern.
     timeline.scrollTop=0;
     timeline.scrollLeft=timelineLeft;
-    const wholeWeek=calendarView==='week'&&weekNavigation.fitsWeek(timeline);
-    if(calendarView==='week'&&(wholeWeek||!keepHorizontalScroll||previousTimeline?.dataset.weekMode==='week')){
-      // Si hi cap la setmana, el dilluns es manté a l'esquerra encara que se seleccioni un altre dia.
-      // En amplades reduïdes, el dia seleccionat continua al costat de l'eix d'hores.
-      const firstDate=wholeWeek?weekStart(focusDate):focusDate;
+    const singleDay=calendarView==='week'&&weekNavigation.singleDay();
+    const mode=singleDay?'day':'multi';
+    if(calendarView==='week'&&(!keepHorizontalScroll||previousTimeline?.dataset.weekMode&&previousTimeline.dataset.weekMode!==mode)){
+      // Un sol dia: enfoca la data triada. Amb diversos dies, conserva el tram en desplaçar-se.
+      const firstDate=singleDay?focusDate:weekStart(focusDate);
       const header=Array.from(timeline.querySelectorAll<HTMLElement>('.week-day-header')).find(el=>el.dataset.date===firstDate);
       if(header){
         const offset=header.getBoundingClientRect().left-timeline.getBoundingClientRect().left+timeline.scrollLeft-52;

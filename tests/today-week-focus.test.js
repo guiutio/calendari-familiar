@@ -39,8 +39,8 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(theme,/\[data-current-period\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.week-date-columns\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
- assert.match(html,/styles\.css\?v=0\.19\.1/);
- assert.match(sw,/calendari-familiar-v0\.19\.1/);
+ assert.match(html,/styles\.css\?v=0\.19\.2/);
+ assert.match(sw,/calendari-familiar-v0\.19\.2/);
 });
 
 const between=(a,b)=>{
@@ -80,7 +80,7 @@ function simulateRender({oldFocus='',oldLeft=0,oldMode='',focusDate='2026-10-29'
    },
    set innerHTML(value){assert.equal(value,'layout');painted=true;}
  };
- const context=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},weekNavigation:{fitsWeek:()=>visibleWidth>=52+7*196},
+ const context=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},weekNavigation:{singleDay:()=>visibleWidth<=560},
    deferRenderForNativePicker:()=>false,monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},$app,tab:'calendar',calendarView:'week',selectedDate:focusDate,
    weekStart:()=>start,schoolNav:{},sheet:null,fitCalendarTimeline:()=>{},
    layout:()=> 'layout',calendarPage:()=> '',rotationPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',
@@ -99,19 +99,19 @@ test('en entrar a Setmana el scroll horitzontal col·loca el dia seleccionat des
 test('amb la mateixa setmana i dia es conserva el scroll manual en editar o canviar el zoom',()=>{
  assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldLeft:735,focusDate:'2026-10-29'}),{left:735,searchCount:0});
  assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldLeft:735,focusDate:'2026-10-30'}),{left:784,searchCount:1});
- assert.deepEqual(simulateRender({focusDate:'2026-11-01',visibleWidth:600,scrollWidth:1000}),{left:400,searchCount:1});
+ assert.deepEqual(simulateRender({focusDate:'2026-11-01',visibleWidth:600,scrollWidth:1000}),{left:0,searchCount:1});
 });
 
-test('si hi caben els set dies, entrar o seleccionar un dia sempre conserva dilluns a l’esquerra',()=>{
+test('en entrar a la vista amb diversos dies es mostra dilluns i es conserva el desplaçament manual',()=>{
  for(const focusDate of ['2026-10-26','2026-10-29','2026-11-01']){
   assert.deepEqual(simulateRender({focusDate,visibleWidth:1500,scrollWidth:5000}),{left:0,searchCount:1});
  }
  assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldLeft:735,focusDate:'2026-10-30',visibleWidth:1500,scrollWidth:5000}),{left:0,searchCount:1});
- assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldLeft:735,focusDate:'2026-10-29',visibleWidth:1500,scrollWidth:5000}),{left:0,searchCount:1});
+ assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldLeft:735,focusDate:'2026-10-29',visibleWidth:1500,scrollWidth:5000}),{left:735,searchCount:0});
 });
 
 test('en reduir una setmana completa a la vista estreta, es mostra el dia que estava seleccionat',()=>{
- assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldMode:'week',oldLeft:0,focusDate:'2026-10-29'}),{left:588,searchCount:1});
+ assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldMode:'multi',oldLeft:0,focusDate:'2026-10-29'}),{left:588,searchCount:1});
 });
 
 test('tocar una setmana actual enfoca avui; altres setmanes enfoquen el dilluns',()=>{

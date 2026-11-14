@@ -981,6 +981,8 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .month-sequence .month-grid .day-cell {height:100%;min-height:0;padding:4px 2px;gap:1px;}
 .month-sequence .month-grid .day-top {flex:0 0 auto;min-height:0;height:min(30px,calc(var(--month-week-height,100px) * .3));}
 .month-sequence .month-grid .day-number {height:100%;font-size:min(calc(18px * var(--font-scale,1)),calc(var(--month-week-height,100px) * .24));}
+.month-grid .day-top {justify-content:center;position:relative;}
+.month-grid .change-dot {position:absolute;right:3px;top:50%;transform:translateY(-50%);}
 .month-sequence .month-grid .month-mini {flex:1 1 0%;height:auto;min-height:0;grid-template-rows:min(12px,20%) minmax(0,1fr);}
 .month-sequence .month-grid .month-mini-child {font-size:min(calc(9px * var(--font-scale,1)),calc(var(--month-week-height,100px) * .12));}
 .month-sequence .month-grid .mini-empty {min-height:0;}
@@ -1087,8 +1089,16 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .calendar-title,.year-section-title,.month-section-title,.year-month-title,.page-title,.section-title,.sheet-title,.school-date-nav h3 {font-family:"Roboto Condensed",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
 .calendar-title::first-letter,.month-section-title::first-letter,.year-month-title::first-letter,.school-date-nav h3::first-letter {text-transform:uppercase;}
 
-/* Dies de la setmana: selector estable i gestos entre setmanes completes. */
-.calendar-sticky-bar.week-day-strip {display:grid;grid-template-columns:32px repeat(7,minmax(0,1fr)) 32px;gap:0;padding:10px 0 10px;touch-action:pan-y;}
+/* Un dia: selector fix. Diversos dies: les dates segueixen les columnes de la graella. */
+.calendar-sticky-bar.week-day-strip {display:block;padding:0;touch-action:pan-y;min-width:0;}
+.week-fixed-strip {display:none;grid-template-columns:32px repeat(7,minmax(0,1fr)) 32px;gap:0;padding:10px 0 10px;}
+.week-scroll-strip {overflow:hidden;max-width:100%;}
+.week-scroll-track {display:grid;gap:0;padding:10px 0;}
+.week-scroll-track .week-strip-day {cursor:default;}
+.week-strip-corner {position:sticky;left:0;z-index:1;display:flex;align-items:center;background:var(--app-background);}
+.week-strip-corner .week-arrow {width:26px;}
+.week-date-button:disabled {opacity:1;cursor:default;}
+@media(max-width:560px){.week-fixed-strip {display:grid;}.week-scroll-strip {display:none;}}
 .week-strip-day {display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;min-height:64px;padding:0;border:0;background:transparent;color:var(--text-primary);cursor:pointer;}
 .week-strip-label,:root .calendar-layout .calendar-sticky-bar .weekdays .week-strip-label {font-size:calc(11px * var(--font-scale,1));font-weight:600;line-height:1.2;color:inherit;}
 /* El cercle és fix: limitem la lletra ampliada perquè hi càpiguen dues xifres. */
@@ -1139,9 +1149,9 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 }
 
 /* Dies consecutius: l’amplada de cada dia no depèn del tram carregat. */
-.calendar-week-layout .week-timeline-viewport {container-type:inline-size;}
+.calendar-week-layout .week-timeline-viewport {container-type:inline-size;scroll-snap-type:x mandatory;scroll-padding-left:52px;}
 .calendar-week-layout .week-timeline-inner {width:calc(52px + var(--week-day-count) * max(var(--week-day-width,98px), (100cqw - 52px) / 7));}
-.calendar-week-layout .week-timeline-viewport[data-week-mode="week"] {overflow-x:hidden;}
+.calendar-week-layout .week-day-header,.calendar-week-layout .week-date-columns {scroll-snap-align:start;}
 
 /* Al mòbil, un dia complet entre l’eix horari i la vora dreta. */
 @media(max-width:560px) {

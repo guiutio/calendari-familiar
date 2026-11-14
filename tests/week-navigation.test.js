@@ -20,7 +20,7 @@ function setup(initialLeft=0,singleDay=false,finePointer=!singleDay,wholeWeek=fa
  const cleanup=mount();
  const touch=(type,x,y=100,where=viewport)=>where.emit(type,{touches:type==='touchend'?[]:[{clientX:x,clientY:y}]});
  const wheel=(dx,dy=0,where=viewport)=>where.emit('wheel',{deltaX:dx,deltaY:dy,deltaMode:0,shiftKey:false});
- return {viewport,strip,mount,cleanup,touch,wheel,navigations,focused,timers,advance:ms=>now+=ms,flush:()=>{for(const fn of timers.values())fn();timers.clear();}};
+ return {setSingleDay:value=>singleDay=value,viewport,strip,mount,cleanup,touch,wheel,navigations,focused,timers,advance:ms=>now+=ms,flush:()=>{for(const fn of timers.values())fn();timers.clear();}};
 }
 test('el gest lateral recorre els dies sense barrejar setmanes i actualitza el dia seleccionat',()=>{
  const s=setup();s.touch('touchstart',300);const move=s.touch('touchmove',104);s.touch('touchend',104);
@@ -41,7 +41,7 @@ test('un moviment curt al límit, un gest vertical o cancel·lat no canvien de s
  assert.deepEqual(s.navigations,[]);
 });
 test('la capçalera també permet canviar de setmana, encara que no hi hagi fills visibles',()=>{
- const s=setup();s.touch('touchstart',250,100,s.strip);s.touch('touchmove',120,100,s.strip);s.touch('touchend',120,100,s.strip);
+ const s=setup(0,true);s.touch('touchstart',250,100,s.strip);s.touch('touchmove',120,100,s.strip);s.touch('touchend',120,100,s.strip);
  assert.deepEqual(s.navigations,[1]);assert.equal(s.viewport.scrollLeft,0);
 });
 test('la roda horitzontal canvia de setmana als extrems i la rodeta del PC mou la graella',()=>{
@@ -75,12 +75,12 @@ test('els gestos canvien de setmana sencera en creuar l’any i el focus actuali
  const parseDate=value=>new Date(value+'T12:00:00Z'),localDate=date=>date.toISOString().slice(0,10);
  const addDays=(value,n)=>{const date=parseDate(value);date.setUTCDate(date.getUTCDate()+n);return localDate(date);};
  const weekStart=value=>addDays(value,-((parseDate(value).getUTCDay()+6)%7));
- const buttons=Array.from({length:7},(_,i)=>({dataset:{date:addDays('2026-12-28',i)},classList:{toggle(_name,value){this.selected=value;}},setAttribute(name,value){this[name]=value;}}));
+ const buttons=Array.from({length:7},(_,i)=>({tagName:'BUTTON',dataset:{date:addDays('2026-12-28',i)},classList:{toggle(_name,value){this.selected=value;}},setAttribute(name,value){this[name]=value;}}));
  const strip={querySelectorAll:()=>buttons,setAttribute(name,value){this[name]=value;},set innerHTML(start){buttons.forEach((b,i)=>b.dataset.date=addDays(start,i));}},viewport={dataset:{}};
  const monthLabel={textContent:'desembre',toggleAttribute(name,active){this[name]=active;}};
  const yearLabel={textContent:'2026',toggleAttribute(name,active){this[name]=active;}};
  const title={querySelector:selector=>selector==='.calendar-controls-week-month'?monthLabel:yearLabel};
- const ctx=vm.createContext({weekNavigation:{mount(v,s,options){assert.equal(v,viewport);assert.equal(s,strip);callbacks=options;return ()=>newCleanups++;}},
+ const ctx=vm.createContext({weekNavigation:{singleDay:()=>true,mount(v,s,options){assert.equal(v,viewport);assert.equal(s,strip);callbacks=options;return ()=>newCleanups++;}},
   $app:{querySelector:selector=>selector==='.week-day-strip'?strip:selector==='.calendar-controls-week-title'?title:viewport},months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],stopCalendarScroll:()=>oldCleanups++,selectedDate:'2026-12-31',
   document:{createElement:()=>({content:{firstElementChild:{innerHTML:''}},set innerHTML(value){this.content.firstElementChild.innerHTML=value;}})},
   calendarNavigation:()=>weekStart(ctx.selectedDate),periodTitle:()=>weekStart(ctx.selectedDate),
@@ -174,36 +174,40 @@ test('la rodeta conserva el zoom del navegador i els gestos verticals tàctils',
  const coarse=setup(392,false,false);assert.equal(coarse.wheel(0,120).prevented,false);assert.equal(coarse.viewport.scrollLeft,392);
 });
 
-test('quan hi cap la setmana, la rodeta, el trackpad i la barra naveguen conjuntament per setmanes',()=>{
- const s=setup(0,false,true,true);
- assert.equal(s.viewport.dataset.weekMode,'week');
- assert.equal(s.wheel(0,120).prevented,true);assert.deepEqual(s.navigations,[1]);
- s.wheel(0,120);assert.deepEqual(s.navigations,[1],'La inèrcia no encadena setmanes');
- s.advance(250);s.wheel(-100);assert.deepEqual(s.navigations,[1,-1]);
- s.advance(250);s.wheel(0,120,s.strip);assert.deepEqual(s.navigations,[1,-1,1]);
- s.advance(250);s.wheel(-100,0,s.strip);assert.deepEqual(s.navigations,[1,-1,1,-1]);
- assert.equal(s.viewport.scrollLeft,0);assert.deepEqual(s.focused,[]);
+test('encara que hi càpiga la setmana, la rodeta conserva el moviment continu i fa snap al dia',()=>{
+ const s=setup(0,false,true,true);s.viewport.scrollWidth=52+21*196;
+ assert.equal(s.viewport.dataset.weekMode,'multi');
+ assert.equal(s.wheel(0,120).prevented,true);assert.equal(s.viewport.scrollLeft,120);
+ s.wheel(0,120);assert.equal(s.viewport.scrollLeft,240,'No bloqueja ni salta una setmana amb la inèrcia');
+ assert.deepEqual(s.navigations,[]);assert.equal(s.focused.at(-1),'2026-11-03');
+ s.flush();assert.equal(s.viewport.scrollLeft,196,'En acabar, encaixa al dia més proper');
+ s.wheel(0,-100,s.strip);assert.equal(s.viewport.scrollLeft,96);
+ s.flush();assert.equal(s.viewport.scrollLeft,0);assert.deepEqual(s.navigations,[]);
 });
 
-test('la setmana completa també navega amb gest tàctil i teclat sense enfocar el primer dia visible',()=>{
- const s=setup(0,false,false,true);
- s.touch('touchstart',300);assert.equal(s.touch('touchmove',100).prevented,true);s.touch('touchend',100);
- assert.deepEqual(s.navigations,[1]);assert.equal(s.viewport.scrollLeft,0);
- assert.equal(s.viewport.emit('keydown',{key:'ArrowLeft'}).prevented,true);
- assert.deepEqual(s.navigations,[1,-1]);
- s.viewport.emit('scroll');assert.deepEqual(s.focused,[]);
+test('la barra ampla arrossega la mateixa graella per dies; la barra mòbil conserva els gestos entre setmanes',()=>{
+ const s=setup(0,false,false,true);s.viewport.scrollWidth=52+21*196;
+ s.touch('touchstart',300,100,s.strip);s.touch('touchmove',100,100,s.strip);s.touch('touchend',100,100,s.strip);
+ assert.equal(s.viewport.scrollLeft,196);assert.deepEqual(s.navigations,[]);
+ assert.equal(s.focused.at(-1),'2026-11-03');
+ const mobile=setup(0,true);
+ mobile.touch('touchstart',300,100,mobile.strip);mobile.touch('touchmove',100,100,mobile.strip);mobile.touch('touchend',100,100,mobile.strip);
+ assert.deepEqual(mobile.navigations,[1]);
 });
 
-test('la setmana completa no carrega dies continus addicionals; el mòbil conserva el mode dia',()=>{
- const s=setup(0,false,true,true);s.cleanup();let extensions=0;
- s.mount(()=>{extensions++;return true;});s.viewport.emit('scroll');
- assert.equal(extensions,0);
- assert.equal(setup(0,true,true,true).viewport.dataset.weekMode,'day');
- assert.equal(setup().viewport.dataset.weekMode,'day','Si només hi caben alguns dies continua el desplaçament per dies');
+test('el trackpad i la sincronització continuen actius en una pantalla ampla',()=>{
+ const s=setup(0,false,true,true);s.cleanup();let syncs=0,extensions=0;
+ s.viewport.scrollWidth=52+35*196;
+ s.mount(()=>{extensions++;s.viewport.scrollLeft+=7*196;return true;});
+ assert.ok(extensions>0,'També carrega dies anteriors quan hi cap una setmana');
+ const ctx=vm.createContext({window:{matchMedia:()=>({matches:false})},Date,setTimeout,clearTimeout});
+ vm.runInContext(read('week-navigation.js'),ctx);
+ s.cleanup();s.viewport.scrollLeft=392;ctx.window.weekNavigation.mount(s.viewport,s.strip,{navigate:assert.fail,focus:()=>{},sync:()=>syncs++});
+ assert.equal(s.wheel(120).prevented,false);
+ s.viewport.emit('scroll');assert.ok(syncs>=2,'Sincronitza la barra en muntar i en cada scroll');
 });
 
-test('eixamplar el navegador no selecciona un altre dia abans de redibuixar la setmana completa',()=>{
- const s=setup(392);
- s.viewport.clientWidth=52+7*196;s.viewport.emit('scroll');
+test('redimensionar entre un dia i diversos dies no canvia la data abans del nou render',()=>{
+ const s=setup(392);s.setSingleDay(true);s.viewport.emit('scroll');
  assert.deepEqual(s.focused,[]);
 });

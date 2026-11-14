@@ -50,8 +50,10 @@ function controller({mobile=true,native=true,year=2026,panelHeight=0}={}){
  const fire=n=>(mobile?mainEvents:windowEvents).get(n)?.();
  const end=()=>{fire('scrollend');flush();};
  const advance=ms=>{clock+=ms;for(const [id,t] of [...timers])if(t.due<=clock){timers.delete(id);t.f();}flush();};
- ctx.mountCalendarScroll(null,true);flush();
- return {ctx,main,panels:()=>panels,metrics:()=>({top,writes,changes}),flush,end,advance,
+ ctx.mountCalendarScroll(null,true);
+ const initial={count:panels.length,bottom:panels.at(-1).getBoundingClientRect().bottom,changes};
+ flush();
+ return {ctx,main,initial,panels:()=>panels,metrics:()=>({top,writes,changes}),flush,end,advance,
   fire:n=>mainEvents.get(n)?.(),scroll:v=>{setTop(v);flush();},
   go(y,offset=0){const p=panels.find(p=>p.year===y);assert.ok(p,'Any carregat: '+y);setTop(top+p.getBoundingClientRect().top-100+offset);flush();},
   remount(){const anchor=ctx.monthPosition();ctx.stopCalendarScroll();top=0;ctx.mountCalendarScroll(anchor,false);flush();},
@@ -137,5 +139,16 @@ test('Any omple finestres altes encara que els anys siguin compactes i no hi hag
   assert.ok(c.panels().at(-1).getBoundingClientRect().bottom>=800);
   const before=c.metrics().top;c.scroll(before+100);
   assert.ok(c.metrics().top>before);
+ }
+});
+
+test('Any calcula la càrrega segons l’alçada real abans de la primera pintada, en un sol lot',()=>{
+ for(const mobile of [true,false]){
+  const compact=controller({mobile,year:2027,panelHeight:180});
+  const tall=controller({mobile,year:2027,panelHeight:1000});
+  assert.ok(compact.initial.count>tall.initial.count);
+  assert.ok(compact.initial.bottom>=1500,'Ja cobreix la finestra i el marge abans de cap requestAnimationFrame');
+  assert.ok(compact.initial.changes<=2,'Un lot per davant i un per darrere, sense inserir any per any');
+  assert.equal(compact.initial.count,compact.panels().length,'No necessita omplir buits en pintades posteriors');
  }
 });
