@@ -1161,7 +1161,12 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .calendar-week-layout .week-day-header,.calendar-week-layout .week-date-columns {scroll-snap-align:start;}
 
 /* Al mòbil, un dia complet entre l’eix horari i la vora dreta. */
+.week-sticky-head {display:none;}
 @media(max-width:560px) {
+  .calendar-week-layout .week-sticky-head {display:block;position:sticky;top:0;height:0;z-index:20;}
+  .week-sticky-head-viewport {overflow:hidden;max-width:100%;}
+  .week-sticky-head .week-timeline-head {position:static;}
+  .calendar-week-layout .week-timeline-viewport .week-timeline-head {visibility:hidden;}
   .calendar-week-layout .week-timeline-viewport {container-type:inline-size;scroll-snap-type:x mandatory;scroll-padding-left:52px;touch-action:pan-x pan-y;}
   .calendar-week-layout .week-timeline-inner {--week-min-width:0px;width:calc(52px + var(--week-day-count) * (100cqw - 52px));}
   .calendar-week-layout .week-timeline-head,.calendar-week-layout .week-timeline-grid {grid-template-columns:52px repeat(var(--week-day-count),minmax(0,1fr));}

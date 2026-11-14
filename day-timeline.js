@@ -73,6 +73,7 @@
     const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${columnCount}" aria-label="${escape(day.label)}">
       ${children.length?buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots):`<div class="day-time-column" style="height:${height}px"></div>`}</div>`).join('');
     return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
+      <div class="week-sticky-head"><div class="week-sticky-head-viewport"></div></div>
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
            data-timeline-key="week:${escape(startDate)}" data-focus-date="${escape(focusDate)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">

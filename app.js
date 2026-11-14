@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.19.5';
+const APP_VERSION = '0.19.6';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1474,14 +1474,35 @@ function mountWeekNavigation() {
     const viewport = $app.querySelector('.week-timeline-viewport');
     const strip = $app.querySelector('.week-day-strip');
     const syncStrip = () => {
-        if (!viewport || !strip || weekNavigation.singleDay())
+        if (!viewport)
             return;
-        const scroller = strip.querySelector('.week-scroll-strip'), track = strip.querySelector('.week-scroll-track');
         const inner = viewport.querySelector('.week-timeline-inner');
-        if (!scroller || !track || !inner)
+        if (!inner)
             return;
         const headers = Array.from(viewport.querySelectorAll('.week-day-header'));
         const key = `${headers[0]?.dataset.date}:${headers.at(-1)?.dataset.date}`;
+        if (weekNavigation.singleDay()) {
+            // Fora del contenidor horitzontal: sticky s'ancora al scroll vertical principal.
+            const pinned = $app.querySelector('.week-sticky-head-viewport');
+            const head = viewport.querySelector('.week-timeline-head');
+            if (!pinned || !head)
+                return;
+            if (pinned.dataset.range !== key) {
+                pinned.innerHTML = head.outerHTML;
+                pinned.dataset.range = key;
+            }
+            const pinnedHead = pinned.firstElementChild;
+            pinned.style.width = `${viewport.clientWidth}px`;
+            pinnedHead.style.width = `${inner.getBoundingClientRect().width}px`;
+            pinnedHead.style.setProperty('--week-day-count', String(headers.length));
+            pinned.scrollLeft = viewport.scrollLeft;
+            return;
+        }
+        if (!strip)
+            return;
+        const scroller = strip.querySelector('.week-scroll-strip'), track = strip.querySelector('.week-scroll-track');
+        if (!scroller || !track || !inner)
+            return;
         if (track.dataset.range !== key) {
             const arrows = Array.from(strip.querySelectorAll('.week-fixed-strip .week-arrow')).map(button => button.outerHTML).join('');
             track.innerHTML = `<span class="week-strip-corner">${arrows}</span>${headers.map(header => weekStripDay(header.dataset.date)).join('')}`;

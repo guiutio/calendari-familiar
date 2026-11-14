@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.19.5';
+const APP_VERSION = '0.19.6';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -1273,12 +1273,27 @@ function mountWeekNavigation(){
   const viewport=$app.querySelector<HTMLElement>('.week-timeline-viewport');
   const strip=$app.querySelector<HTMLElement>('.week-day-strip');
   const syncStrip=()=>{
-    if(!viewport||!strip||weekNavigation.singleDay())return;
-    const scroller=strip.querySelector<HTMLElement>('.week-scroll-strip'),track=strip.querySelector<HTMLElement>('.week-scroll-track');
+    if(!viewport)return;
     const inner=viewport.querySelector<HTMLElement>('.week-timeline-inner');
-    if(!scroller||!track||!inner)return;
+    if(!inner)return;
     const headers=Array.from(viewport.querySelectorAll<HTMLElement>('.week-day-header'));
     const key=`${headers[0]?.dataset.date}:${headers.at(-1)?.dataset.date}`;
+    if(weekNavigation.singleDay()){
+      // Fora del contenidor horitzontal: sticky s'ancora al scroll vertical principal.
+      const pinned=$app.querySelector<HTMLElement>('.week-sticky-head-viewport');
+      const head=viewport.querySelector<HTMLElement>('.week-timeline-head');
+      if(!pinned||!head)return;
+      if(pinned.dataset.range!==key){pinned.innerHTML=head.outerHTML;pinned.dataset.range=key;}
+      const pinnedHead=pinned.firstElementChild as HTMLElement;
+      pinned.style.width=`${viewport.clientWidth}px`;
+      pinnedHead.style.width=`${inner.getBoundingClientRect().width}px`;
+      pinnedHead.style.setProperty('--week-day-count',String(headers.length));
+      pinned.scrollLeft=viewport.scrollLeft;
+      return;
+    }
+    if(!strip)return;
+    const scroller=strip.querySelector<HTMLElement>('.week-scroll-strip'),track=strip.querySelector<HTMLElement>('.week-scroll-track');
+    if(!scroller||!track||!inner)return;
     if(track.dataset.range!==key){
       const arrows=Array.from(strip.querySelectorAll('.week-fixed-strip .week-arrow')).map(button=>button.outerHTML).join('');
       track.innerHTML=`<span class="week-strip-corner">${arrows}</span>${headers.map(header=>weekStripDay(header.dataset.date!)).join('')}`;
