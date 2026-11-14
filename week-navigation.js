@@ -1,8 +1,15 @@
-/* Continuous days in the grid; the day strip follows complete calendar weeks. */
+/* Whole weeks when they fit; continuous days in narrower viewports. */
 (() => {
  let wheelLocked=false,lastWheel=0,suppressClickUntil=0;
+ function fitsWeek(viewport){
+  if(!viewport||window.matchMedia?.('(max-width:560px)').matches)return false;
+  const width=viewport.querySelectorAll('.week-day-header')[0]?.getBoundingClientRect().width;
+  return width>0&&width*7<=viewport.clientWidth-52+1;
+ }
  function mount(viewport,strip,{navigate,focus,extend}){
   const cleanups=[];let touch=null,interacted=false,distance=0,filling=false,lastFocusedDate=viewport?.dataset?.focusDate??'';
+  const wholeGrid=fitsWeek(viewport);
+  if(viewport?.dataset)viewport.dataset.weekMode=wholeGrid?'week':'day';
   const listen=(target,type,handler,options)=>{
    if(!target)return;
    target.addEventListener(type,handler,options);
@@ -12,7 +19,7 @@
   const maxScroll=()=>Math.max(0,(viewport?.scrollWidth??0)-(viewport?.clientWidth??0));
   const left=()=>Math.max(0,Math.min(maxScroll(),viewport?.scrollLeft??0));
   const fill=()=>{
-   if(!viewport||!extend||filling)return;
+   if(!viewport||!extend||filling||wholeGrid)return;
    filling=true;
    try{
     for(const direction of [-1,1]){
@@ -34,7 +41,8 @@
    if(closest&&closest.dataset.date!==lastFocusedDate){lastFocusedDate=closest.dataset.date;focus(lastFocusedDate);}
   };
   const scrolled=()=>{
-   if(filling)return;
+   // Un canvi d'amplada pot emetre scroll abans que ResizeObserver torni a muntar la vista.
+   if(filling||wholeGrid||fitsWeek(viewport))return;
    interacted=true;
    // Actualitza la barra en el mateix esdeveniment, també durant la inèrcia.
    selectVisible();
@@ -42,8 +50,9 @@
   };
   const wheel=(event,wholeWeek)=>{
    if(event.ctrlKey||event.metaKey)return;
+   wholeWeek=wholeWeek||wholeGrid;
    const mouseWheel=!singleDay()&&window.matchMedia?.('(pointer:fine)').matches;
-   if(viewport&&mouseWheel&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX)){
+   if(viewport&&mouseWheel&&!wholeGrid&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX)){
     event.preventDefault();
     fill();
     const scale=event.deltaMode===1?16:event.deltaMode===2?viewport.clientWidth:1;
@@ -51,8 +60,9 @@
     scrolled();
     return;
    }
-   const raw=event.deltaX||(event.shiftKey?event.deltaY:0);
-   if(!raw||(!event.shiftKey&&Math.abs(raw)<=Math.abs(event.deltaY)))return;
+   const verticalWheel=wholeGrid&&mouseWheel&&!event.shiftKey&&Math.abs(event.deltaY)>Math.abs(event.deltaX);
+   const raw=verticalWheel?event.deltaY:event.deltaX||(event.shiftKey?event.deltaY:0);
+   if(!raw||(!verticalWheel&&!event.shiftKey&&Math.abs(raw)<=Math.abs(event.deltaY)))return;
    if(extend&&!wholeWeek){interacted=true;fill();return;}
    const now=Date.now();if(now-lastWheel>200){wheelLocked=false;distance=0;}lastWheel=now;
    if(wheelLocked){event.preventDefault();return;}
@@ -66,7 +76,7 @@
   const start=(event,wholeWeek)=>{
    if(event.touches.length!==1){touch=null;return;}
    const point=event.touches[0];
-   touch={x:point.clientX,y:point.clientY,scroll:left(),horizontal:false,vertical:false,excess:0,wholeWeek};
+   touch={x:point.clientX,y:point.clientY,scroll:left(),horizontal:false,vertical:false,excess:0,wholeWeek:wholeWeek||wholeGrid};
   };
   const move=event=>{
    if(!touch||event.touches.length!==1)return;
@@ -109,9 +119,12 @@
   listen(viewport,'scrollend',selectVisible,{passive:true});
   listen(viewport,'keydown',event=>{
    if(event.altKey&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
-   else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){interacted=true;}
+   else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+    if(wholeGrid){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
+    else interacted=true;
+   }
   });
   return ()=>{cleanups.forEach(cleanup=>cleanup());};
  }
- window.weekNavigation={mount};
+ window.weekNavigation={mount,fitsWeek};
 })();

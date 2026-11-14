@@ -1141,6 +1141,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Dies consecutius: l’amplada de cada dia no depèn del tram carregat. */
 .calendar-week-layout .week-timeline-viewport {container-type:inline-size;}
 .calendar-week-layout .week-timeline-inner {width:calc(52px + var(--week-day-count) * max(var(--week-day-width,98px), (100cqw - 52px) / 7));}
+.calendar-week-layout .week-timeline-viewport[data-week-mode="week"] {overflow-x:hidden;}
 
 /* Al mòbil, un dia complet entre l’eix horari i la vora dreta. */
 @media(max-width:560px) {

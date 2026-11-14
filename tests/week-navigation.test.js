@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
-function setup(initialLeft=0,singleDay=false,finePointer=!singleDay){
+function setup(initialLeft=0,singleDay=false,finePointer=!singleDay,wholeWeek=false){
  const dayWidth=singleDay?392:196;
  let now=1000,serial=0;const timers=new Map(),navigations=[],focused=[];
  const target=()=>{
@@ -11,12 +11,12 @@ function setup(initialLeft=0,singleDay=false,finePointer=!singleDay){
   return {handlers,addEventListener(type,fn){handlers.set(type,fn);},removeEventListener(type){handlers.delete(type);},
    emit(type,values={}){const event={prevented:false,stopped:false,preventDefault(){this.prevented=true;},stopPropagation(){this.stopped=true;},...values};handlers.get(type)?.(event);return event;}};
  };
- const viewport={...target(),scrollLeft:initialLeft,scrollWidth:52+7*dayWidth,clientWidth:444,getBoundingClientRect:()=>({left:0}),
-  querySelectorAll:()=>Array.from({length:7},(_,i)=>({dataset:{date:`2026-11-0${i+2}`},getBoundingClientRect:()=>({left:52+i*dayWidth-viewport.scrollLeft})}))};
+ const viewport={...target(),dataset:{},scrollLeft:initialLeft,scrollWidth:52+7*dayWidth,clientWidth:wholeWeek?52+7*dayWidth:444,getBoundingClientRect:()=>({left:0}),
+  querySelectorAll:()=>Array.from({length:7},(_,i)=>({dataset:{date:`2026-11-0${i+2}`},getBoundingClientRect:()=>({left:52+i*dayWidth-viewport.scrollLeft,width:dayWidth})}))};
  const strip=target();
  const ctx=vm.createContext({window:{matchMedia:query=>({matches:query==='(pointer:fine)'?finePointer:singleDay})},Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)});
  vm.runInContext(read('week-navigation.js'),ctx);
- const mount=()=>ctx.window.weekNavigation.mount(viewport,strip,{navigate:step=>navigations.push(step),focus:date=>focused.push(date)});
+ const mount=extend=>ctx.window.weekNavigation.mount(viewport,strip,{navigate:step=>navigations.push(step),focus:date=>focused.push(date),extend});
  const cleanup=mount();
  const touch=(type,x,y=100,where=viewport)=>where.emit(type,{touches:type==='touchend'?[]:[{clientX:x,clientY:y}]});
  const wheel=(dx,dy=0,where=viewport)=>where.emit('wheel',{deltaX:dx,deltaY:dy,deltaMode:0,shiftKey:false});
@@ -172,4 +172,38 @@ test('la rodeta conserva el zoom del navegador i els gestos verticals tàctils',
  assert.equal(s.viewport.scrollLeft,392);
  const touch=setup(392,true);assert.equal(touch.wheel(0,120).prevented,false);assert.equal(touch.viewport.scrollLeft,392);
  const coarse=setup(392,false,false);assert.equal(coarse.wheel(0,120).prevented,false);assert.equal(coarse.viewport.scrollLeft,392);
+});
+
+test('quan hi cap la setmana, la rodeta, el trackpad i la barra naveguen conjuntament per setmanes',()=>{
+ const s=setup(0,false,true,true);
+ assert.equal(s.viewport.dataset.weekMode,'week');
+ assert.equal(s.wheel(0,120).prevented,true);assert.deepEqual(s.navigations,[1]);
+ s.wheel(0,120);assert.deepEqual(s.navigations,[1],'La inèrcia no encadena setmanes');
+ s.advance(250);s.wheel(-100);assert.deepEqual(s.navigations,[1,-1]);
+ s.advance(250);s.wheel(0,120,s.strip);assert.deepEqual(s.navigations,[1,-1,1]);
+ s.advance(250);s.wheel(-100,0,s.strip);assert.deepEqual(s.navigations,[1,-1,1,-1]);
+ assert.equal(s.viewport.scrollLeft,0);assert.deepEqual(s.focused,[]);
+});
+
+test('la setmana completa també navega amb gest tàctil i teclat sense enfocar el primer dia visible',()=>{
+ const s=setup(0,false,false,true);
+ s.touch('touchstart',300);assert.equal(s.touch('touchmove',100).prevented,true);s.touch('touchend',100);
+ assert.deepEqual(s.navigations,[1]);assert.equal(s.viewport.scrollLeft,0);
+ assert.equal(s.viewport.emit('keydown',{key:'ArrowLeft'}).prevented,true);
+ assert.deepEqual(s.navigations,[1,-1]);
+ s.viewport.emit('scroll');assert.deepEqual(s.focused,[]);
+});
+
+test('la setmana completa no carrega dies continus addicionals; el mòbil conserva el mode dia',()=>{
+ const s=setup(0,false,true,true);s.cleanup();let extensions=0;
+ s.mount(()=>{extensions++;return true;});s.viewport.emit('scroll');
+ assert.equal(extensions,0);
+ assert.equal(setup(0,true,true,true).viewport.dataset.weekMode,'day');
+ assert.equal(setup().viewport.dataset.weekMode,'day','Si només hi caben alguns dies continua el desplaçament per dies');
+});
+
+test('eixamplar el navegador no selecciona un altre dia abans de redibuixar la setmana completa',()=>{
+ const s=setup(392);
+ s.viewport.clientWidth=52+7*196;s.viewport.emit('scroll');
+ assert.deepEqual(s.focused,[]);
 });

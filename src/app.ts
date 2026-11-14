@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.19.0';
+const APP_VERSION = '0.19.1';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -1340,11 +1340,12 @@ function render(){
     // Les 24 hores formen part del scroll principal, no d'un scroll intern.
     timeline.scrollTop=0;
     timeline.scrollLeft=timelineLeft;
-    if(calendarView==='week'&&!keepHorizontalScroll){
-      // Quan s'entra a Setmana o canvia el dia de referència, situa'l al costat de l'eix d'hores.
-      // No forcem el scroll en tornar a pintar la mateixa setmana (zoom, filtres, edició):
-      // així es preserva el desplaçament horitzontal que l'usuari ja ha fet manualment.
-      const header=Array.from(timeline.querySelectorAll<HTMLElement>('.week-day-header')).find(el=>el.dataset.date===focusDate);
+    const wholeWeek=calendarView==='week'&&weekNavigation.fitsWeek(timeline);
+    if(calendarView==='week'&&(wholeWeek||!keepHorizontalScroll||previousTimeline?.dataset.weekMode==='week')){
+      // Si hi cap la setmana, el dilluns es manté a l'esquerra encara que se seleccioni un altre dia.
+      // En amplades reduïdes, el dia seleccionat continua al costat de l'eix d'hores.
+      const firstDate=wholeWeek?weekStart(focusDate):focusDate;
+      const header=Array.from(timeline.querySelectorAll<HTMLElement>('.week-day-header')).find(el=>el.dataset.date===firstDate);
       if(header){
         const offset=header.getBoundingClientRect().left-timeline.getBoundingClientRect().left+timeline.scrollLeft-52;
         timeline.scrollLeft=Math.max(0,Math.min(timeline.scrollWidth-timeline.clientWidth,offset));

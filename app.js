@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.19.0';
+const APP_VERSION = '0.19.1';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1571,11 +1571,12 @@ function render() {
         // Les 24 hores formen part del scroll principal, no d'un scroll intern.
         timeline.scrollTop = 0;
         timeline.scrollLeft = timelineLeft;
-        if (calendarView === 'week' && !keepHorizontalScroll) {
-            // Quan s'entra a Setmana o canvia el dia de referència, situa'l al costat de l'eix d'hores.
-            // No forcem el scroll en tornar a pintar la mateixa setmana (zoom, filtres, edició):
-            // així es preserva el desplaçament horitzontal que l'usuari ja ha fet manualment.
-            const header = Array.from(timeline.querySelectorAll('.week-day-header')).find(el => el.dataset.date === focusDate);
+        const wholeWeek = calendarView === 'week' && weekNavigation.fitsWeek(timeline);
+        if (calendarView === 'week' && (wholeWeek || !keepHorizontalScroll || previousTimeline?.dataset.weekMode === 'week')) {
+            // Si hi cap la setmana, el dilluns es manté a l'esquerra encara que se seleccioni un altre dia.
+            // En amplades reduïdes, el dia seleccionat continua al costat de l'eix d'hores.
+            const firstDate = wholeWeek ? weekStart(focusDate) : focusDate;
+            const header = Array.from(timeline.querySelectorAll('.week-day-header')).find(el => el.dataset.date === firstDate);
             if (header) {
                 const offset = header.getBoundingClientRect().left - timeline.getBoundingClientRect().left + timeline.scrollLeft - 52;
                 timeline.scrollLeft = Math.max(0, Math.min(timeline.scrollWidth - timeline.clientWidth, offset));
