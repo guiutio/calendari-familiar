@@ -3,17 +3,18 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
-function setup(initialLeft=0){
+function setup(initialLeft=0,singleDay=false){
+ const dayWidth=singleDay?392:196;
  let now=1000,serial=0;const timers=new Map(),navigations=[],focused=[];
  const target=()=>{
   const handlers=new Map();
   return {handlers,addEventListener(type,fn){handlers.set(type,fn);},removeEventListener(type){handlers.delete(type);},
    emit(type,values={}){const event={prevented:false,stopped:false,preventDefault(){this.prevented=true;},stopPropagation(){this.stopped=true;},...values};handlers.get(type)?.(event);return event;}};
  };
- const viewport={...target(),scrollLeft:initialLeft,scrollWidth:1424,clientWidth:444,getBoundingClientRect:()=>({left:0}),
-  querySelectorAll:()=>Array.from({length:7},(_,i)=>({dataset:{date:`2026-11-0${i+2}`},getBoundingClientRect:()=>({left:52+i*196-viewport.scrollLeft})}))};
+ const viewport={...target(),scrollLeft:initialLeft,scrollWidth:52+7*dayWidth,clientWidth:444,getBoundingClientRect:()=>({left:0}),
+  querySelectorAll:()=>Array.from({length:7},(_,i)=>({dataset:{date:`2026-11-0${i+2}`},getBoundingClientRect:()=>({left:52+i*dayWidth-viewport.scrollLeft})}))};
  const strip=target();
- const ctx=vm.createContext({window:{},Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)});
+ const ctx=vm.createContext({window:{matchMedia:()=>({matches:singleDay})},Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)});
  vm.runInContext(read('week-navigation.js'),ctx);
  const mount=()=>ctx.window.weekNavigation.mount(viewport,strip,{navigate:step=>navigations.push(step),focus:date=>focused.push(date)});
  const cleanup=mount();
@@ -93,4 +94,25 @@ test('els gestos canvien de setmana sencera en creuar l’any i el focus actuali
  assert.equal(monthLabel.textContent,'gener');assert.equal(yearLabel.textContent,'2027');
  assert.equal(ctx.viewYear,2027);assert.equal(ctx.viewMonth,0);
  ctx.stopCalendarScroll();assert.equal(oldCleanups,1);assert.equal(newCleanups,1);
+});
+
+
+test('al mòbil el gest nadiu fa snap al dia i el focus segueix el dia assentat',()=>{
+ const s=setup(0,true);
+ s.touch('touchstart',350);const move=s.touch('touchmove',120);
+ assert.equal(move.prevented,false);
+ assert.equal(s.viewport.scrollLeft,0,'El navegador gestiona el desplaçament tàctil');
+ s.viewport.scrollLeft=392;s.viewport.emit('scroll');s.touch('touchend',120);
+ s.viewport.emit('scrollend');
+ assert.deepEqual(s.focused,['2026-11-03']);
+ assert.deepEqual(s.navigations,[]);
+});
+
+test('al mòbil es conserva el canvi de setmana als extrems i el gest de la barra de set dies',()=>{
+ const s=setup(6*392,true);
+ s.touch('touchstart',300);s.touch('touchmove',200);s.touch('touchend',200);
+ assert.deepEqual(s.navigations,[1]);
+ const other=setup(0,true);
+ other.touch('touchstart',120,100,other.strip);other.touch('touchmove',250,100,other.strip);other.touch('touchend',250,100,other.strip);
+ assert.deepEqual(other.navigations,[-1]);
 });

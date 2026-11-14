@@ -8,6 +8,7 @@
    target.addEventListener(type,handler,options);
    cleanups.push(()=>target.removeEventListener(type,handler,options));
   };
+  const singleDay=()=>Boolean(window.matchMedia?.('(max-width:560px)').matches);
   const maxScroll=()=>Math.max(0,(viewport?.scrollWidth??0)-(viewport?.clientWidth??0));
   const left=()=>Math.max(0,Math.min(maxScroll(),viewport?.scrollLeft??0));
   const selectVisible=()=>{
@@ -45,17 +46,21 @@
     else {touch.vertical=true;return;}
    }
    if(!touch.horizontal)return;
-   event.preventDefault();interacted=true;
+   interacted=true;
    const wanted=touch.scroll+dx,max=maxScroll();
    touch.excess=touch.wholeWeek?dx:wanted<0?wanted:wanted>max?wanted-max:0;
+   // El mòbil deixa el desplaçament als gestos nadius i al snap CSS.
+   if(singleDay()&&!touch.wholeWeek)return;
+   event.preventDefault();
    if(viewport&&!touch.wholeWeek)viewport.scrollLeft=Math.max(0,Math.min(max,wanted));
   };
   const end=()=>{
    if(!touch)return;
-   const {horizontal,excess}=touch;touch=null;
+   const {horizontal,excess,wholeWeek}=touch;touch=null;
    if(!horizontal)return;
    suppressClickUntil=Date.now()+350;
    if(Math.abs(excess)>=64){interacted=false;clearTimeout(timer);navigate(Math.sign(excess));}
+   else if(singleDay()&&!wholeWeek)scrolled();
    else selectVisible();
   };
   const cancel=()=>{touch=null;interacted=false;};
@@ -69,6 +74,7 @@
    listen(target,'click',click,true);
   }
   listen(viewport,'scroll',scrolled,{passive:true});
+  listen(viewport,'scrollend',selectVisible,{passive:true});
   listen(viewport,'keydown',event=>{
    if(event.altKey&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
    else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){interacted=true;}

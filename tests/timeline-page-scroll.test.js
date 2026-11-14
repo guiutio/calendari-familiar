@@ -22,7 +22,7 @@ test('setmana: 7 dies i 3 fills en columnes compactes',()=>{
  const dates=['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31','2026-11-01'];
  const days=dates.map(date=>({date,label:date,activities:[],nightSegments:empty}));
  const html=renderWeek(dates[0],days,children,50);
- assert.match(html,/min-width:2110px/); // 52+7*3*98
+ assert.match(html,/min-width:var\(--week-min-width,2110px\)/); // 52+7*3*98
  assert.match(html,/--week-day-width:294px/);
  assert.equal((html.match(/class="day-time-column"/g)||[]).length,21);
 });
