@@ -867,7 +867,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .extra-rotation-section>.panel-header .section-title {flex:1 1 100%;}
 
 /* Vista anual: dotze mesos compactes amb les mateixes miniatures de colors que Mes. */
-.year-overview {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.year-overview {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),180px));justify-content:space-evenly;gap:10px;}
 .year-month {display:flex;flex-direction:column;justify-content:flex-start;min-width:0;width:100%;padding:3px;border:0;background:transparent;color:inherit;text-align:left;}
 .year-month-title {display:block;margin-bottom:5px;font-size:calc(15px * var(--font-scale,1));font-weight:780;text-transform:none;}
 @media(hover:hover){.year-month:hover .year-month-title {text-decoration:underline;}}
@@ -878,7 +878,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-month .month-mini {grid-template-rows:minmax(0,1fr);height:10px;gap:1px;}
 .year-month .month-mini-child {display:none;}
 .year-month .month-mini-column {border-radius:1px;}
-@media(max-width:900px){.year-overview {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 6px;}}
+@media(max-width:900px){.year-overview {gap:8px 6px;}}
 
 /* A Any els contorns no han de tapar les franges nocturnes de les miniatures. */
 .year-month .month-mini-school {border-left:0;box-shadow:none;}
