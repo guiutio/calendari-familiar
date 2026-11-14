@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.19.3';
+const APP_VERSION = '0.19.4';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -687,7 +687,7 @@ function calendarControls(docked = false) {
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">v${APP_VERSION}</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>${tab === 'calendar' ? calendarControls(true) : ''}
+  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${tab === 'calendar' ? `<hr class="side-nav-separator">${calendarControls(true)}<hr class="side-nav-separator">` : ''}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   </aside>${tab === 'calendar' ? (calendarView === 'year' ? '' : calendarControls()) + calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
