@@ -61,22 +61,22 @@
     // Omple l'espai disponible sense retallar l'escala demanada amb el zoom.
     const height=Math.max(DAY_MINUTES*PX_PER_MINUTE*safeZoom/100,Number.isFinite(minimumHeight)?minimumHeight:0);
     const pxPerMinute=height/DAY_MINUTES;
-    if(!children.length)return '<p class="settings-note">Selecciona algun fill als filtres.</p>';
+    const columnCount=Math.max(1,children.length);
     const tickStep=safeZoom===25?120:60;
     const ticks=Array.from({length:DAY_MINUTES/tickStep+1},(_,i)=>
       `<span class="day-time-tick" style="top:${i*tickStep*pxPerMinute}px">${fmt(i*tickStep)}</span>`).join('');
     const childHeaders=children.map(c=>`<span class="week-child-label">${escape(c.name)}</span>`).join('');
     const head=days.map(day=>`<div class="week-day-header${day.date===todayDate?' today':''}" data-date="${escape(day.date)}">
       <button type="button" class="week-date-button${day.dayOff?' is-day-off':''}" data-action="focus-week-day" data-date="${escape(day.date)}" ${day.date===todayDate?'aria-current="date"':''} title="Mostra el dia ${escape(day.label)}">${escape(day.label)}</button>
-      <div class="week-child-headers" style="--week-child-count:${children.length}">${childHeaders}</div>
+      <div class="week-child-headers" style="--week-child-count:${columnCount}">${childHeaders}</div>
     </div>`).join('');
-    const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${children.length}" aria-label="${escape(day.label)}">
-      ${buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots)}</div>`).join('');
+    const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${columnCount}" aria-label="${escape(day.label)}">
+      ${children.length?buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots):`<div class="day-time-column" style="height:${height}px"></div>`}</div>`).join('');
     return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"
            aria-label="Calendari setmanal de 24 hores, desplaçament vertical i horitzontal"
            data-timeline-key="week:${escape(startDate)}" data-focus-date="${escape(focusDate)}" data-zoom="${safeZoom}" data-px-per-minute="${pxPerMinute}" style="--hour-height:${60*pxPerMinute}px" data-initial-scroll="${FOCUS_MINUTE*pxPerMinute}">
-        <div class="week-timeline-inner" style="--week-child-count:${children.length};--week-day-count:${days.length};--week-day-width:${children.length*98}px;min-width:${52+days.length*children.length*98}px">
+        <div class="week-timeline-inner" style="--week-child-count:${columnCount};--week-day-count:${days.length};--week-day-width:${columnCount*98}px;min-width:${52+days.length*columnCount*98}px">
           <div class="week-timeline-head">
             <div class="week-time-corner">Hora</div>${head}
           </div>

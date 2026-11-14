@@ -523,7 +523,6 @@ function weekTimeline(start:string,children:Child[],minimumHeight=0):string{
    for(const c of children)nightSegments[c.id]=dayTimelineUI.overnightSegments(date,c.id,nightChangeTime(date,c.id),assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
    return {date,label:`${weekLong[i]} ${parseDate(date).getDate()}`,dayOff:Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date)),activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),rotatingSlots:extraSlots(date,children)};
  });
- if(!children.length)return `<div class="calendar-empty-state"><p>${state.children.length?'No hi ha fills visibles. Revisa els filtres.':'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length?'open-filters':'tab'}" ${state.children.length?'':'data-tab="people"'}>${state.children.length?'Configura els filtres':'Afegeix un fill'}</button></div>`;
  return dayTimelineUI.renderWeek(start,days,children,timelineZoomForView('week'),selectedDate,localDate(new Date()),minimumHeight);
 }
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
