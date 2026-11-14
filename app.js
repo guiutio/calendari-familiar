@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.20';
+const APP_VERSION = '0.17.21';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -668,20 +668,20 @@ function isCurrentPeriod() {
     return calendarView === 'week' ? weekStart(selectedDate) === weekStart(todayDate) : selectedDate === todayDate;
 }
 function calendarControls(docked = false) {
-    const chosen = calendarView === 'week' ? parseDate(selectedDate) : null, now = new Date();
+    const chosen = calendarView === 'week' && !docked ? parseDate(selectedDate) : null, now = new Date();
     const children = activeChildren();
     const showHolyWeek = state.preferences.showHolyWeek && (calendarView === 'year' || calendarView === 'month');
     const filtered = showHolyWeek || children.length !== state.children.length || state.preferences.visibleGuardians.length !== state.guardians.length || state.preferences.visibleSchools.length > 0 || Boolean(state.personTimeOff && personalTimeOff.filtered(state));
-    const tools = `<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>${calendarView === 'week' ? `<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'dayEdit'}" title="Edita el dia">${icon('pencil', 18)}</button>` : ''}${calendarView === 'week' ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}</div>`;
+    const tools = `<div class="calendar-tools">${docked || calendarView === 'year' ? `<button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter', 18)}<span class="filter-copy">Filtres</span>${filtered ? '<span class="filter-dot"></span>' : ''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'legend'}" title="Llegenda">${icon('info', 18)}</button>` : ''}${calendarView === 'week' && !docked ? `<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'dayEdit'}" title="Edita el dia">${icon('pencil', 18)}</button>` : ''}${calendarView === 'week' && !docked ? `<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type === 'zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom', 18)}</button>` : ''}</div>`;
     return `<div class="calendar-controls${docked ? ' year-tools' : ''}" role="group" aria-label="Controls del calendari">${calendarView === 'month' && !docked ? `<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear === new Date().getFullYear() ? ' data-current-period' : ''}>${viewYear}</span>` : ''}${chosen ? `<span class="calendar-controls-year calendar-controls-week-title"><span class="calendar-controls-week-month"${chosen.getFullYear() === now.getFullYear() && chosen.getMonth() === now.getMonth() ? ' data-current-period' : ''}>${escapeHtml(months[chosen.getMonth()])}</span><span class="calendar-controls-week-year"${chosen.getFullYear() === now.getFullYear() ? ' data-current-period' : ''}>${chosen.getFullYear()}</span></span>` : ''}${calendarView === 'month' && !docked ? '' : tools}</div>`;
 }
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>${tab === 'calendar' && (calendarView === 'year' || calendarView === 'month') ? calendarControls(true) : ''}
+  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>${tab === 'calendar' ? calendarControls(true) : ''}
   <p class="side-foot">${icon('shield', 17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
   </aside>${tab === 'calendar' ? (calendarView === 'year' ? '' : calendarControls()) + calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' && (calendarView === 'year' || calendarView === 'month') ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
+  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
     const year = Math.floor(index / 12), month = index - year * 12;

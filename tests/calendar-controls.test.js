@@ -54,9 +54,20 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  assert.doesNotMatch(ctx.calendarNavigation(),/data-current-period/);
  if(view!=='week')assert.doesNotMatch(title,/<button|data-action=/);
  assert.equal(title.includes('class="weekdays"'),view==='month');
- const tools=(view==='month'?ctx.calendarControls(true):controls).match(/class="calendar-tools">([\s\S]*?)<\/div>/)[1];
- assert.deepEqual([...tools.matchAll(/data-action="([^"]+)"/g)].map(match=>match[1]),
-  ['open-filters','open-legend',...(view==='week'?['open-day-edit']:[]),...(['day','week'].includes(view)?['open-zoom']:[])]);
+ const docked=ctx.calendarControls(true);
+ assert.deepEqual([...docked.matchAll(/data-action="([^"\s]+)"/g)].map(match=>match[1]),['open-filters','open-legend']);
+ assert.doesNotMatch(docked,/calendar-controls-week-title|calendar-controls-year/);
+ if(view==='week'){
+  assert.doesNotMatch(controls,/data-action="open-filters"|data-action="open-legend"/);
+  assert.match(controls,/data-action="open-day-edit"/);
+  assert.match(controls,/data-action="open-zoom"/);
+ }
+ Object.assign(ctx,{tab:'calendar',calendarViewButtons:()=>'<button>Vistes</button>',navButton:()=>'<button>Configuració</button>'});
+ vm.runInContext(app.slice(app.indexOf('function layout('),app.indexOf('function monthPanel(')),ctx);
+ const page=ctx.layout('Calendari');
+ const lower=page.slice(page.indexOf('<nav class="mobile-tabs"'));
+ assert.match(lower,/year-tools[\s\S]*open-filters[\s\S]*open-legend[\s\S]*Configuració/);
+ assert.doesNotMatch(lower,/open-day-edit|open-zoom/);
  assert.doesNotMatch(controls,/data-action="today"|data-action="calendar-navigate"|calendar-period-nav/);
 });
 
