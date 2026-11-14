@@ -31,7 +31,7 @@ test('marges tàctils per a ambdues vistes i moviment vertical natural de pàgin
  assert.match(rules,/\.day-timeline-viewport \{[\s\S]*?height:auto;[\s\S]*?overflow-x:auto;[\s\S]*?overflow-y:hidden;/);
  assert.match(rules,/\.day-timeline-inner \{width:max-content;min-width:0;/);
  assert.match(rules,/\.day-timeline-headers,\.day-timeline-grid \{grid-template-columns:52px repeat\(var\(--day-child-count\),98px\);/);
- assert.match(rules,/\.week-timeline-head,\.week-timeline-grid \{grid-template-columns:52px repeat\(var\(--week-day-count\),var\(--week-day-width,196px\)\);/);
+ assert.match(rules,/\.week-timeline-head,\.week-timeline-grid \{grid-template-columns:52px repeat\(var\(--week-day-count\),minmax\(var\(--week-day-width,196px\),1fr\)\);/);
  assert.match(guard,/const timeline = target\.closest\('\.day-timeline-viewport'\)/);
  assert.match(guard,/const scroller = timeline \? target\.closest\('\.main-area'\)/);
  assert.match(app,/main\.scrollTop = Math\.max\(0, newOffset \+ minuteAtCenter \* newScale - main\.clientHeight \/ 2\)/);
