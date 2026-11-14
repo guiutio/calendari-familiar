@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.15';
+const APP_VERSION = '0.17.16';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -825,7 +825,7 @@ function mountCalendarScroll(position, resetScroll = false) {
         }
         if (last.getBoundingClientRect().bottom < bottom + 700) {
             if (annual) {
-                if (lastIndex < 9999) {
+                while (lastIndex < 9999 && sequence.lastElementChild.getBoundingClientRect().bottom < bottom + 700) {
                     sequence.insertAdjacentHTML('beforeend', yearPanel(lastIndex + 1, children, today));
                     lastIndex++;
                     changed = true;
@@ -911,6 +911,8 @@ function mountCalendarScroll(position, resetScroll = false) {
         if (!annual && fitMonthRows(main, sequence, bar, mobile()) && anchor)
             restore(anchor);
         schedule();
+        if (annual)
+            settle();
     };
     window.addEventListener('resize', resize);
     window.visualViewport?.addEventListener('resize', resize);
@@ -929,6 +931,8 @@ function mountCalendarScroll(position, resetScroll = false) {
         window.cancelAnimationFrame(frame);
     };
     schedule();
+    if (annual)
+        settle();
 }
 function zoomControls() {
     const zoom = timelineZoomForView(), zoomIndex = TIMELINE_ZOOM_LEVELS.indexOf(zoom);

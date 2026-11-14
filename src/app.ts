@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.15';
+const APP_VERSION = '0.17.16';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -720,7 +720,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     }
     if(last.getBoundingClientRect().bottom<bottom+700){
       if(annual){
-        if(lastIndex<9999){sequence.insertAdjacentHTML('beforeend',yearPanel(lastIndex+1,children,today));lastIndex++;changed=true;}
+        while(lastIndex<9999&&(sequence.lastElementChild as HTMLElement).getBoundingClientRect().bottom<bottom+700){sequence.insertAdjacentHTML('beforeend',yearPanel(lastIndex+1,children,today));lastIndex++;changed=true;}
       } else {
         sequence.insertAdjacentHTML('beforeend',monthPanel(lastIndex+1,children,today)+monthPanel(lastIndex+2,children,today));
         lastIndex+=2;changed=true;
@@ -785,6 +785,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const anchor=monthPosition();
     if(!annual&&fitMonthRows(main,sequence,bar,mobile())&&anchor)restore(anchor);
     schedule();
+    if(annual)settle();
   };
   window.addEventListener('resize',resize);
   window.visualViewport?.addEventListener('resize',resize);
@@ -797,6 +798,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     window.cancelAnimationFrame(frame);
   };
   schedule();
+  if(annual)settle();
 }
 
 function zoomControls(){

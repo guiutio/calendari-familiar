@@ -4,10 +4,10 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const section=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
-function controller({mobile=true,native=true,year=2026}={}){
+function controller({mobile=true,native=true,year=2026,panelHeight=0}={}){
  let panels=[],top=0,writes=0,changes=0,serial=0,clock=0;
  const events=[],frames=new Map(),timers=new Map(),mainEvents=new Map(),windowEvents=new Map();
- const height=y=>1080+(y%3)*90;
+ const height=y=>panelHeight||1080+(y%3)*90;
  const max=()=>Math.max(0,32+panels.reduce((n,p)=>n+height(p.year),0)-700);
  const main={dataset:{},get scrollTop(){return top;},set scrollTop(v){writes++;setTop(v);},
   getBoundingClientRect:()=>({top:100,bottom:800}),
@@ -126,5 +126,16 @@ test('Any mostra el títol sota els controls i conserva la posició quan s’aca
    assert.equal(c.metrics().writes,before.writes+(year===2026?1:0));
    const stable=c.metrics();c.end();c.advance(10000);assert.deepEqual(c.metrics(),stable);
   }
+ }
+});
+
+
+test('Any omple finestres altes encara que els anys siguin compactes i no hi hagi scroll inicial',()=>{
+ for(const mobile of [true,false]){
+  const c=controller({mobile,year:2027,panelHeight:180});
+  assert.ok(c.panels().length>3);
+  assert.ok(c.panels().at(-1).getBoundingClientRect().bottom>=800);
+  const before=c.metrics().top;c.scroll(before+100);
+  assert.ok(c.metrics().top>before);
  }
 });
