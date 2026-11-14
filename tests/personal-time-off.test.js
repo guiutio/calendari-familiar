@@ -289,7 +289,7 @@ test('Mes i Any generen els contorns només als dies afectats i responen als fil
 test('el panell de filtres identifica qui soc jo i el botó de filtres indica seleccions ocultes',()=>{
  const s=setup();s.holidays(['2026-11-02']);s.click('person-me');
  assert.equal(s.api.filtered(s.state),false);s.click('person-off-type',{kind:'holiday'});assert.equal(s.api.filtered(s.state),true);
- assert.ok(s.ctx.calendarControls().includes('filter-dot'));
+ assert.ok(s.ctx.calendarControls(true).includes('filter-dot'));
  s.ctx.sheet={type:'filters'};const html=s.ctx.sheetMarkup();
  assert.match(html,/Horari laboral/);assert.match(html,/Guiu · Jo/);
  assert.match(html,/data-action="person-off-type" data-kind="holiday" aria-pressed="false"/);
@@ -371,7 +371,7 @@ test('els contorns i la seva llegenda es limiten a Any i Mes',()=>{
   s.ctx.calendarView=view;
   assert.doesNotMatch(s.ctx.calendarPage(),/class="legend"|calendar-bottom|time-row-help|class="tip-card"/);
   if(view==='week')assert.doesNotMatch(s.ctx.calendarPage(),/class="calendar-card"|Horari laboral/);
-  assert.match(s.ctx.calendarControls(),/data-action="open-legend"/);
+  assert.match(s.ctx.calendarControls(true),/data-action="open-legend"/);
   s.click('open-legend');
   const dialog=s.ctx.sheetMarkup();
   assert.match(dialog,/role="dialog" aria-modal="true" aria-label="Llegenda"/);

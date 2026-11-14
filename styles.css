@@ -1103,8 +1103,8 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 /* Mes i Setmana: les etiquetes tenen el mateix origen (x, y), sense desplaçament lateral. */
 
 /* Capçaleres mensuals alineades sobre la columna del dia 1, amb el mes abreujat. */
-.month-section-title {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:center;min-height:42px;padding:7px 0 5px;border:0;border-bottom:1px solid var(--separator);font-size:calc(15px * var(--font-scale,1));}
-.month-section-name {justify-self:center;min-width:0;text-align:center;line-height:1.2;white-space:nowrap;text-transform:capitalize;}
+.month-section-title {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:center;min-height:42px;padding:7px 0 5px;border:0;position:relative;font-size:calc(15px * var(--font-scale,1));}
+.month-section-name {justify-self:start;min-width:0;text-align:left;line-height:1.2;white-space:nowrap;text-transform:capitalize;}
 /* El període de Setmana conviu amb quatre eines sense desplaçar-les de la dreta. */
 .calendar-controls-week-title {display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;font-size:var(--calendar-period-title-size);}
 .calendar-controls-week-month {text-transform:capitalize;}
@@ -1127,4 +1127,9 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
   .calendar-layout:has(.year-sequence) .main-area {margin-top:env(safe-area-inset-top,0px);padding-top:0;}
   .calendar-layout:has(.year-sequence) .mobile-tabs {gap:0;padding-inline:4px;}
   .mobile-tabs .year-tools {align-self:center;margin-left:auto;}
+}
+
+.month-section-title::after {content:"";position:absolute;bottom:0;left:calc(100% * var(--month-start,0) / 7);right:0;border-bottom:1px solid var(--separator);}
+@media(max-width:900px) {
+  .calendar-layout:has(.month-sequence) .mobile-tabs {gap:0;padding-inline:4px;}
 }

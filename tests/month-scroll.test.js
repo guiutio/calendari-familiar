@@ -135,6 +135,7 @@ test('mesos consecutius: cada data apareix una vegada i les capçaleres separen 
   assert.ok(panel.indexOf('month-section-title')<panel.indexOf('show-calendar-day'));
   const offset=(new Date(year,month,1,12).getDay()+6)%7;
   assert.ok(panel.includes('class="month-section-name" style="grid-column:'+(offset+1)+'"'),'El nom del mes queda a la columna del dia 1');
+  assert.ok(panel.includes('--month-start:'+offset),'El separador comença a la columna del dia 1');
   assert.equal((panel.match(/class="month-empty-cell"/g)||[]).length,Math.ceil((offset+count)/7)*7-count);
  }
 });
@@ -328,4 +329,13 @@ test('un nou gest manté la posició de la capçalera mensual',()=>{
  const c=inertialController(true,true);c.touch();c.goToHeading(c.base+1);c.release();
  const before=c.metrics();c.signalEnd();c.touch();c.flush();c.advance(2000);
  assert.equal(c.bodyTop(c.base+1),130);assert.deepEqual(c.metrics(),before);
+});
+
+
+test('el separador mensual comença a la mateixa columna que el nom i el dia 1',()=>{
+ const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+ const theme=readFileSync(new URL('../theme.css',import.meta.url),'utf8');
+ assert.match(css,/\.month-section-name \{justify-self:start;min-width:0;text-align:left;/);
+ assert.match(css,/\.month-section-title::after \{[^}]*left:calc\(100% \* var\(--month-start,0\) \/ 7\)/);
+ assert.match(theme,/\.month-section-title \{[^}]*border-bottom:0;/);
 });

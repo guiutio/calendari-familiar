@@ -16,7 +16,7 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
   months:['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'],weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],weekdays:['Dl','Dt','Dc','Dj','Dv','Ds','Dg']});
  vm.runInContext(dateHelpers+app.slice(start,end),ctx);
  const title=ctx.calendarNavigation(),controls=ctx.calendarControls();
-  if(view==='month')assert.match(controls,/class="calendar-controls-year" data-calendar-year="2026" data-current-period>2026<\/span><div class="calendar-tools">/);
+  if(view==='month')assert.match(controls,/class="calendar-controls-year" data-calendar-year="2026" data-current-period>2026<\/span><\/div>/);
   else if(view==='week'){
     assert.match(controls,/class="calendar-controls-year calendar-controls-week-title"/);
     assert.match(controls,/class="calendar-controls-week-month" data-current-period>novembre<\/span>/);
@@ -33,6 +33,13 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  }
 
  else if(view==='month'){
+  assert.doesNotMatch(controls,/data-action="open-filters"|data-action="open-legend"/);
+  Object.assign(ctx,{tab:'calendar',calendarViewButtons:()=>'<button>Vistes</button>',navButton:()=>'<button>Configuració</button>'});
+  vm.runInContext(app.slice(app.indexOf('function layout('),app.indexOf('function monthPanel(')),ctx);
+  const layout=ctx.layout('<div class="month-sequence"></div>');
+  const mobile=layout.slice(layout.indexOf('<nav class="mobile-tabs"'));
+  assert.match(mobile,/year-tools[\s\S]*open-filters[\s\S]*open-legend[\s\S]*Configuració/);
+  assert.doesNotMatch(ctx.calendarControls(true),/calendar-controls-year/);
   assert.match(title,/<div class="weekdays"><span class="week-strip-label">dl\.<\/span>.*<span class="week-strip-label">dg\.<\/span>/);
   assert.doesNotMatch(title,/calendar-title|calendar-toolbar/);
  }
@@ -47,7 +54,7 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
  assert.doesNotMatch(ctx.calendarNavigation(),/data-current-period/);
  if(view!=='week')assert.doesNotMatch(title,/<button|data-action=/);
  assert.equal(title.includes('class="weekdays"'),view==='month');
- const tools=controls.match(/class="calendar-tools">([\s\S]*?)<\/div>/)[1];
+ const tools=(view==='month'?ctx.calendarControls(true):controls).match(/class="calendar-tools">([\s\S]*?)<\/div>/)[1];
  assert.deepEqual([...tools.matchAll(/data-action="([^"]+)"/g)].map(match=>match[1]),
   ['open-filters','open-legend',...(view==='week'?['open-day-edit']:[]),...(['day','week'].includes(view)?['open-zoom']:[])]);
  assert.doesNotMatch(controls,/data-action="today"|data-action="calendar-navigate"|calendar-period-nav/);

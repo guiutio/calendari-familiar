@@ -96,7 +96,7 @@
 
 /* El calendari conserva els colors de responsabilitat i neutralitza les superfícies. */
 :root[data-theme] .calendar-card:has(.month-sequence) {background:var(--app-background);border:0;box-shadow:none;}
-:root[data-theme] .month-section-title {background:var(--app-background);border-color:transparent;border-bottom:1px solid var(--separator);box-shadow:none;}
+:root[data-theme] .month-section-title {background:var(--app-background);border-color:transparent;border-bottom:0;box-shadow:none;}
 :root[data-theme] .month-grid {background:var(--app-background);border-color:transparent;}
 :root[data-theme] .day-cell {background:var(--app-background);color:var(--text-primary);}
 :root[data-theme] .day-cell:hover {background:var(--surface-secondary);}
