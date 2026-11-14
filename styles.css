@@ -9,7 +9,7 @@ button:focus-visible,input:focus-visible,select:focus-visible { outline:3px soli
 button:disabled { opacity:.5; cursor:not-allowed; }
 svg { flex-shrink:0; }
 #app { min-height:100vh; }
-.app-layout { width:min(1170px,100%); margin:0 auto; display:grid; grid-template-columns:248px minmax(0,1fr); min-height:100vh; }
+.app-layout { width:100%; margin:0; display:grid; grid-template-columns:248px minmax(0,1fr); min-height:100vh; }
 .sidebar { border-right:1px solid #e7eaf0; padding:34px 19px; background:#fbfbfc; }
 .brand { display:flex; align-items:center; gap:11px; padding:0 12px; margin-bottom:42px; }
 .brand-mark { height:40px;width:40px;display:grid;place-items:center;border-radius:14px;background:#253851;color:white; box-shadow:0 4px 9px #25385119; }
