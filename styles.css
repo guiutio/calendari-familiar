@@ -1109,6 +1109,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .calendar-controls-week-title {display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap;font-size:var(--calendar-period-title-size);}
 .calendar-controls-week-month {text-transform:capitalize;}
 
-.week-arrow {align-self:center;min-height:44px;width:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-primary);font:inherit;font-size:24px;cursor:pointer;}
+.week-arrow {align-self:center;min-height:44px;width:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--text-primary);font:inherit;font-size:calc(24px * var(--font-scale,1));cursor:pointer;}
 .week-arrow:hover {background:var(--selection-background);}
 .week-arrow:focus-visible {outline:2px solid var(--accent);outline-offset:-2px;}

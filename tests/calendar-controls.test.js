@@ -57,7 +57,7 @@ test('Mes i Setmana comparteixen les coordenades de les abreviatures dels dies',
   const day=rule('.week-strip-day {');
   assert.ok(css.includes('.weekdays,.month-grid {grid-template-columns:repeat(7,minmax(0,1fr));}'));
   assert.ok(month.includes('width:100%;max-width:none;padding:10px 0 10px;'));
-  assert.ok(week.includes('grid-template-columns:repeat(7,minmax(0,1fr));gap:0;padding:10px 0 10px;'));
+  assert.ok(week.includes('grid-template-columns:32px repeat(7,minmax(0,1fr)) 32px;gap:0;padding:10px 0 10px;'));
   assert.ok(day.includes('padding:0;'));
 });
 
