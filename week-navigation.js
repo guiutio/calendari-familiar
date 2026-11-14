@@ -1,8 +1,8 @@
-/* One complete week at a time; horizontal movement inside it stays independent. */
+/* Continuous days in the grid; the day strip follows complete calendar weeks. */
 (() => {
  let wheelLocked=false,lastWheel=0,suppressClickUntil=0;
- function mount(viewport,strip,{navigate,focus}){
-  const cleanups=[];let timer,touch=null,interacted=false,distance=0;
+ function mount(viewport,strip,{navigate,focus,extend}){
+  const cleanups=[];let timer,touch=null,interacted=false,distance=0,filling=false;
   const listen=(target,type,handler,options)=>{
    if(!target)return;
    target.addEventListener(type,handler,options);
@@ -11,6 +11,18 @@
   const singleDay=()=>Boolean(window.matchMedia?.('(max-width:560px)').matches);
   const maxScroll=()=>Math.max(0,(viewport?.scrollWidth??0)-(viewport?.clientWidth??0));
   const left=()=>Math.max(0,Math.min(maxScroll(),viewport?.scrollLeft??0));
+  const fill=()=>{
+   if(!viewport||!extend||filling)return;
+   filling=true;
+   try{
+    for(const direction of [-1,1]){
+     for(let i=0;i<3;i++){
+      const remaining=direction<0?left():maxScroll()-left();
+      if(remaining>=viewport.clientWidth*2||!extend(direction))break;
+     }
+    }
+   }finally{filling=false;}
+  };
   const selectVisible=()=>{
    if(!viewport||!interacted)return;
    interacted=false;
@@ -19,10 +31,11 @@
    const closest=days.reduce((best,day)=>!best||Math.abs(day.getBoundingClientRect().left-edge)<Math.abs(best.getBoundingClientRect().left-edge)?day:best,null);
    if(closest)focus(closest.dataset.date);
   };
-  const scrolled=()=>{clearTimeout(timer);timer=setTimeout(selectVisible,140);};
+  const scrolled=()=>{if(extend&&!filling){interacted=true;fill();}clearTimeout(timer);timer=setTimeout(selectVisible,140);};
   const wheel=(event,wholeWeek)=>{
    const raw=event.deltaX||(event.shiftKey?event.deltaY:0);
    if(!raw||(!event.shiftKey&&Math.abs(raw)<=Math.abs(event.deltaY)))return;
+   if(extend&&!wholeWeek){interacted=true;fill();return;}
    const now=Date.now();if(now-lastWheel>200){wheelLocked=false;distance=0;}lastWheel=now;
    if(wheelLocked){event.preventDefault();return;}
    const delta=raw*(event.deltaMode===1?16:event.deltaMode===2?(viewport?.clientWidth??300):1);
@@ -59,12 +72,13 @@
    const {horizontal,excess,wholeWeek}=touch;touch=null;
    if(!horizontal)return;
    suppressClickUntil=Date.now()+350;
-   if(Math.abs(excess)>=64){interacted=false;clearTimeout(timer);navigate(Math.sign(excess));}
+   if(Math.abs(excess)>=64&&(wholeWeek||!extend)){interacted=false;clearTimeout(timer);navigate(Math.sign(excess));}
    else if(singleDay()&&!wholeWeek)scrolled();
    else selectVisible();
   };
   const cancel=()=>{touch=null;interacted=false;};
   const click=event=>{if(Date.now()<suppressClickUntil){event.preventDefault();event.stopPropagation();}};
+  fill();
   for(const [target,wholeWeek] of [[viewport,false],[strip,true]]){
    listen(target,'wheel',event=>wheel(event,wholeWeek),{passive:false});
    listen(target,'touchstart',event=>start(event,wholeWeek),{passive:true});

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.17.22';
+const APP_VERSION = '0.18.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -572,17 +572,23 @@ function dayTimeline(date, children, minimumHeight = 0) {
         return `<div class="calendar-empty-state"><p>${state.children.length ? 'No hi ha fills visibles. Revisa els filtres.' : 'Encara no hi ha fills al calendari.'}</p><button class="secondary-btn" data-action="${state.children.length ? 'open-filters' : 'tab'}" ${state.children.length ? '' : 'data-tab="people"'}>${state.children.length ? 'Configura els filtres' : 'Afegeix un fill'}</button></div>`;
     return dayTimelineUI.render(date, fullDate(date), children, schoolActivities(date, children), nights, changeTime, timelineZoomForView('day'), monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extraSlots(date, children), minimumHeight);
 }
+let weekDayRange = null;
 function weekTimeline(start, children, minimumHeight = 0) {
     if (!dayTimelineUI)
         return '<p class="settings-note">No es pot carregar la línia temporal setmanal.</p>';
-    const days = Array.from({ length: 7 }, (_, i) => {
+    if (!weekDayRange || selectedDate < weekDayRange.first || selectedDate > weekDayRange.last)
+        weekDayRange = { first: start, last: addDays(start, 6) };
+    const count = Math.round((parseDate(weekDayRange.last).getTime() - parseDate(weekDayRange.first).getTime()) / 86400000) + 1;
+    return dayTimelineUI.renderWeek(start, weekTimelineDays(weekDayRange.first, children, count), children, timelineZoomForView('week'), selectedDate, localDate(new Date()), minimumHeight);
+}
+function weekTimelineDays(start, children, count = 7) {
+    return Array.from({ length: count }, (_, i) => {
         const date = addDays(start, i);
         const nightSegments = {};
         for (const c of children)
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, nightChangeTime(date, c.id), assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-        return { date, label: `${weekLong[i]} ${parseDate(date).getDate()}`, dayOff: Boolean(state.preferences.mePerson && workSchedule.isDayOff(state, date)), activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
+        return { date, label: `${weekLong[(parseDate(date).getDay() + 6) % 7]} ${parseDate(date).getDate()}`, dayOff: Boolean(state.preferences.mePerson && workSchedule.isDayOff(state, date)), activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
     });
-    return dayTimelineUI.renderWeek(start, days, children, timelineZoomForView('week'), selectedDate, localDate(new Date()), minimumHeight);
 }
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
@@ -1439,7 +1445,38 @@ function fitCalendarTimeline(main) {
 function mountWeekNavigation() {
     const viewport = $app.querySelector('.week-timeline-viewport');
     const strip = $app.querySelector('.week-day-strip');
+    const extend = (direction) => {
+        if (!viewport || !dayTimelineUI || !weekDayRange)
+            return false;
+        const first = direction < 0 ? addDays(weekDayRange.first, -7) : addDays(weekDayRange.last, 1), last = addDays(first, 6);
+        if (!isValidDate(first) || !isValidDate(last))
+            return false;
+        const children = activeChildren(), axis = viewport.querySelector('.week-time-axis');
+        const template = document.createElement('template');
+        template.innerHTML = dayTimelineUI.renderWeek(weekStart(selectedDate), weekTimelineDays(first, children), children, timelineZoomForView('week'), selectedDate, localDate(new Date()), axis?.offsetHeight ?? 0);
+        const headers = Array.from(template.content.querySelectorAll('.week-day-header')).map(el => el.outerHTML).join('');
+        const columns = Array.from(template.content.querySelectorAll('.week-date-columns')).map(el => el.outerHTML).join('');
+        const anchor = viewport.querySelector('.week-day-header'), left = anchor?.getBoundingClientRect().left ?? 0;
+        if (direction < 0) {
+            viewport.querySelector('.week-time-corner').insertAdjacentHTML('afterend', headers);
+            axis.insertAdjacentHTML('afterend', columns);
+            weekDayRange.first = first;
+        }
+        else {
+            viewport.querySelector('.week-timeline-head').insertAdjacentHTML('beforeend', headers);
+            viewport.querySelector('.week-timeline-grid').insertAdjacentHTML('beforeend', columns);
+            weekDayRange.last = last;
+        }
+        const inner = viewport.querySelector('.week-timeline-inner');
+        const count = viewport.querySelectorAll('.week-day-header').length;
+        inner.style.setProperty('--week-day-count', String(count));
+        inner.style.minWidth = `var(--week-min-width,${52 + count * Math.max(1, children.length) * 98}px)`;
+        if (direction < 0 && anchor)
+            viewport.scrollLeft += anchor.getBoundingClientRect().left - left;
+        return true;
+    };
     const stop = weekNavigation.mount(viewport, strip, {
+        extend,
         navigate: (step) => {
             const next = addDays(weekStart(selectedDate), step < 0 ? -1 : 7), date = parseDate(next);
             if (date.getFullYear() < 100 || date.getFullYear() > 9999)
@@ -1451,9 +1488,21 @@ function mountWeekNavigation() {
             render();
         },
         focus: (date) => {
-            if (!isValidDate(date) || weekStart(date) !== weekStart(selectedDate))
+            if (!isValidDate(date))
                 return;
+            const changedWeek = weekStart(date) !== weekStart(selectedDate);
             selectedDate = date;
+            if (viewport) {
+                viewport.dataset.focusDate = date;
+                viewport.dataset.timelineKey = `week:${weekStart(date)}`;
+            }
+            if (changedWeek && strip) {
+                const template = document.createElement('template');
+                template.innerHTML = calendarNavigation();
+                const next = template.content.firstElementChild;
+                strip.innerHTML = next.innerHTML;
+                strip.setAttribute('aria-label', periodTitle());
+            }
             const chosen = parseDate(date), now = new Date();
             viewYear = chosen.getFullYear();
             viewMonth = chosen.getMonth();

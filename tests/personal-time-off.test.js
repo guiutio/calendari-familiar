@@ -97,6 +97,7 @@ test('Any, Mes i Setmana atenuen les dates lliures de la persona identificada',(
  assert.equal(annualCell('2026-11-06'),'year-day-number');
  s.ctx.calendarView='week';s.ctx.selectedDate='2026-11-07';
  assert.match(s.ctx.calendarNavigation(),/week-strip-day is-day-off selected[^>]+data-date="2026-11-07"/);
+ s.ctx.weekDayRange=null;
  vm.runInContext(read('day-timeline.js')+section('function weekTimeline(', 'function miniBands('),s.ctx);
  Object.assign(s.ctx,{dayTimelineUI:s.ctx.window.dayTimelineUI,nightChangeTime:()=> '19:00',assigned:()=>'',schoolActivities:()=>[],extraSlots:()=>[],timelineZoomForView:()=>50});
  const week=s.ctx.weekTimeline('2026-11-02',s.state.children);
