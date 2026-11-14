@@ -141,3 +141,16 @@ test('el tram continu afegeix dies als dos extrems sense navegar de cop ni perdr
  viewport.scrollLeft=323;handlers.get('wheel')({...wheel,deltaX:-100});handlers.get('scroll')();handlers.get('scrollend')();
  assert.ok(first<0);assert.equal(selected.at(-1),date(1));assert.deepEqual(navigated,[]);
 });
+
+
+test('el dia de la barra canvia en el mateix esdeveniment scroll sense esperar scrollend ni temporitzadors',()=>{
+ const s=setup(0,true);
+ s.viewport.scrollLeft=392;s.viewport.emit('scroll');
+ assert.deepEqual(s.focused,['2026-11-03']);assert.equal(s.timers.size,0);
+ s.viewport.scrollLeft=392+10;s.viewport.emit('scroll');
+ assert.deepEqual(s.focused,['2026-11-03'],'No repeteix l’actualització del mateix dia');
+ s.viewport.scrollLeft=784;s.viewport.emit('scroll');
+ assert.deepEqual(s.focused,['2026-11-03','2026-11-04']);
+ s.viewport.scrollLeft=0;s.viewport.emit('scroll');
+ assert.equal(s.focused.at(-1),'2026-11-02');assert.equal(s.timers.size,0);
+});

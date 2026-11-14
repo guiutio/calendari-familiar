@@ -2,7 +2,7 @@
 (() => {
  let wheelLocked=false,lastWheel=0,suppressClickUntil=0;
  function mount(viewport,strip,{navigate,focus,extend}){
-  const cleanups=[];let timer,touch=null,interacted=false,distance=0,filling=false;
+  const cleanups=[];let touch=null,interacted=false,distance=0,filling=false,lastFocusedDate=viewport?.dataset?.focusDate??'';
   const listen=(target,type,handler,options)=>{
    if(!target)return;
    target.addEventListener(type,handler,options);
@@ -28,10 +28,18 @@
    interacted=false;
    const edge=viewport.getBoundingClientRect().left+52;
    const days=Array.from(viewport.querySelectorAll('.week-day-header'));
-   const closest=days.reduce((best,day)=>!best||Math.abs(day.getBoundingClientRect().left-edge)<Math.abs(best.getBoundingClientRect().left-edge)?day:best,null);
-   if(closest)focus(closest.dataset.date);
+   const first=days[0]?.getBoundingClientRect(),width=first?.width;
+   const closest=width>0?days[Math.max(0,Math.min(days.length-1,Math.round((edge-first.left)/width)))]:
+    days.reduce((best,day)=>!best||Math.abs(day.getBoundingClientRect().left-edge)<Math.abs(best.getBoundingClientRect().left-edge)?day:best,null);
+   if(closest&&closest.dataset.date!==lastFocusedDate){lastFocusedDate=closest.dataset.date;focus(lastFocusedDate);}
   };
-  const scrolled=()=>{if(extend&&!filling){interacted=true;fill();}clearTimeout(timer);timer=setTimeout(selectVisible,140);};
+  const scrolled=()=>{
+   if(filling)return;
+   interacted=true;
+   // Actualitza la barra en el mateix esdeveniment, també durant la inèrcia.
+   selectVisible();
+   fill();
+  };
   const wheel=(event,wholeWeek)=>{
    const raw=event.deltaX||(event.shiftKey?event.deltaY:0);
    if(!raw||(!event.shiftKey&&Math.abs(raw)<=Math.abs(event.deltaY)))return;
@@ -43,7 +51,7 @@
    if(!outward){distance=0;interacted=true;return;}
    event.preventDefault();
    distance=Math.sign(distance)===Math.sign(delta)?distance+delta:delta;
-   if(Math.abs(distance)>=64){wheelLocked=true;interacted=false;clearTimeout(timer);navigate(Math.sign(distance));}
+   if(Math.abs(distance)>=64){wheelLocked=true;interacted=false;navigate(Math.sign(distance));}
   };
   const start=(event,wholeWeek)=>{
    if(event.touches.length!==1){touch=null;return;}
@@ -72,7 +80,7 @@
    const {horizontal,excess,wholeWeek}=touch;touch=null;
    if(!horizontal)return;
    suppressClickUntil=Date.now()+350;
-   if(Math.abs(excess)>=64&&(wholeWeek||!extend)){interacted=false;clearTimeout(timer);navigate(Math.sign(excess));}
+   if(Math.abs(excess)>=64&&(wholeWeek||!extend)){interacted=false;navigate(Math.sign(excess));}
    else if(singleDay()&&!wholeWeek)scrolled();
    else selectVisible();
   };
@@ -93,7 +101,7 @@
    if(event.altKey&&(event.key==='ArrowLeft'||event.key==='ArrowRight')){event.preventDefault();navigate(event.key==='ArrowLeft'?-1:1);}
    else if(event.key==='ArrowLeft'||event.key==='ArrowRight'){interacted=true;}
   });
-  return ()=>{clearTimeout(timer);cleanups.forEach(cleanup=>cleanup());};
+  return ()=>{cleanups.forEach(cleanup=>cleanup());};
  }
  window.weekNavigation={mount};
 })();
