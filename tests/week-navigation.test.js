@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
-function setup(initialLeft=0,singleDay=false){
+function setup(initialLeft=0,singleDay=false,finePointer=!singleDay){
  const dayWidth=singleDay?392:196;
  let now=1000,serial=0;const timers=new Map(),navigations=[],focused=[];
  const target=()=>{
@@ -14,7 +14,7 @@ function setup(initialLeft=0,singleDay=false){
  const viewport={...target(),scrollLeft:initialLeft,scrollWidth:52+7*dayWidth,clientWidth:444,getBoundingClientRect:()=>({left:0}),
   querySelectorAll:()=>Array.from({length:7},(_,i)=>({dataset:{date:`2026-11-0${i+2}`},getBoundingClientRect:()=>({left:52+i*dayWidth-viewport.scrollLeft})}))};
  const strip=target();
- const ctx=vm.createContext({window:{matchMedia:()=>({matches:singleDay})},Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)});
+ const ctx=vm.createContext({window:{matchMedia:query=>({matches:query==='(pointer:fine)'?finePointer:singleDay})},Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)});
  vm.runInContext(read('week-navigation.js'),ctx);
  const mount=()=>ctx.window.weekNavigation.mount(viewport,strip,{navigate:step=>navigations.push(step),focus:date=>focused.push(date)});
  const cleanup=mount();
@@ -44,8 +44,8 @@ test('la capçalera també permet canviar de setmana, encara que no hi hagi fill
  const s=setup();s.touch('touchstart',250,100,s.strip);s.touch('touchmove',120,100,s.strip);s.touch('touchend',120,100,s.strip);
  assert.deepEqual(s.navigations,[1]);assert.equal(s.viewport.scrollLeft,0);
 });
-test('la roda horitzontal només canvia de setmana als extrems i no intercepta el scroll vertical',()=>{
- const s=setup(196);assert.equal(s.wheel(100).prevented,false);assert.equal(s.wheel(0,100).prevented,false);
+test('la roda horitzontal canvia de setmana als extrems i la rodeta del PC mou la graella',()=>{
+ const s=setup(196);assert.equal(s.wheel(100).prevented,false);assert.equal(s.wheel(0,100).prevented,true);assert.equal(s.viewport.scrollLeft,296);
  s.viewport.scrollLeft=980;s.wheel(30);assert.deepEqual(s.navigations,[]);s.wheel(40);assert.deepEqual(s.navigations,[1]);
 });
 test('la inèrcia de la roda no encadena setmanes, també després de reconstruir la vista',()=>{
@@ -153,4 +153,23 @@ test('el dia de la barra canvia en el mateix esdeveniment scroll sense esperar s
  assert.deepEqual(s.focused,['2026-11-03','2026-11-04']);
  s.viewport.scrollLeft=0;s.viewport.emit('scroll');
  assert.equal(s.focused.at(-1),'2026-11-02');assert.equal(s.timers.size,0);
+});
+
+
+test('la rodeta al PC avança i retrocedeix horitzontalment amb unitats de píxel, línia i pàgina',()=>{
+ const s=setup(392);
+ assert.equal(s.wheel(0,120).prevented,true);assert.equal(s.viewport.scrollLeft,512);
+ assert.equal(s.wheel(0,-120).prevented,true);assert.equal(s.viewport.scrollLeft,392);
+ s.viewport.emit('wheel',{deltaX:0,deltaY:3,deltaMode:1});assert.equal(s.viewport.scrollLeft,440);
+ s.viewport.emit('wheel',{deltaX:0,deltaY:1,deltaMode:2});assert.equal(s.viewport.scrollLeft,884);
+ s.wheel(0,-100,s.strip);assert.equal(s.viewport.scrollLeft,784);
+});
+
+test('la rodeta conserva el zoom del navegador i els gestos verticals tàctils',()=>{
+ const s=setup(392);
+ assert.equal(s.viewport.emit('wheel',{deltaX:0,deltaY:120,ctrlKey:true}).prevented,false);
+ assert.equal(s.viewport.emit('wheel',{deltaX:0,deltaY:120,metaKey:true}).prevented,false);
+ assert.equal(s.viewport.scrollLeft,392);
+ const touch=setup(392,true);assert.equal(touch.wheel(0,120).prevented,false);assert.equal(touch.viewport.scrollLeft,392);
+ const coarse=setup(392,false,false);assert.equal(coarse.wheel(0,120).prevented,false);assert.equal(coarse.viewport.scrollLeft,392);
 });
