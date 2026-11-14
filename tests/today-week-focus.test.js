@@ -39,8 +39,8 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(theme,/\[data-current-period\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.week-date-columns\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
- assert.match(html,/styles\.css\?v=0\.19\.4/);
- assert.match(sw,/calendari-familiar-v0\.19\.4/);
+ assert.match(html,/styles\.css\?v=0\.19\.5/);
+ assert.match(sw,/calendari-familiar-v0\.19\.5/);
 });
 
 const between=(a,b)=>{
@@ -112,6 +112,19 @@ test('en entrar a la vista amb diversos dies es mostra dilluns i es conserva el 
 
 test('en reduir una setmana completa a la vista estreta, es mostra el dia que estava seleccionat',()=>{
  assert.deepEqual(simulateRender({oldFocus:'2026-10-29',oldMode:'multi',oldLeft:0,focusDate:'2026-10-29'}),{left:588,searchCount:1});
+});
+
+test('amb diversos dies, seleccionar una data no repinta la graella i el botó d’edició obre aquella data',()=>{
+ let paints=0;
+ const context=vm.createContext({calendarView:'week',selectedDate:'2026-10-26',sheet:null,
+  weekNavigation:{singleDay:()=>false},isValidDate:value=>/^\d{4}-\d{2}-\d{2}$/.test(value),
+  selectWeekDate:value=>context.selectedDate=value,render:()=>paints++});
+ vm.runInContext(between('function clickAction(button) {',"document.addEventListener('click'"),context);
+ context.clickAction({dataset:{action:'focus-week-day',date:'2026-10-29'}});
+ assert.equal(context.selectedDate,'2026-10-29');assert.equal(paints,0);
+ context.clickAction({dataset:{action:'open-day-edit'}});
+ assert.equal(context.sheet.type,'dayEdit');assert.equal(context.sheet.date,'2026-10-29');
+ assert.equal(paints,1);
 });
 
 test('tocar una setmana actual enfoca avui; altres setmanes enfoquen el dilluns',()=>{

@@ -6,7 +6,7 @@
   const cleanups=[];let touch=null,interacted=false,distance=0,filling=false,lastFocusedDate=viewport?.dataset?.focusDate??'';
   const initialSingleDay=singleDay();
   if(viewport?.dataset)viewport.dataset.weekMode=initialSingleDay?'day':'multi';
-  let snapTimer;
+  let snapTimer,lastScrollLeft;
   const pauseSnap=()=>{if(viewport?.style)viewport.style.scrollSnapType='none';};
   const snap=()=>{
    if(!viewport)return;
@@ -50,10 +50,14 @@
   const scrolled=()=>{
    // Un canvi d'amplada pot emetre scroll abans que ResizeObserver torni a muntar la vista.
    if(filling||initialSingleDay!==singleDay())return;
+   const currentLeft=left();
+   if(currentLeft===lastScrollLeft&&!interacted)return;
+   lastScrollLeft=currentLeft;
    interacted=true;
    // Actualitza la barra en el mateix esdeveniment, també durant la inèrcia.
    selectVisible();
    fill();
+   lastScrollLeft=left();
    sync?.();
   };
   const wheel=(event,wholeWeek)=>{
@@ -111,7 +115,7 @@
   };
   const cancel=()=>{touch=null;interacted=false;if(viewport?.style)viewport.style.scrollSnapType='';};
   const click=event=>{if(Date.now()<suppressClickUntil){event.preventDefault();event.stopPropagation();}};
-  fill();sync?.();
+  fill();sync?.();lastScrollLeft=left();
   for(const [target,wholeWeek] of [[viewport,false],[strip,true]]){
    listen(target,'wheel',event=>wheel(event,wholeWeek),{passive:false});
    listen(target,'touchstart',event=>start(event,wholeWeek),{passive:true});

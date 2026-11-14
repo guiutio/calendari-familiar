@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.19.4';
+const APP_VERSION = '0.19.5';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -88,7 +88,7 @@ const icons = {
     'calendar-week': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M7 10v11m5-11v11m5-11v11"/>',
     'calendar-day': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/><path d="M8 14h8m-8 3h5"/>',
     repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
-    settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2 2-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21h-2.85v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06-2-2 .06-.06A1.65 1.65 0 0 0 7.6 15a1.65 1.65 0 0 0-1.51-1H6v-2.85h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06 2-2 .06.06A1.65 1.65 0 0 0 11.09 6a1.65 1.65 0 0 0 1-1.51V4h2.85v.49a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06 2 2-.06.06A1.65 1.65 0 0 0 19.4 10a1.65 1.65 0 0 0 1.51 1H21v3h-.09a1.65 1.65 0 0 0-1.51 1Z" transform="translate(-.5 -.5) scale(.94)"/>',
+    settings: '<polygon points="10.54,4.64 10.05,2.19 13.95,2.19 13.46,4.64 16.17,5.76 17.56,3.69 20.31,6.44 18.24,7.83 19.36,10.54 21.81,10.05 21.81,13.95 19.36,13.46 18.24,16.17 20.31,17.56 17.56,20.31 16.17,18.24 13.46,19.36 13.95,21.81 10.05,21.81 10.54,19.36 7.83,18.24 6.44,20.31 3.69,17.56 5.76,16.17 4.64,13.46 2.19,13.95 2.19,10.05 4.64,10.54 5.76,7.83 3.69,6.44 6.44,3.69 7.83,5.76"/><circle cx="12" cy="12" r="3.25"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>', chevronRight: '<path d="m9 18 6-6-6-6"/>',
     zoom: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M7.5 10.5h6m-3-3v6"/>',
     filter: '<path d="M4 7h16M7 12h10M10 17h4"/>',
@@ -687,7 +687,8 @@ function calendarControls(docked = false) {
 function layout(content) {
     return `<div class="app-layout ${tab === 'calendar' ? 'calendar-layout' : ''}${tab === 'calendar' && calendarView === 'week' ? ' calendar-week-layout' : ''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home', 22)}</span><span><div class="brand-name">Calendari<br>Familiar</div><div class="brand-caption">v${APP_VERSION}</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${tab === 'calendar' ? `<hr class="side-nav-separator">${calendarControls(true)}<hr class="side-nav-separator">` : ''}${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${tab === 'calendar' ? `<hr class="side-nav-separator">${calendarControls(true)}` : ''}</nav>
+  <nav class="side-nav-bottom" aria-label="Configuració"><hr class="side-nav-separator">${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   </aside>${tab === 'calendar' ? (calendarView === 'year' ? '' : calendarControls()) + calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
   <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
@@ -1483,10 +1484,8 @@ function mountWeekNavigation() {
         const key = `${headers[0]?.dataset.date}:${headers.at(-1)?.dataset.date}`;
         if (track.dataset.range !== key) {
             const arrows = Array.from(strip.querySelectorAll('.week-fixed-strip .week-arrow')).map(button => button.outerHTML).join('');
-            track.innerHTML = `<span class="week-strip-corner">${arrows}</span>${headers.map(header => weekStripDay(header.dataset.date, false)).join('')}`;
+            track.innerHTML = `<span class="week-strip-corner">${arrows}</span>${headers.map(header => weekStripDay(header.dataset.date)).join('')}`;
             track.dataset.range = key;
-            // Les dates només són navegables quan es mostra un sol dia.
-            viewport.querySelectorAll('.week-date-button').forEach(button => button.disabled = true);
         }
         scroller.style.width = `${viewport.clientWidth}px`;
         track.style.width = `${inner.getBoundingClientRect().width}px`;
@@ -1537,47 +1536,50 @@ function mountWeekNavigation() {
             weekFocusTarget = true;
             render();
         },
-        focus: (date) => {
-            if (!isValidDate(date))
-                return;
-            const changedWeek = weekStart(date) !== weekStart(selectedDate);
-            selectedDate = date;
-            if (viewport) {
-                viewport.dataset.focusDate = date;
-                viewport.dataset.timelineKey = `week:${weekStart(date)}`;
-            }
-            if (changedWeek && strip && weekNavigation.singleDay()) {
-                const template = document.createElement('template');
-                template.innerHTML = calendarNavigation();
-                const next = template.content.firstElementChild;
-                strip.innerHTML = next.innerHTML;
-                strip.setAttribute('aria-label', periodTitle());
-            }
-            strip?.setAttribute('aria-label', periodTitle());
-            const chosen = parseDate(date), now = new Date();
-            viewYear = chosen.getFullYear();
-            viewMonth = chosen.getMonth();
-            const title = $app.querySelector('.calendar-controls-week-title');
-            const monthLabel = title?.querySelector?.('.calendar-controls-week-month');
-            const yearLabel = title?.querySelector?.('.calendar-controls-week-year');
-            if (monthLabel) {
-                monthLabel.textContent = months[chosen.getMonth()] ?? '';
-                monthLabel.toggleAttribute('data-current-period', viewYear === now.getFullYear() && viewMonth === now.getMonth());
-            }
-            if (yearLabel) {
-                yearLabel.textContent = String(viewYear);
-                yearLabel.toggleAttribute('data-current-period', viewYear === now.getFullYear());
-            }
-            strip?.querySelectorAll('.week-strip-day').forEach(button => {
-                const active = button.dataset.date === date;
-                button.classList.toggle('selected', active);
-                if (button.tagName === 'BUTTON')
-                    button.setAttribute('aria-pressed', String(active));
-            });
-        }
+        focus: selectWeekDate
     });
     const previousStop = stopCalendarScroll;
     stopCalendarScroll = () => { previousStop?.(); stop(); };
+}
+function selectWeekDate(date) {
+    const viewport = $app.querySelector('.week-timeline-viewport');
+    const strip = $app.querySelector('.week-day-strip');
+    if (!isValidDate(date))
+        return;
+    const changedWeek = weekStart(date) !== weekStart(selectedDate);
+    selectedDate = date;
+    if (viewport) {
+        viewport.dataset.focusDate = date;
+        viewport.dataset.timelineKey = `week:${weekStart(date)}`;
+    }
+    if (changedWeek && strip && weekNavigation.singleDay()) {
+        const template = document.createElement('template');
+        template.innerHTML = calendarNavigation();
+        const next = template.content.firstElementChild;
+        strip.innerHTML = next.innerHTML;
+        strip.setAttribute('aria-label', periodTitle());
+    }
+    strip?.setAttribute('aria-label', periodTitle());
+    const chosen = parseDate(date), now = new Date();
+    viewYear = chosen.getFullYear();
+    viewMonth = chosen.getMonth();
+    const title = $app.querySelector('.calendar-controls-week-title');
+    const monthLabel = title?.querySelector?.('.calendar-controls-week-month');
+    const yearLabel = title?.querySelector?.('.calendar-controls-week-year');
+    if (monthLabel) {
+        monthLabel.textContent = months[chosen.getMonth()] ?? '';
+        monthLabel.toggleAttribute('data-current-period', viewYear === now.getFullYear() && viewMonth === now.getMonth());
+    }
+    if (yearLabel) {
+        yearLabel.textContent = String(viewYear);
+        yearLabel.toggleAttribute('data-current-period', viewYear === now.getFullYear());
+    }
+    strip?.querySelectorAll('.week-strip-day').forEach(button => {
+        const active = button.dataset.date === date;
+        button.classList.toggle('selected', active);
+        if (button.tagName === 'BUTTON')
+            button.setAttribute('aria-pressed', String(active));
+    });
 }
 function render() {
     if (deferRenderForNativePicker())
@@ -2277,7 +2279,24 @@ function clickAction(button) {
             render();
             break;
         }
-        case 'focus-week-day':
+        case 'focus-week-day': {
+            const date = button.dataset.date ?? '';
+            if (!isValidDate(date))
+                break;
+            if (calendarView === 'week' && !weekNavigation.singleDay()) {
+                selectWeekDate(date);
+                break;
+            }
+            selectedDate = date;
+            calendarView = 'week';
+            weekFocusTarget = true;
+            sheet = null;
+            const day = parseDate(date);
+            viewYear = day.getFullYear();
+            viewMonth = day.getMonth();
+            render();
+            break;
+        }
         case 'show-calendar-day':
         case 'open-day': {
             const date = button.dataset.date ?? '';

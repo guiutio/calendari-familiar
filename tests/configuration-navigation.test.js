@@ -35,7 +35,8 @@ const navTargets=(html,kind)=>{
 
 test('Configuració conserva les quatre àrees i la navegació inclou les tres vistes del calendari',()=>{
  const s=setup();s.ctx.changeTab('settings');
- assert.deepEqual(navTargets(s.html,'side-nav'),['year','month','week','settings']);
+ assert.deepEqual(navTargets(s.html,'side-nav'),['year','month','week']);
+ assert.deepEqual(navTargets(s.html,'side-nav-bottom'),['settings']);
  assert.deepEqual(navTargets(s.html,'mobile-tabs'),['year','month','week','settings']);
  assert.deepEqual([...s.html.matchAll(/settings-area-link[^>]+data-tab="([^"]+)"/g)].map(match=>match[1]),['general','people','rotation','schools']);
  assert.deepEqual([...s.html.matchAll(/settings-area-copy"><strong>([^<]+)/g)].map(match=>match[1]),['General','Persones','Rotacions','Escoles']);

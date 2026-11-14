@@ -211,3 +211,10 @@ test('redimensionar entre un dia i diversos dies no canvia la data abans del nou
  const s=setup(392);s.setSingleDay(true);s.viewport.emit('scroll');
  assert.deepEqual(s.focused,[]);
 });
+
+test('el scroll programàtic sense moviment en repintar no substitueix el dia triat per editar',()=>{
+ const s=setup(392);s.viewport.emit('scroll');s.viewport.emit('scrollend');
+ assert.deepEqual(s.focused,[]);
+ s.viewport.scrollLeft=588;s.viewport.emit('scroll');
+ assert.deepEqual(s.focused,['2026-11-05']);
+});

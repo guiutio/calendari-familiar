@@ -797,7 +797,8 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 
 .calendar-sticky-bar .filter-button {min-height:33px;padding:6px 9px;position:relative;}
 @media(min-width:901px) {
-  .sidebar {position:sticky;top:0;align-self:start;min-height:100vh;}
+  .sidebar {position:sticky;top:0;align-self:start;min-height:100vh;display:flex;flex-direction:column;}
+  .side-nav-bottom {margin-top:auto;padding-top:16px;}
 }
 @media(max-width:560px) {
   .calendar-sticky-bar .filter-button {width:32px;min-height:32px;padding:0;}
@@ -1095,7 +1096,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .week-fixed-strip {display:none;grid-template-columns:32px repeat(7,minmax(0,1fr)) 32px;gap:0;padding:10px 0 10px;}
 .week-scroll-strip {overflow:hidden;max-width:100%;}
 .week-scroll-track {display:grid;gap:0;padding:10px 0;}
-.week-scroll-track .week-strip-day {cursor:default;}
 .week-strip-corner {position:sticky;left:0;z-index:1;display:flex;align-items:center;background:var(--app-background);}
 .week-strip-corner .week-arrow {width:26px;}
 .week-date-button:disabled {opacity:1;cursor:default;}
