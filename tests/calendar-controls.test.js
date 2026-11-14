@@ -22,7 +22,16 @@ for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i c
     assert.match(controls,/class="calendar-controls-week-month" data-current-period>novembre<\/span>/);
     assert.match(controls,/class="calendar-controls-week-year" data-current-period>2026<\/span>/);
   } else assert.doesNotMatch(controls,/calendar-controls-year/);
- if(view==='year')assert.equal(title,'');
+ if(view==='year'){
+  assert.equal(title,'');
+  Object.assign(ctx,{tab:'calendar',calendarViewButtons:()=>'<button>Vistes</button>',navButton:()=>'<button>Configuració</button>'});
+  vm.runInContext(app.slice(app.indexOf('function layout('),app.indexOf('function monthPanel(')),ctx);
+  const layout=ctx.layout('<div class="year-sequence"></div>');
+  assert.match(layout,/<\/aside><main class="main-area">/);
+  const mobile=layout.slice(layout.indexOf('<nav class="mobile-tabs"'));
+  assert.match(mobile,/year-tools[\s\S]*open-filters[\s\S]*open-legend[\s\S]*Configuració/);
+ }
+
  else if(view==='month'){
   assert.match(title,/<div class="weekdays"><span class="week-strip-label">dl\.<\/span>.*<span class="week-strip-label">dg\.<\/span>/);
   assert.doesNotMatch(title,/calendar-title|calendar-toolbar/);

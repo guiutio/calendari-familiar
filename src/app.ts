@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.17.18';
+const APP_VERSION = '0.17.19';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -588,19 +588,19 @@ function isCurrentPeriod(){
   const todayDate=localDate(new Date());
   return calendarView==='week'?weekStart(selectedDate)===weekStart(todayDate):selectedDate===todayDate;
 }
-function calendarControls(){
+function calendarControls(docked=false){
   const chosen=calendarView==='week'?parseDate(selectedDate):null,now=new Date();
   const children=activeChildren();
   const showHolyWeek=state.preferences.showHolyWeek&&(calendarView==='year'||calendarView==='month');
   const filtered=showHolyWeek||children.length!==state.children.length||state.preferences.visibleGuardians.length!==state.guardians.length||state.preferences.visibleSchools.length>0||Boolean(state.personTimeOff&&personalTimeOff.filtered(state));
-  return `<nav class="calendar-controls" aria-label="Controls del calendari">${calendarView==='month'?`<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear===new Date().getFullYear()?' data-current-period':''}>${viewYear}</span>`:''}${chosen?`<span class="calendar-controls-year calendar-controls-week-title"><span class="calendar-controls-week-month"${chosen.getFullYear()===now.getFullYear()&&chosen.getMonth()===now.getMonth()?' data-current-period':''}>${escapeHtml(months[chosen.getMonth()])}</span><span class="calendar-controls-week-year"${chosen.getFullYear()===now.getFullYear()?' data-current-period':''}>${chosen.getFullYear()}</span></span>`:''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></nav>`;
+  return `<div class="calendar-controls${docked?' year-tools':''}" role="group" aria-label="Controls del calendari">${calendarView==='month'?`<span class="calendar-controls-year" data-calendar-year="${viewYear}"${viewYear===new Date().getFullYear()?' data-current-period':''}>${viewYear}</span>`:''}${chosen?`<span class="calendar-controls-year calendar-controls-week-title"><span class="calendar-controls-week-month"${chosen.getFullYear()===now.getFullYear()&&chosen.getMonth()===now.getMonth()?' data-current-period':''}>${escapeHtml(months[chosen.getMonth()])}</span><span class="calendar-controls-week-year"${chosen.getFullYear()===now.getFullYear()?' data-current-period':''}>${chosen.getFullYear()}</span></span>`:''}<div class="calendar-tools"><button class="filter-button" data-action="open-filters" aria-label="Filtres del calendari">${icon('filter',18)}<span class="filter-copy">Filtres</span>${filtered?'<span class="filter-dot"></span>':''}</button><button type="button" class="filter-button legend-panel-button" data-action="open-legend" aria-label="Llegenda del calendari" aria-haspopup="dialog" aria-expanded="${sheet?.type==='legend'}" title="Llegenda">${icon('info',18)}</button>${calendarView==='week'?`<button type="button" class="filter-button edit-panel-button" data-action="open-day-edit" aria-label="Edita el dia seleccionat" aria-haspopup="dialog" aria-expanded="${sheet?.type==='dayEdit'}" title="Edita el dia">${icon('pencil',18)}</button>`:''}${calendarView==='week'?`<button type="button" class="filter-button zoom-panel-button" data-action="open-zoom" aria-label="Zoom de les hores" aria-haspopup="dialog" aria-expanded="${sheet?.type==='zoom'}" title="Zoom: ${timelineZoomForView()}%">${icon('zoom',18)}</button>`:''}</div></div>`;
 }
 function layout(content:string){return `<div class="app-layout ${tab==='calendar'?'calendar-layout':''}${tab==='calendar'&&calendarView==='week'?' calendar-week-layout':''}"><aside class="sidebar">
   <div class="brand"><span class="brand-mark">${icon('home',22)}</span><span><div class="brand-name">Calendari<br>Familiar</div></span></div>
-  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings','Configuració','settings','side')}</nav>
+  <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${navButton('settings','Configuració','settings','side')}</nav>${tab==='calendar'&&calendarView==='year'?calendarControls(true):''}
   <p class="side-foot">${icon('shield',17)}<br><strong>Les dades són teves.</strong><br>Tot queda al teu dispositiu.</p>
-  </aside>${tab==='calendar'?calendarControls()+calendarNavigation():''}<main class="main-area"><div class="content">${tab!=='calendar'&&tab!=='settings'?`<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft',17)} Configuració</button></nav>`:''}${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
+  </aside>${tab==='calendar'?(calendarView==='year'?'':calendarControls())+calendarNavigation():''}<main class="main-area"><div class="content">${tab!=='calendar'&&tab!=='settings'?`<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft',17)} Configuració</button></nav>`:''}${content}</div></main>
+  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab==='calendar'&&calendarView==='year'?calendarControls(true):''}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function monthPanel(index:number,children:Child[],today:string):string {
     const year=Math.floor(index/12),month=index-year*12;
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
@@ -631,10 +631,10 @@ function monthPanel(index:number,children:Child[],today:string):string {
 function monthPosition():MonthPosition|null {
   const annual=calendarView==='year';
   const sequence=$app.querySelector<HTMLElement>(annual?'.year-sequence':'.month-sequence');
-  const bar=$app.querySelector<HTMLElement>(annual?'.calendar-controls':'.calendar-sticky-bar');
+  const bar=$app.querySelector<HTMLElement>(annual?'.main-area':'.calendar-sticky-bar');
   if(!sequence||!bar)return null;
   const panels=Array.from(sequence.querySelectorAll<HTMLElement>(annual?'.year-panel':'.month-panel'));
-  const top=bar.getBoundingClientRect().bottom;
+  const top=annual?Math.max(0,bar.getBoundingClientRect().top):bar.getBoundingClientRect().bottom;
   const panel=panels.find(el=>el.getBoundingClientRect().bottom>top+1)??panels.at(-1);
   const cell=panel?Array.from(panel.querySelectorAll<HTMLElement>(annual?'.year-month':'.day-cell')).find(el=>el.getBoundingClientRect().bottom>top+1):null;
   return panel?{index:Number(annual?panel.dataset.yearIndex:panel.dataset.monthIndex),top:panel.getBoundingClientRect().top,date:annual?cell?.dataset.focusDate:cell?.dataset.date}:null;
@@ -656,7 +656,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
   const annual=calendarView==='year';
   const main=$app.querySelector<HTMLElement>('.main-area')!;
   const sequence=$app.querySelector<HTMLElement>(annual?'.year-sequence':'.month-sequence')!;
-  const bar=$app.querySelector<HTMLElement>(annual?'.calendar-controls':'.calendar-sticky-bar')!;
+  const bar=$app.querySelector<HTMLElement>(annual?'.main-area':'.calendar-sticky-bar')!;
   const mobile=()=>window.matchMedia('(max-width:900px)').matches;
   const panelSelector=(index:number)=>`[data-${annual?'year':'month'}-index="${index}"]`;
   if(!annual)fitMonthRows(main,sequence,bar,mobile());
@@ -669,7 +669,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const target=sequence.querySelector<HTMLElement>(panelSelector(annual?viewYear:viewYear*12+viewMonth));
     if(target){
       // La barra queda fora del contenidor desplaçable: el límit visible és la seva vora inferior.
-      const top=bar.getBoundingClientRect().bottom;
+      const top=annual?Math.max(0,bar.getBoundingClientRect().top):bar.getBoundingClientRect().bottom;
       const currentMonth=annual?target.querySelector<HTMLElement>('.year-month.current-month'):null;
       const start=currentMonth??target;
       shift(start.getBoundingClientRect().top-top);
@@ -706,7 +706,7 @@ function mountCalendarScroll(position:MonthPosition|null,resetScroll=false){
     const anchor=monthPosition();
     if(!anchor)return;
     const first=sequence.firstElementChild as HTMLElement,last=sequence.lastElementChild as HTMLElement;
-    const top=bar.getBoundingClientRect().bottom;
+    const top=annual?Math.max(0,bar.getBoundingClientRect().top):bar.getBoundingClientRect().bottom;
     const bottom=mobile()?main.getBoundingClientRect().bottom:window.innerHeight;
     let firstIndex=Number(annual?first.dataset.yearIndex:first.dataset.monthIndex),lastIndex=Number(annual?last.dataset.yearIndex:last.dataset.monthIndex),changed=false;
     const children=activeChildren(),today=localDate(new Date());
