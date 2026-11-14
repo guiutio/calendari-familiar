@@ -43,7 +43,10 @@ test('capçaleres navegables amb dates, horaris independents i dades filtrables'
  assert.ok(markup.includes('data-child="elna"'));
  assert.ok(markup.includes('data-child="blai"'));
  const empty=ui.renderWeek(dates[0],days,[]);
- assert.match(empty,/Selecciona algun fill/);
+ assert.match(empty,/00:00/);
+ assert.match(empty,/24:00/);
+ assert.equal((empty.match(/class="week-date-columns/g)||[]).length,7);
+ assert.doesNotMatch(empty,/Selecciona algun fill|--week-child-count:0/);
 });
 test('les 24 hores omplen l’alçada útil i tots els esdeveniments mantenen la proporció',()=>{
  const markup=ui.renderWeek(dates[0],days,children,50,'','',720);
