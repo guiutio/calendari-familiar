@@ -1128,6 +1128,12 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .year-tools .calendar-tools {gap:2px;}
 .year-tools .filter-button {width:28px;min-width:28px;min-height:40px;}
 .sidebar .year-tools {justify-content:flex-start;margin-top:16px;}
+.sidebar .calendar-controls.year-tools {display:block;margin-top:5px;}
+.sidebar .year-tools .calendar-tools {display:grid;width:100%;gap:5px;}
+.sidebar .calendar-controls.year-tools .filter-button {width:100%;min-height:48px;justify-content:flex-start;gap:13px;padding:14px 15px;border:0;border-radius:12px;background:transparent;box-shadow:none;color:var(--text-secondary);font-size:calc(14px * var(--font-scale,1));font-weight:610;text-align:left;}
+.sidebar .year-tools .filter-copy {display:inline;}
+.sidebar .year-tools .filter-button svg {width:20px;height:20px;}
+.sidebar .year-tools .filter-button:hover {background:var(--selection-background);}
 @media(min-width:901px) {
   .calendar-layout:has(.year-sequence) {grid-template-rows:1fr;}
   .calendar-layout:has(.year-sequence) .main-area {grid-row:1;padding-top:0;}

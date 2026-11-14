@@ -9,7 +9,7 @@ const dateHelpers=app.slice(app.indexOf('function localDate('),app.indexOf('func
  app.slice(app.indexOf('function weekStart('),app.indexOf('function fullAgenda('));
 const labels={year:'',month:'',week:'2 de Novembre – 8 de Novembre'};
 for(const view of Object.keys(labels))test(`${view}: capçalera corresponent i controls de navegació`,()=>{
- const ctx=vm.createContext({calendarView:view,viewYear:2026,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
+ const ctx=vm.createContext({APP_VERSION:'test',calendarView:view,viewYear:2026,selectedDate:view==='week'?'2026-11-02':'2026-11-04',sheet:null,activeChildren:()=>[],
   Date:class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]));}},
   state:{children:[],guardians:[],schools:[],preferences:{visibleGuardians:[],visibleSchools:[]}},
   icon:()=>'',escapeHtml:String,periodTitle:()=>labels[view],timelineZoomForView:()=>50,
