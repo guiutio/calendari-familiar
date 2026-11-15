@@ -95,3 +95,9 @@ test('la vista setmanal reusa la mateixa estructura de pernoctes i d’activitat
  assert.match(css,/\.week-time-axis \{position:sticky;left:0;/);
  assert.match(css,/\.week-timeline-viewport \{max-width:100%;/);
 });
+
+test('les franges de cada dia queden en una capa inferior a les hores, inclòs el focus',()=>{
+ assert.match(css,/\.week-date-columns \{position:relative;isolation:isolate;z-index:0;/);
+ assert.match(css,/\.week-time-axis \{position:sticky;left:0;z-index:[1-9]\d*;[^}]*background:/);
+ assert.match(css,/\.week-timeline-head \{position:sticky;top:0;z-index:[1-9]\d*;/);
+});

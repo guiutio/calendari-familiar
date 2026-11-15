@@ -511,7 +511,8 @@ hr { border:none;border-top:1px solid #edf0f3;margin:18px 0; }
 .week-date-button:active {background:#d0e5ff;}
 .week-child-headers {display:grid;grid-template-columns:repeat(var(--week-child-count),minmax(0,1fr));}
 .week-child-label {min-width:0;padding:8px 3px;display:block;overflow-wrap:anywhere;font-size:calc(11px * var(--font-scale,1));font-weight:750;color:#3c587a;}
-.week-date-columns {min-width:0;display:grid;grid-template-columns:repeat(var(--week-child-count),minmax(0,1fr));border-left:1px solid #d4e0ee;}
+/* Les franges, inclòs el focus, queden dins de la capa del dia, sota l’eix horari. */
+.week-date-columns {position:relative;isolation:isolate;z-index:0;min-width:0;display:grid;grid-template-columns:repeat(var(--week-child-count),minmax(0,1fr));border-left:1px solid #d4e0ee;}
 .week-date-columns .day-time-column:first-child {border-left:0;}
 :root[data-theme="dark"] .week-timeline-head {background:#26354c;border-color:#40556e;}
 :root[data-theme="dark"] .week-time-corner {background:#26354c;color:#e1ebf9;border-color:#40556e;}
