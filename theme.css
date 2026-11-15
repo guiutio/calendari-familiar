@@ -124,7 +124,6 @@
 :root[data-theme] .school-timeline-column {border-color:var(--grid-line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 53px,var(--grid-line) 53px,var(--grid-line) 54px);}
 :root[data-theme] .week-day-header.today,
 :root[data-theme] .week-day-header.today .week-date-button,
-:root[data-theme] .week-date-columns.today,
 :root[data-theme] .calendar-day-layout:has(.calendar-title[data-current-period]) :is(.day-timeline-headers,.day-timeline-grid) {background:var(--calendar-current);color:#fff;}
 :root[data-theme] .week-day-header.today .week-child-label,
 :root[data-theme] .calendar-day-layout:has(.calendar-title[data-current-period]) :is(.day-timeline-headers span,.day-time-tick) {color:#fff;}

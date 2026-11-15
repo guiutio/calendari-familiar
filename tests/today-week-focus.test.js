@@ -15,7 +15,7 @@ vm.runInNewContext(day,dayContext);
 const ui=dayContext.window.dayTimelineUI;
 const children=[{id:'elna',name:'Elna'},{id:'blai',name:'Blai'}];
 
-test('a Setmana es ressalta tota la columna d’avui i la capçalera, no els altres dies',()=>{
+test('a Setmana es marca avui a la capçalera i a la columna, no els altres dies',()=>{
  const dates=['2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30','2026-10-31','2026-11-01'];
  const days=dates.map(date=>({date,label:date,activities:[],nightSegments:{}}));
  const output=ui.renderWeek('2026-10-26',days,children,50,'2026-10-29','2026-10-29');
@@ -38,9 +38,10 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(theme,/\.month-grid \.day-cell\.today,\s*:root\[data-theme\] \.year-day\.today \{background:var\(--calendar-current\);color:#fff;/);
  assert.match(theme,/\[data-current-period\],[\s\S]*?\.year-month\.current-month \.year-month-title \{color:var\(--calendar-current\);/);
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
- assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.week-date-columns\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
- assert.match(html,/styles\.css\?v=0\.19\.6/);
- assert.match(sw,/calendari-familiar-v0\.19\.6/);
+ assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
+ assert.doesNotMatch(theme,/\.week-date-columns\.today/);
+ assert.match(html,/styles\.css\?v=0\.19\.7/);
+ assert.match(sw,/calendari-familiar-v0\.19\.7/);
 });
 
 const between=(a,b)=>{
