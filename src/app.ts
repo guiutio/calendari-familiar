@@ -102,7 +102,7 @@ type Tab = 'extracurricular' | 'calendar' | 'rotation' | 'schools' | 'people' | 
 type Sheet = {type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.24.1';
+const APP_VERSION = '0.24.2';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -476,9 +476,9 @@ type SchoolCalendarUI={
   render:(date:string,dateLabel:string,children:Child[],activities:SchoolCalendarItem[],commonRange?:[number,number]|null,empty?:boolean,reduced?:boolean)=>string;
 };
 const schoolCalendarUI=(window as Window & {schoolCalendarUI?:SchoolCalendarUI}).schoolCalendarUI;
-function schoolActivities(date:string,children:Child[]):SchoolCalendarItem[]{
+function schoolActivities(date:string,children:Child[],includeExtracurriculars=true):SchoolCalendarItem[]{
   const school=schoolCalendarUI?.collect(date,children,state.schools,state.preferences.visibleSchools,schoolScheduleForCalendarDay)??[];
-  const extra=state.extracurricularCourses?.length?extracurricular.collect(state,date,children):[];
+  const extra=includeExtracurriculars&&state.extracurricularCourses?.length?extracurricular.collect(state,date,children):[];
   return [...school,...extra].sort((a,b)=>a.start-b.start||a.end-b.end||a.childId.localeCompare(b.childId));
 }
 function schoolReducedDay(date:string,children:Child[]):boolean{
@@ -527,7 +527,7 @@ function extraSlots(date:string,children:Child[]):ExtraSlot[] {
 function monthData(date:string,children:Child[]){
   const nights:Record<string,any[]>={};
   for(const c of children)nights[c.id]=dayTimelineUI?.overnightSegments(date,c.id,nightChangeTime(date,c.id),assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians)??[];
-  return {nights,activities:schoolActivities(date,children),slots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extra:extraSlots(date,children)};
+  return {nights,activities:schoolActivities(date,children,false),slots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extra:extraSlots(date,children)};
 }
 function dayTimeline(date:string,children:Child[],minimumHeight=0):string{
  if(!dayTimelineUI)return '<p class="settings-note">No es pot carregar la línia temporal diària.</p>';

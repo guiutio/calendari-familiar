@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.24.1';
+const APP_VERSION = '0.24.2';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -524,9 +524,9 @@ function activeBands() { return BANDS.filter(b => state.preferences.visibleBands
 function bandKey(date, childId, band) { return `${date}|${childId}|${band}`; }
 function shortChildLabel(c) { return monthDayUI.childSymbol(c); }
 const schoolCalendarUI = window.schoolCalendarUI;
-function schoolActivities(date, children) {
+function schoolActivities(date, children, includeExtracurriculars = true) {
     const school = schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, schoolScheduleForCalendarDay) ?? [];
-    const extra = state.extracurricularCourses?.length ? extracurricular.collect(state, date, children) : [];
+    const extra = includeExtracurriculars && state.extracurricularCourses?.length ? extracurricular.collect(state, date, children) : [];
     return [...school, ...extra].sort((a, b) => a.start - b.start || a.end - b.end || a.childId.localeCompare(b.childId));
 }
 function schoolReducedDay(date, children) {
@@ -577,7 +577,7 @@ function monthData(date, children) {
     const nights = {};
     for (const c of children)
         nights[c.id] = dayTimelineUI?.overnightSegments(date, c.id, nightChangeTime(date, c.id), assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians) ?? [];
-    return { nights, activities: schoolActivities(date, children), slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extra: extraSlots(date, children) };
+    return { nights, activities: schoolActivities(date, children, false), slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extra: extraSlots(date, children) };
 }
 function dayTimeline(date, children, minimumHeight = 0) {
     if (!dayTimelineUI)

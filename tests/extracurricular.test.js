@@ -190,3 +190,21 @@ test('el mòdul d’extraescolars es carrega abans de l’app i està inclòs a 
  const version=JSON.parse(read('package.json')).version,resource=`extracurricular.js?v=${version}`,html=read('index.html');
  assert.ok(html.includes(resource));assert.ok(html.indexOf(resource)<html.indexOf(`app.js?v=${version}`));assert.ok(read('sw.js').includes(resource));
 });
+
+test('Any i Mes conserven l’escola i les rotacions però les extraescolars només es mostren a Setmana',()=>{
+ const s=setup(),c=s.course(),a=s.activity(c),g=s.group(a);s.session(g);
+ const school={id:'school-session',childId:'a',schoolId:'school',schoolName:'Escola',color:'#123456',start:540,end:960,startTime:'09:00',endTime:'16:00',kind:'Classe',description:''};
+ const rotation={childId:'a',from:960,to:1200,visible:true};
+ s.state.guardians=[];Object.assign(s.state.preferences,{visibleSchools:['school'],visibleGuardians:[]});
+ Object.assign(s.ctx,{state:s.state,extracurricular:s.api,schoolCalendarUI:{collect:()=>[school]},schoolScheduleForCalendarDay:()=>[],
+  dayTimelineUI:s.ctx.window.dayTimelineUI,monthDayUI:s.ctx.window.monthDayUI,nightChangeTime:()=> '19:00',assigned:()=>'',guardian:()=>undefined,
+  extraSlots:()=>[rotation],addDays:(day,n)=>new Date(Date.parse(day+'T12:00:00Z')+n*86400000).toISOString().slice(0,10),
+  parseDate:day=>new Date(day+'T12:00:00Z'),weekLong:['Dilluns','Dimarts','Dimecres','Dijous','Divendres','Dissabte','Diumenge'],workSchedule:{isDayOff:()=>false}});
+ const app=read('app.js'),section=(start,end)=>app.slice(app.indexOf(start),app.indexOf(end,app.indexOf(start)));
+ vm.runInContext(section('function schoolActivities(', 'function schoolReducedDay(')+section('function monthData(', 'function dayTimeline(')+section('function weekTimelineDays(', 'function miniBands('),s.ctx);
+ const before=JSON.stringify(s.state),monthly=s.ctx.monthData('2026-11-16',s.state.children);
+ assert.deepEqual(plain(monthly.activities),[school]);assert.deepEqual(plain(monthly.extra),[rotation]);
+ const weekly=s.ctx.weekTimelineDays('2026-11-16',s.state.children,1)[0];
+ assert.equal(weekly.activities.length,2);assert.equal(weekly.activities[1].kind,'Extraescolar');
+ assert.equal(weekly.activities[1].schoolName,'Música');assert.equal(JSON.stringify(s.state),before);
+});
