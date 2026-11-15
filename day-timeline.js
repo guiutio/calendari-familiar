@@ -17,49 +17,65 @@
         visible:Boolean(guardian&&visibleGuardianIds.includes(guardian.id))};
     });
   }
+  // Les franges se superposen com targetes: la més llarga al fons i un
+  // petit sagnat per cada nivell, sense repartir l’amplada en columnes.
+  function stackTimedBlocks(items) {
+    const active=[];
+    return items.filter(item=>item.end>item.start).sort((a,b)=>a.start-b.start||b.end-a.end||a.priority-b.priority||String(a.item.id??a.item.rotationId??'').localeCompare(String(b.item.id??b.item.rotationId??''))).map((entry,index)=>{
+      for(let i=active.length-1;i>=0;i--)if(active[i].end<=entry.start)active.splice(i,1);
+      const depth=active.reduce((level,item)=>Math.max(level,item.depth+1),0);
+      const placed={...entry,depth,layer:index+2};
+      active.push(placed);
+      return placed;
+    });
+  }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
   function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={},rotatingSlots=[]) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
-      const nights=segments.filter(s=>s.visible).map(s=>{
+      const visibleNights=segments.filter(s=>s.visible);
+      const nights=visibleNights.map((s,index)=>{
+        const same=(a,b)=>a&&b&&a.guardianId===b.guardianId&&a.to===b.from;
+        const continuedBefore=same(visibleNights[index-1],s),continuedAfter=same(s,visibleNights[index+1]);
         const h=(s.to-s.from)*pxPerMinute;
         const name=escape(s.guardianName);
         const title=`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`;
-        return `<button type="button" class="day-night-block" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
+        return `<button type="button" class="day-night-block${continuedBefore?' night-continues-before':''}${continuedAfter?' night-continues-after':''}" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
       }).join('');
-      const overrides=(customSlots[child.id]??[]).map(slot=>{
+      const childActivities=activities.filter(a=>a.childId===child.id);
+      const childRotations=rotatingSlots.filter(item=>item.childId===child.id&&item.visible);
+      const childOverrides=customSlots[child.id]??[];
+      const placed=stackTimedBlocks([
+        ...childRotations.map(item=>({item,start:Math.max(0,item.from),end:Math.min(DAY_MINUTES,item.to),priority:0})),
+        ...childOverrides.map(item=>({item,start:Math.max(0,item.from),end:Math.min(DAY_MINUTES,item.to),priority:1})),
+        ...childActivities.map(item=>({item,start:Math.max(0,item.start),end:Math.min(DAY_MINUTES,item.end),priority:2}))
+      ]);
+      const positions=new Map(placed.map(entry=>[entry.item,entry]));
+      const position=(item,extraStyle)=>{
+        const entry=positions.get(item),level=entry.depth+(visibleNights.length?1:0);
+        return `data-event-depth="${entry.depth}" style="top:${entry.start*pxPerMinute}px;height:${(entry.end-entry.start)*pxPerMinute}px;--event-indent:min(${level*6}px,30%);--event-layer:${entry.layer};${extraStyle}\"`;
+      };
+      const overrides=childOverrides.map(slot=>{
         const start=Math.max(0,slot.from),end=Math.min(DAY_MINUTES,slot.to);
         if(end<=start)return '';
         const title=`Assignació puntual · ${slot.name} · ${slot.startTime}–${slot.endTime}. Toca per editar.`;
-        return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" style="top:${start*pxPerMinute}px;height:${(end-start)*pxPerMinute}px;background-color:${escape(slot.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small></button>`;
+        return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" ${position(slot,`background-color:${escape(slot.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small></button>`;
       }).join('');
-      const childActivities=activities.filter(a=>a.childId===child.id).sort((a,b)=>a.start-b.start||a.end-b.end);
-      const childRotations=rotatingSlots.filter(item=>item.childId===child.id&&item.visible);
-      const overlapsActivity=item=>childActivities.some(a=>a.start<item.to&&a.end>item.from);
-      // Conservem una franja de la rotació al costat de les activitats amb horari.
-      const shared=childRotations.some(overlapsActivity),available=shared?77:100;
-      const laneEnds=[];
-      const placed=childActivities.map(a=>{
-        let lane=laneEnds.findIndex(end=>end<=a.start);
-        if(lane<0){lane=laneEnds.length;laneEnds.push(a.end);}else laneEnds[lane]=a.end;
-        return {a,lane};
-      });
-      const laneCount=Math.max(1,laneEnds.length);
-      const school=placed.map(({a,lane})=>{
+      const school=childActivities.map(a=>{
         const start=Math.max(0,a.start),end=Math.min(DAY_MINUTES,a.end);
         if(end<=start)return '';
         const isExtracurricular=a.kind==='Extraescolar';
         const caption=isExtracurricular?`${a.schoolName} · ${a.startTime}–${a.endTime}`:`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
-        const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
         const heading=`<span class="day-school-kind">${escape(isExtracurricular?a.schoolName:a.kind)}</span>`;
         const hours=`<span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span>`;
-        return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${shared?'23% + ':''}${lane} * ${available}% / ${laneCount} + 3px);width:calc(${available}% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
+        return `<button type="button" class="day-school-block" ${position(a,`--school-event-color:${escape(a.color)}`)} data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
       const extras=childRotations.map(item=>{
+        if(!positions.has(item))return '';
         const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
-        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}${overlapsActivity(item)?' with-activity':''}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
+        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" ${position(item,`--extra-color:${escape(item.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
       }).join('');
-      return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
+      return `<div class="day-time-column" style="height:${height}px;--event-focus-layer:${placed.length+3}" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');
     return columns;
   }
@@ -112,5 +128,5 @@
       </div>
     </section>`;
   }
-  window.dayTimelineUI={overnightSegments,render,renderWeek,PX_PER_MINUTE,FOCUS_MINUTE};
+  window.dayTimelineUI={overnightSegments,stackTimedBlocks,render,renderWeek,PX_PER_MINUTE,FOCUS_MINUTE};
 })();

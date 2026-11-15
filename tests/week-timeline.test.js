@@ -52,7 +52,7 @@ test('les 24 hores omplen l’alçada útil i tots els esdeveniments mantenen la
  const markup=ui.renderWeek(dates[0],days,children,50,'','',720);
  assert.match(markup,/data-px-per-minute="0.5"/);
  assert.match(markup,/--hour-height:30px/);
- assert.equal((markup.match(/class="day-time-column" style="height:720px"/g)||[]).length,14);
+ assert.equal((markup.match(/class="day-time-column" style="height:720px;/g)||[]).length,14);
  assert.match(markup,/top:270px;height:30px/); // escola 09:00–10:00
  assert.match(markup,/top:570px;height:150px/); // pernocta 19:00–24:00
  assert.match(markup,/top:720px">24:00/);

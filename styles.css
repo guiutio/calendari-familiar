@@ -1220,3 +1220,11 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
  .week-desktop-arrows .week-arrow:hover,.week-desktop-arrows .week-arrow:focus-visible {opacity:1;}
 }
 @media(min-width:561px) and (hover:none){.week-desktop-arrows .week-arrow {opacity:1;}}
+
+/* Solapaments amb sagnat: cada targeta conserva gairebé tota l’amplada. */
+.day-time-column > [data-event-depth] {left:calc(var(--event-indent) + 3px);width:calc(100% - var(--event-indent) - 6px);z-index:var(--event-layer);}
+.day-time-column > :is([data-event-depth],.day-night-block):focus-visible {z-index:var(--event-focus-layer);}
+/* Mateix tutor a banda i banda: continuïtat visual, mantenint els dos dies editables. */
+.day-night-block.night-continues-after {border-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0;}
+.day-night-block.night-continues-before {border-top:0;border-top-left-radius:0;border-top-right-radius:0;}
+.day-night-block.night-continues-before > span {visibility:hidden;}

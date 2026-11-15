@@ -150,8 +150,8 @@ test('una rotació coincident deixa lloc a l’extraescolar i conserva una franj
   const day=s.ctx.window.dayTimelineUI.render(date,'Dilluns',s.state.children,items,{},'19:00',50,{},[rotation]);
   const week=s.ctx.window.dayTimelineUI.renderWeek(date,[{date,label:'Dilluns',activities:items,nightSegments:{},rotatingSlots:[rotation]}],s.state.children,50);
   for(const html of [day,week]){
-   assert.match(html,/left:calc\(23% \+ 0 \* 77% \/ 1 \+ 3px\);width:calc\(77% \/ 1 - 6px\)/);
-   assert.match(html,/day-extra-block (?:with|without)-guardian with-activity/);
+   assert.match(html,/class="day-school-block" data-event-depth="1"[^>]*--event-indent:min\(6px,30%\);--event-layer:3/);
+   assert.match(html,/day-extra-block (?:with|without)-guardian"[^>]*data-event-depth="0"[^>]*--event-layer:2/);
    assert.match(html,/data-action="open-school-activity"/);assert.match(html,/data-action="edit-extra-slot"/);
   }
   for(const view of ['month','year']){
@@ -165,7 +165,7 @@ test('una rotació coincident deixa lloc a l’extraescolar i conserva una franj
  const layer=selector=>Number(css.match(new RegExp(selector.replaceAll('.', '\\.')+' ?\\{z-index:(\\d+)'))?.[1]);
  assert.ok(layer('.day-school-block')>4,'l’activitat es pinta per sobre de la rotació (capa 4)');
  assert.ok(layer('.month-mini-school')>4);
- assert.match(css,/\.day-extra-block\.with-activity \{left:0;width:100%;\}/);
+ assert.match(css,/\[data-event-depth\] \{left:calc\(var\(--event-indent\) \+ 3px\);width:calc\(100% - var\(--event-indent\) - 6px\);z-index:var\(--event-layer\)/);
  assert.match(css,/\.month-mini-extra\.with-activity \{left:0;right:0;\}/);
 });
 
@@ -175,7 +175,7 @@ test('només les rotacions visibles del mateix fill que se solapen reserven una 
  const base={childId:'a',from:1020,to:1080,visible:true,guardianId:'tutor'};
  for(const rotation of [{...base,to:1020,from:960},{...base,from:1080,to:1200},{...base,visible:false},{...base,childId:'b'}]){
   const html=s.ctx.window.dayTimelineUI.render(date,'Dilluns',s.state.children,items,{},'19:00',50,{},[rotation]);
-  assert.doesNotMatch(html,/23% \+|with-activity/);assert.match(html,/width:calc\(100% \/ 1 - 6px\)/);
+  assert.doesNotMatch(html,/23% \+|with-activity/);assert.match(html,/class="day-school-block" data-event-depth="0"[^>]*--event-indent:min\(0px,30%\)/);
   const mini=s.ctx.window.monthDayUI.mini(s.state.children,{},items,{},[rotation]);
   assert.doesNotMatch(mini,/--schedule-inset|with-activity/);
  }
