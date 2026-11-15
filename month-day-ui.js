@@ -100,7 +100,7 @@
   // visual. Una franja especial nocturna restaura l'escala real de 24 hores
   // en aquella casella; la pernocta habitual NO compta com a franja especial.
   const NIGHT_WEIGHT=0.18, MORNING_END=360, EVENING_START=1320;
-  // Any: quatre vegades més espai per hora nocturna; l’escola de 09–17 ocupa 1/6 de la barra.
+  // Any i Mes comparteixen les mateixes proporcions i les mateixes excepcions nocturnes.
   function miniGeometry(from,to,expanded=false,nightWeight=NIGHT_WEIGHT){
     const clamp=n=>Math.max(0,Math.min(DAY,Number(n)||0));
     const visual=n=>expanded?clamp(n):
@@ -120,7 +120,7 @@
       ].some(a=>a.from<MORNING_END||a.to>EVENING_START)
     );
     const rect=(from,to,color,klass,label)=>{
-      const {top,height}=miniGeometry(from,to,annual?false:special,annual?4:NIGHT_WEIGHT);
+      const {top,height}=miniGeometry(from,to,special);
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
     const shared=child=>rotatingSlots.some(item=>item.childId===child.id&&item.visible&&activities.some(a=>a.childId===child.id&&a.start<item.to&&a.end>item.from));
