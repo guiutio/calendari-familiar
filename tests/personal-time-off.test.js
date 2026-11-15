@@ -210,6 +210,37 @@ test('Fills i Tutors són llistes reordenables i les dades s’obren a la fitxa 
  s.click('open-person',{person:'unknown:other'});assert.equal(s.ctx.sheet.personKey,'guardian:other');
 });
 
+test('les escoles es reordenen en llista i conserven cursos, grups i referències JSON',()=>{
+ const s=setup();
+ s.state.schools=[
+  {id:'school-a',name:'Escola <A>',color:'#112233',years:[{id:'year',groups:[{id:'group',childIds:['same']}]}],childIds:['same'],weeklySchedule:[]},
+  {id:'school-b',name:'Escola B',color:'#445566',years:[],childIds:[],weeklySchedule:[]},
+  {id:'school-c',name:'Escola C',color:'#778899',years:[],childIds:[],weeklySchedule:[]}
+ ];
+ s.state.preferences.visibleSchools=['school-a','school-c'];
+ const before=JSON.stringify(s.state),schools=new Map(s.state.schools.map(school=>[school.id,JSON.stringify(school)]));
+ vm.runInContext(section('function schoolById(', 'function schoolDayIsWeekend('),s.ctx);
+ const html=s.ctx.schoolsPage();
+ assert.match(html,/<ol class="people-list" data-kind="school" aria-label="Escoles">/);
+ assert.equal((html.match(/class="person-drag-handle"/g)||[]).length,3);
+ assert.match(html,/data-action="school-nav" data-school="school-a" aria-label="Obre Escola &lt;A&gt;"/);
+ assert.match(html,/<small>1 curs<\/small>/);assert.match(html,/<small>0 cursos<\/small>/);
+ assert.equal(s.ctx.commitPersonOrder('school','school-c',0),true);
+ assert.deepEqual(plain(s.state.schools.map(school=>school.id)),['school-c','school-a','school-b']);
+ assert.equal(s.saves,1);
+ for(const school of s.state.schools)assert.equal(JSON.stringify(school),schools.get(school.id));
+ assert.deepEqual(s.state.preferences.visibleSchools,['school-a','school-c']);
+ const restored=JSON.parse(JSON.stringify(s.state));
+ assert.deepEqual(restored.schools.map(school=>school.id),['school-c','school-a','school-b']);
+ assert.deepEqual(restored.schools[1].years[0].groups[0].childIds,['same']);
+ assert.equal(s.ctx.commitPersonOrder('school','school-c',0),false);
+ assert.equal(s.ctx.commitPersonOrder('school','missing',1),false);
+ assert.equal(s.ctx.commitPersonOrder('school','school-a',3),false);assert.equal(s.saves,1);
+ s.ctx.commitPersonOrder('school','school-c',2);assert.equal(JSON.stringify(s.state),before);
+ s.state.schools=s.state.schools.slice(0,1);assert.match(s.ctx.schoolsPage(),/aria-pressed="false" disabled/);
+ s.state.schools=[];assert.match(s.ctx.schoolsPage(),/Encara no has afegit cap escola/);
+});
+
 test('els filtres de persones i tipus són independents dels colors de tutors i fills de les franges',()=>{
  const s=setup();working(s);s.holidays(['2026-11-02']);s.vacation({name:'Descans',startDate:'2026-11-03',endDate:'2026-11-04'});
  s.state.preferences.visibleChildren=[];s.state.preferences.visibleGuardians=[];

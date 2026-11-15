@@ -76,3 +76,8 @@ test('a prop de la vora fa scroll automàtic i el cancel·la en acabar',()=>{
  const [id,tick]=[...s.frames.entries()][0];s.frames.delete(id);tick();assert.ok(s.scroller.scrollTop>0);
  s.fire('pointercancel','a');assert.equal(s.frames.size,0);
 });
+
+test('les escoles reutilitzen el gest i comuniquen la posició dins de la seva llista',()=>{
+ const s=setup('school');s.fire('pointerdown','a');s.fire('pointermove','a',{clientY:340});s.fire('pointerup','a');
+ assert.deepEqual(s.order(),['b','c','d','a']);assert.deepEqual(s.commits,[['school','a',3]]);
+});

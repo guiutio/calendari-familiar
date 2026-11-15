@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.20.0';
+const APP_VERSION = '0.21.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -935,10 +935,11 @@ function schoolReducedPanel(school:School,year:SchoolYear,group:ClassGroup):stri
 }
 function schoolsPage():string {
  const school=schoolById(schoolNav.schoolId),year=yearById(school,schoolNav.yearId),group=groupById(year,schoolNav.groupId);
- if(!school) return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
+ if(!school) return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Toca una escola per obrir-la. Arrossega les tres ratlles per canviar-ne l’ordre.</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Les escoles</h2><button class="secondary-btn" data-action="school-add">${icon('plus',15)} Afegir escola</button></div>
  <p class="section-description">Cada escola pot tenir diferents cursos, grups classe, festius i dies d’horari reduït. Les dades són privades i es desen al teu dispositiu.</p>
- ${state.schools.length?state.schools.map(s=>`<div class="school-row"><span class="school-color-dot" style="background:${s.color}" aria-hidden="true"></span>${schoolNavButton(s.name,{schoolId:s.id})}<span class="school-meta">${s.years.length} ${s.years.length===1?'curs':'cursos'}</span></div>`).join(''):'<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
+ <p id="people-reorder-help" class="visually-hidden">Arrossega per reordenar. Amb el teclat, fes servir les fletxes amunt i avall, Inici o Fi.</p>
+ ${state.schools.length?`<ol class="people-list" data-kind="school" aria-label="Escoles">${state.schools.map(s=>`<li class="person-list-row" data-id="${escapeHtml(s.id)}"><button type="button" class="person-list-open" data-action="school-nav" data-school="${escapeHtml(s.id)}" aria-label="Obre ${escapeHtml(s.name)}"><span class="person-list-color" style="background:${s.color}" aria-hidden="true"></span><span class="person-list-name">${escapeHtml(s.name)}<small>${s.years.length} ${s.years.length===1?'curs':'cursos'}</small></span>${icon('chevronRight',18)}</button><button type="button" class="person-drag-handle" aria-label="Reordena ${escapeHtml(s.name)}" aria-describedby="people-reorder-help" aria-pressed="false" ${state.schools.length<2?'disabled':''}>${icon('drag',22)}</button></li>`).join('')}</ol>`:'<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
  if(!year) return `<header class="page-heading"><div>${schoolCrumb('Escoles')}<div class="eyebrow">ESCOLA</div><h1 class="page-title">${escapeHtml(school.name)}</h1><p class="page-subtitle">${escapeHtml(school.address||'Adreça no indicada')}${school.phone?` · ${escapeHtml(school.phone)}`:''}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Dades de l’escola</h2><button class="secondary-btn" data-action="school-edit" data-school="${escapeHtml(school.id)}">${icon('pencil',15)} Edita</button></div>
  <div class="school-details"><p><span class="school-color-dot" style="background:${school.color}"></span><strong>Color de l’escola</strong></p>${school.address?`<p><strong>Adreça:</strong> ${escapeHtml(school.address)}</p>`:''}${school.phone?`<p><strong>Telèfon:</strong> <a href="tel:${escapeHtml(school.phone.replace(/[^+\d]/g,''))}">${escapeHtml(school.phone)}</a></p>`:''}${!school.address&&!school.phone?'<p class="settings-note">Sense adreça ni telèfon.</p>':''}</div>
@@ -1113,7 +1114,7 @@ function personDetails(key:string):string {
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child?'delete-child':'delete-guardian'}" data-${child?'child':'guardian'}="${id}">${icon('trash',16)} Suprimeix ${child?'el fill':'el tutor'}</button></div>`;
 }
 function commitPersonOrder(kind:string,id:string,index:number):boolean {
-  const entries:(Child|Guardian)[]|null=kind==='child'?state.children:kind==='guardian'?state.guardians:null;
+  const entries:(Child|Guardian|School)[]|null=kind==='child'?state.children:kind==='guardian'?state.guardians:kind==='school'?state.schools:null;
   if(!entries||!Number.isInteger(index)||index<0||index>=entries.length)return false;
   const previous=entries.findIndex(person=>person.id===id);
   if(previous<0||previous===index)return false;

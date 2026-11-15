@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.20.0';
+const APP_VERSION = '0.21.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1079,10 +1079,11 @@ function schoolReducedPanel(school, year, group) {
 function schoolsPage() {
     const school = schoolById(schoolNav.schoolId), year = yearById(school, schoolNav.yearId), group = groupById(year, schoolNav.groupId);
     if (!school)
-        return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Escoles, cursos i grups dels fills.</p></div></header>
+        return `<header class="page-heading"><div><div class="eyebrow">VIDA ESCOLAR</div><h1 class="page-title">Escoles</h1><p class="page-subtitle">Toca una escola per obrir-la. Arrossega les tres ratlles per canviar-ne l’ordre.</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Les escoles</h2><button class="secondary-btn" data-action="school-add">${icon('plus', 15)} Afegir escola</button></div>
  <p class="section-description">Cada escola pot tenir diferents cursos, grups classe, festius i dies d’horari reduït. Les dades són privades i es desen al teu dispositiu.</p>
- ${state.schools.length ? state.schools.map(s => `<div class="school-row"><span class="school-color-dot" style="background:${s.color}" aria-hidden="true"></span>${schoolNavButton(s.name, { schoolId: s.id })}<span class="school-meta">${s.years.length} ${s.years.length === 1 ? 'curs' : 'cursos'}</span></div>`).join('') : '<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
+ <p id="people-reorder-help" class="visually-hidden">Arrossega per reordenar. Amb el teclat, fes servir les fletxes amunt i avall, Inici o Fi.</p>
+ ${state.schools.length ? `<ol class="people-list" data-kind="school" aria-label="Escoles">${state.schools.map(s => `<li class="person-list-row" data-id="${escapeHtml(s.id)}"><button type="button" class="person-list-open" data-action="school-nav" data-school="${escapeHtml(s.id)}" aria-label="Obre ${escapeHtml(s.name)}"><span class="person-list-color" style="background:${s.color}" aria-hidden="true"></span><span class="person-list-name">${escapeHtml(s.name)}<small>${s.years.length} ${s.years.length === 1 ? 'curs' : 'cursos'}</small></span>${icon('chevronRight', 18)}</button><button type="button" class="person-drag-handle" aria-label="Reordena ${escapeHtml(s.name)}" aria-describedby="people-reorder-help" aria-pressed="false" ${state.schools.length < 2 ? 'disabled' : ''}>${icon('drag', 22)}</button></li>`).join('')}</ol>` : '<div class="empty-state">Encara no has afegit cap escola. Afegeix-ne una per començar.</div>'}</section>`;
     if (!year)
         return `<header class="page-heading"><div>${schoolCrumb('Escoles')}<div class="eyebrow">ESCOLA</div><h1 class="page-title">${escapeHtml(school.name)}</h1><p class="page-subtitle">${escapeHtml(school.address || 'Adreça no indicada')}${school.phone ? ` · ${escapeHtml(school.phone)}` : ''}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Dades de l’escola</h2><button class="secondary-btn" data-action="school-edit" data-school="${escapeHtml(school.id)}">${icon('pencil', 15)} Edita</button></div>
@@ -1282,7 +1283,7 @@ function personDetails(key) {
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
 }
 function commitPersonOrder(kind, id, index) {
-    const entries = kind === 'child' ? state.children : kind === 'guardian' ? state.guardians : null;
+    const entries = kind === 'child' ? state.children : kind === 'guardian' ? state.guardians : kind === 'school' ? state.schools : null;
     if (!entries || !Number.isInteger(index) || index < 0 || index >= entries.length)
         return false;
     const previous = entries.findIndex(person => person.id === id);
