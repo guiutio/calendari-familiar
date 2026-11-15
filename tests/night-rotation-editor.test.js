@@ -89,12 +89,12 @@ test('es validen les dates finals i es pot tornar a un interval sense final',()=
  s.editor.change(s.state,{rotation:'n',extraChange:'endDate'},'',{});assert.equal(r.endDate,undefined);
 });
 
-test('s’ordenen per data d’inici tant plegades com obertes',()=>{
+test('s’ordenen per data d’inici inversa tant plegades com obertes',()=>{
  const s=setup();s.state.extraRotations=[s.night('late','2027-01-01'),s.night('early','2026-01-01','2026-10-31'),{...s.night('middle','2026-12-01','2026-12-31'),kind:'activity',startTime:'16:00',endTime:'17:00'}];
  for(const open of [null,'late']){
   const html=s.editor.render(s.state,open);
-  const ids=[...html.matchAll(/class="card extra-rotation-card" data-extra-rotation="([^"]+)"/g)].map(m=>m[1]);
-  assert.deepEqual(ids,['early','middle','late']);
+  const ids=[...html.matchAll(/class="extra-rotation-card rotation-list-item" data-extra-rotation="([^"]+)"/g)].map(m=>m[1]);
+  assert.deepEqual(ids,['late','middle','early']);
  }
 });
 
@@ -178,4 +178,25 @@ test('eliminar persones neteja totes les pernoctes sense assignar-ne automàtica
  assert.equal(s.state.extraRotations[0].assignments.elna,undefined);
  assert.equal(s.core.nightAssignment(s.state.extraRotations,'2026-11-02','elna'),'');
  assert.equal(s.core.nightAssignment(s.state.extraRotations,'2026-11-02','blai'),'mare');
+});
+
+test('la llista resumeix nom, tipus i dates i només ofereix una entrada de creació',()=>{
+ const s=setup();
+ const a=s.night('n','2026-11-01','2026-12-31');a.name='Nits <família>';
+ const b={...s.night('other','2027-01-01'),kind:'activity',name:'Recollida'};
+ s.state.extraRotations=[a,b];const before=JSON.stringify(s.state);
+ const html=s.editor.render(s.state,null);
+ assert.match(html,/<ol class="rotation-list" aria-label="Rotacions, de més recent a més antiga">/);
+ assert.match(html,/<strong>Nits &lt;família&gt;<\/strong>/);
+ assert.match(html,/<span class="rotation-list-kind">Pernocta<\/span>/);
+ assert.match(html,/<span class="rotation-list-kind">Altres<\/span>/);
+ assert.match(html,/<time datetime="2026-11-01">01\/11\/2026<\/time>/);
+ assert.match(html,/<time datetime="2026-12-31">31\/12\/2026<\/time>/);
+ assert.match(html,/Sense data final/);
+ assert.equal((html.match(/data-action="extra-new"/g)||[]).length,1);
+ assert.doesNotMatch(html,/data-action="extra-add"|person-drag-handle|data-action="extra-delete"/);
+ assert.equal(JSON.stringify(s.state),before);
+ const chooser=s.editor.typeChooser();
+ assert.match(chooser,/data-action="extra-add" data-kind="night" aria-label="Pernocta"/);
+ assert.match(chooser,/data-action="extra-add" data-kind="activity" aria-label="Altres"/);
 });

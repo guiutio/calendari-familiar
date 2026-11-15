@@ -116,3 +116,17 @@ test('cada editor mostra les accions de desar i descartar, amb el patró encara 
  assert.match(html,/Esborrany A/);
  assert.equal(s.state.extraRotations[0].name,'a');
 });
+
+test('crear primer demana el tipus i cancel·lar no crea cap esborrany',()=>{
+ const s=setup(),before=JSON.stringify(s.state);
+ s.click('extra-new');assert.equal(s.ctx.sheet.type,'rotationType');
+ assert.equal(JSON.stringify(s.state),before);assert.deepEqual(plain(s.ctx.extraRotationDrafts),{});
+ s.click('close-sheet');assert.equal(s.ctx.sheet,null);assert.deepEqual(plain(s.ctx.extraRotationDrafts),{});
+ for(const kind of ['night','activity']){
+  s.click('extra-new');s.click('extra-add','',{kind});
+  assert.equal(s.ctx.sheet,null);
+  const draft=s.ctx.extraRotationDrafts[s.ctx.extraRotationOpen];assert.equal(draft.kind,kind);
+  assert.equal(JSON.stringify(s.state),before);assert.equal(s.saves,0);
+  s.click('extra-cancel',draft.id);
+ }
+});

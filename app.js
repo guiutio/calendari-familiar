@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.21.0';
+const APP_VERSION = '0.22.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1347,6 +1347,9 @@ function sheetMarkup() {
     <div class="calendar-legend-dialog">${calendarLegend()}<p class="settings-note">● Canvi puntual</p></div>
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
     }
+    else if (sheet?.type === 'rotationType') {
+        contents = rotationEditor.typeChooser();
+    }
     else if (sheet?.type === 'zoom') {
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Zoom · Setmana</h2><p class="sheet-subtitle">El nivell de zoom es desa per a aquesta vista.</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${zoomControls()}
@@ -2511,6 +2514,10 @@ function clickAction(button) {
             notify('Canvis descartats');
             break;
         }
+        case 'extra-new':
+            sheet = { type: 'rotationType' };
+            render();
+            break;
         case 'extra-add':
         case 'extra-toggle':
         case 'extra-delete':
@@ -2524,8 +2531,10 @@ function clickAction(button) {
                 break;
             if (button.dataset.action === 'extra-add') {
                 const added = work.extraRotations.find((r) => r.id === result.open);
-                if (added)
+                if (added) {
                     extraRotationDrafts[added.id] = added;
+                    sheet = null;
+                }
             }
             if (button.dataset.action === 'extra-delete') {
                 delete extraRotationDrafts[id];

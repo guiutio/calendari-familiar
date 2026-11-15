@@ -866,7 +866,7 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .extra-editor .extra-school-only input {width:22px;min-width:22px;height:22px;flex:0 0 22px;margin:0;accent-color:#365f8c;}
 
 .extra-rotation-section>.panel-header {flex-wrap:wrap;}
-.extra-rotation-section>.panel-header .section-title {flex:1 1 100%;}
+.extra-rotation-section>.panel-header .section-title {flex:1;min-width:0;}
 
 /* Vista anual: dotze mesos compactes amb les mateixes miniatures de colors que Mes. */
 .year-overview {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),180px));justify-content:space-evenly;gap:10px;}
@@ -1178,3 +1178,25 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 }
 
 .visually-hidden {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}
+
+/* Resum de rotacions: ordre cronològic invers i edició dins de la fila. */
+.rotation-list {list-style:none;padding:0;margin:0;}
+.rotation-list-item {border-top:1px solid var(--separator);}
+.rotation-list-item:first-child {border-top:0;}
+.rotation-list-open {display:flex;align-items:center;gap:16px;width:100%;min-height:80px;padding:14px 0;border:0;background:transparent;color:var(--text-primary);text-align:left;}
+.rotation-list-name {display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;overflow-wrap:anywhere;}
+.rotation-list-name strong {font-size:calc(15px * var(--font-scale,1));font-weight:650;}
+.rotation-list-kind {color:var(--text-secondary);font-size:calc(12px * var(--font-scale,1));}
+.rotation-list-dates {display:grid;gap:5px;font-size:calc(12px * var(--font-scale,1));}
+.rotation-date-label {display:inline-block;min-width:34px;color:var(--text-secondary);}
+.rotation-list-open>svg {flex-shrink:0;}
+.rotation-list-open[aria-expanded="true"]>svg {transform:rotate(90deg);}
+.rotation-list-item>.extra-editor {margin:0 0 20px;padding-top:12px;border-top:1px solid var(--separator);}
+.rotation-type-choice>span {display:flex;flex-direction:column;gap:5px;text-align:left;}
+.rotation-type-choice small {font-weight:400;color:var(--text-secondary);line-height:1.4;}
+@media(max-width:560px){
+ .rotation-list-open {flex-wrap:wrap;gap:8px;}
+ .rotation-list-name {flex-basis:calc(100% - 30px);order:0;}
+ .rotation-list-open>svg {order:1;}
+ .rotation-list-dates {order:2;width:100%;}
+}
