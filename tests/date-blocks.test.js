@@ -95,6 +95,13 @@ test('integració: tocar la franja obre el detall puntual; + tria data i editar 
  vm.runInContext('function submitDateBlock(form,event){'+section('if (form.dataset.dateBlockForm)', 'if (form.dataset.daySlotForm)')+'}',s.ctx);
  s.ctx.submitDateBlock({dataset:{dateBlockForm:'true',date:s.date,child:'a',source:'activity:school:school-session'},values:{name:'Escola puntual',startTime:'10:00',endTime:'16:00',guardianId:'m',note:'Recollida especial'}},{preventDefault(){}});
  assert.equal(s.ctx.sheet,null);assert.equal(s.ctx.weekFocusTarget,false,'editar no recol·loca el dia a l’esquerra');assert.equal(s.ctx.selectedDate,s.date);
+ s.ctx.clickAction({dataset:{action:'date-block-edit',date:s.date,child:'a',source:'activity:school:school-session',origin:'day'}});assert.equal(s.ctx.sheet.origin,'day');
+ s.ctx.submitDateBlock({dataset:{dateBlockForm:'true',origin:'day',date:s.date,child:'a',source:'activity:school:school-session'},values:{name:'Escola revisada',startTime:'10:00',endTime:'16:00',guardianId:'m',note:'Nota revisada'}},{preventDefault(){}});
+ assert.deepEqual(plain(s.ctx.sheet),{type:'dayEdit',date:s.date});
+ s.ctx.clickAction({dataset:{action:'date-block-edit',date:s.date,child:'a',source:'activity:school:school-session',origin:'day'}});s.ctx.clickAction({dataset:{action:'close-sheet'}});assert.equal(s.ctx.sheet.type,'dayEdit');
+ s.ctx.tab='extracurricular';s.ctx.clickAction({dataset:{action:'date-block-edit',date:s.date,child:'a',source:'activity:school:school-session',origin:'extracurricular'}});assert.equal(s.ctx.sheet.origin,'extracurricular');
+ s.ctx.clickAction({dataset:{action:'date-block-discard',date:s.date,child:'a',source:'activity:school:school-session',origin:'extracurricular'}});assert.equal(s.ctx.sheet,null);assert.equal(s.ctx.tab,'extracurricular');assert.equal(Object.keys(s.state.dateEdits).length,0);
+ s.ctx.tab='calendar';
  s.ctx.clickAction({dataset:{action:'date-block-add'}});assert.equal(s.ctx.sheet.sourceId,'');assert.equal(s.ctx.sheet.date,s.date);
  s.ctx.submitDateBlock({dataset:{dateBlockForm:'true',date:s.date,child:'a',source:''},values:{date:'2026-11-25',childId:'b',name:'Logopèdia',startTime:'18:00',endTime:'19:00',guardianId:'',note:'Sala 2'}},{preventDefault(){}});
  assert.equal(s.ctx.selectedDate,'2026-11-25');assert.equal(s.ctx.weekFocusTarget,true);assert.equal(Object.values(s.state.dateEdits).find(e=>e.kind==='manual').childId,'b');
@@ -114,4 +121,40 @@ test('les franges renderitzades mantenen referències d’edició, notes i tutor
  assert.match(html,/data-view-date="2026-11-19"[^>]+data-date-block="night:2026-11-18"/);
  assert.match(html,/class="day-block-guardian">Maria/);assert.match(html,/class="day-block-note"[^>]*>&lt;img src=x&gt;/);assert.doesNotMatch(html,/<img/);
  vm.runInContext(read('month-day-ui.js'),s.ctx);assert.equal(s.ctx.window.monthDayUI.hasChanges(s.state,s.date),true);assert.equal(s.ctx.window.monthDayUI.hasChanges(s.state,'2026-11-20'),false);
+});
+
+
+test('revisió global i per dia: dates descendents, estat, fill, tutor, nota i accions',()=>{
+ const s=setup();s.save('activity:ec%3A2:ec%3A1%3A2%3A3%3A4',{name:'Karate puntual',note:'<script>note</script>'});
+ s.api.remove(s.state,s.date,'a','rotation:pickup',s.data);s.save('',{name:'Natació'},'b','2026-11-25');
+ const global=s.api.changes(s.state),day=s.api.changes(s.state,s.date);
+ assert.ok(global.indexOf('Natació')<global.indexOf('Karate puntual'));
+ for(const word of ['25/11/2026','19/11/2026','Alba','Bruc','Maria','Extraescolar','Modificada','Afegida','Eliminada aquest dia','data-action="date-block-edit"','data-action="date-block-discard"','data-origin="extracurricular"'])assert.ok(global.includes(word),word);
+ assert.match(global,/&lt;script&gt;note/);assert.doesNotMatch(global,/<script>/);
+ assert.match(day,/data-origin="day"/);assert.doesNotMatch(day,/Natació/);
+ assert.match(s.api.changes(s.state,'2027-01-01'),/Aquest dia no té canvis puntuals/);
+ s.api.clearDate(s.state,s.date);s.api.clearDate(s.state,'2026-11-25');assert.match(s.api.changes(s.state),/No hi ha canvis puntuals/);
+});
+test('desfer un canvi recupera l’original o treu una franja afegida, sense tocar la resta',()=>{
+ const s=setup(),source='activity:school:school-session';s.save(source);s.save('');s.save('',{},'b');
+ assert.equal(s.api.discard(s.state,s.date,'a',source),true);
+ assert.equal(s.api.apply(s.state,s.date,s.state.children,s.data).activities[0].startTime,'09:00');
+ assert.equal(s.api.discard(s.state,s.date,'a','manual:1'),true);
+ assert.ok(!s.api.apply(s.state,s.date,s.state.children,s.data).slots.a.some(x=>x.id==='manual:1'));
+ assert.equal(Object.values(s.state.dateEdits).length,1);assert.equal(Object.values(s.state.dateEdits)[0].childId,'b');
+ assert.equal(s.api.discard(s.state,s.date,'a','manual:missing'),false);
+});
+test('editar una eliminació conserva l’estat fins que es demana recuperar-la explícitament',()=>{
+ const s=setup(),source='activity:school:school-session';s.api.remove(s.state,s.date,'a',source,s.data);
+ const form=s.api.form(s.state,s.date,'a',source,s.data,'day');assert.match(form,/name="disabled" checked/);assert.match(form,/data-origin="day"/);
+ assert.equal(s.save(source,{disabled:'on',note:'Avís de l’absència'}),'');
+ assert.equal(s.api.apply(s.state,s.date,s.state.children,s.data).activities.length,1);
+ assert.equal(s.api.find(s.state,s.date,'a',source,s.data).note,'Avís de l’absència');
+ assert.equal(s.save(source),'');assert.equal(s.api.apply(s.state,s.date,s.state.children,s.data).activities.length,2);
+});
+test('Extraescolars inclou la revisió fins i tot sense cursos i conserva les excepcions de cursos esborrats',()=>{
+ const s=setup();s.state.extracurricularCourses=[];s.save('activity:ec%3A2:ec%3A1%3A2%3A3%3A4',{name:'Karate històric'});
+ vm.runInContext(read('extracurricular.js'),s.ctx);const html=s.ctx.window.extracurricular.page(s.state);
+ assert.match(html,/Canvis puntuals/);assert.match(html,/Karate històric/);assert.match(html,/data-action="date-block-edit"/);
+ s.data.activities=[];assert.ok(s.api.find(s.state,s.date,'a','activity:ec%3A2:ec%3A1%3A2%3A3%3A4',s.data));
 });

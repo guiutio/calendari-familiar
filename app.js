@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.25.0';
+const APP_VERSION = '0.26.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1418,7 +1418,7 @@ function sheetMarkup() {
     else if (sheet?.type === 'dayEdit') {
         const date = sheet.date;
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Edita el dia</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
-    <div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}">+ Afegeix una franja</button>` : `<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, date)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, date) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>` : ''}</div>
+    <div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}" data-origin="day">+ Afegeix una franja</button>` : `<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, date)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, date) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>` : ''}</div>
     ${schoolInfoForDay(date)}${dateBlocks.changes(state, date)}${state.personTimeOff ? workSchedule.agenda(state, [date]) : ''}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
     }
@@ -1426,7 +1426,7 @@ function sheetMarkup() {
         contents = monthDayUI.form(sheet.date, sheet.childId, sheet.slotId, state.children, state.guardians, state);
     }
     else if (sheet?.type === 'dateBlock') {
-        contents = dateBlocks.form(state, sheet.date, sheet.childId, sheet.sourceId, dateBlockSnapshot(sheet.date));
+        contents = dateBlocks.form(state, sheet.date, sheet.childId, sheet.sourceId, dateBlockSnapshot(sheet.date), sheet.origin);
     }
     else if (sheet?.type === 'schoolActivity') {
         const { date, childId, schoolId, sessionId } = sheet;
@@ -2293,7 +2293,7 @@ function clickAction(button) {
             }
             break;
         case 'close-sheet':
-            sheet = null;
+            sheet = sheet?.type === 'dateBlock' && sheet.origin === 'day' ? { type: 'dayEdit', date: sheet.date } : null;
             render();
             break;
         case 'return-detail':
@@ -2365,14 +2365,31 @@ function clickAction(button) {
             const date = button.dataset.date ?? selectedDate;
             if (!isValidDate(date))
                 break;
-            sheet = { type: 'dateBlock', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '', sourceId: '' };
+            sheet = { type: 'dateBlock', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '', sourceId: '', origin: button.dataset.origin === 'day' ? 'day' : undefined };
             render();
+            break;
+        }
+        case 'date-block-edit': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
+            if (isValidDate(date) && dateBlocks.find(state, date, childId, sourceId, dateBlockSnapshot(date))) {
+                sheet = { type: 'dateBlock', date, childId, sourceId, origin: button.dataset.origin === 'day' ? 'day' : 'extracurricular' };
+                render();
+            }
+            break;
+        }
+        case 'date-block-discard': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
+            if (dateBlocks.discard(state, date, childId, sourceId)) {
+                sheet = button.dataset.origin === 'day' ? { type: 'dayEdit', date } : null;
+                update();
+                notify('Canvi puntual desfet');
+            }
             break;
         }
         case 'date-block-delete': {
             const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
             if (isValidDate(date) && dateBlocks.remove(state, date, childId, sourceId, dateBlockSnapshot(date))) {
-                sheet = null;
+                sheet = button.dataset.origin === 'day' ? { type: 'dayEdit', date } : null;
                 update();
                 notify('Franja eliminada només aquest dia. La pots recuperar des d’Edita el dia.');
             }
@@ -2381,7 +2398,7 @@ function clickAction(button) {
         case 'date-block-restore': {
             const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
             if (dateBlocks.restore(state, date, childId, sourceId)) {
-                sheet = { type: 'dayEdit', date };
+                sheet = button.dataset.origin === 'extracurricular' ? null : { type: 'dayEdit', date };
                 update();
                 notify('Franja recuperada');
             }
@@ -2825,7 +2842,7 @@ document.addEventListener('submit', event => {
         }
         if (!state.preferences.visibleChildren.includes(childId))
             state.preferences.visibleChildren.push(childId);
-        sheet = null;
+        sheet = form.dataset.origin === 'day' ? { type: 'dayEdit', date } : null;
         update();
         notify('Franja puntual desada');
         return;

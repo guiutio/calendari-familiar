@@ -99,10 +99,10 @@ type ExtracurricularNav={courseId?:string;activityId?:string;groupId?:string};
 type ExtracurricularEditor=ExtracurricularNav & {kind:'course'|'activity'|'group'|'session';sessionId?:string};
 type AppState = { dateEdits?:Record<string,any>; extracurricularCourses:ExtracurricularCourse[]; version: number; personTimeOff:Record<string,PersonTimeOff>; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'extracurricular' | 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'general';
-type Sheet = {type:'dateBlock';date:string;childId:string;sourceId:string}|{type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = {type:'dateBlock';date:string;childId:string;sourceId:string;origin?:'day'|'extracurricular'}|{type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.25.0';
+const APP_VERSION = '0.26.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -1232,13 +1232,13 @@ function sheetMarkup(){
   } else if(sheet?.type==='dayEdit'){
     const date=sheet.date;
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Edita el dia</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
-    <div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}">+ Afegeix una franja</button>`:`<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r=>r.kind!=='night'&&rotationPatterns.inRange(r,date))?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,date)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>`:''}</div>
+    <div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}" data-origin="day">+ Afegeix una franja</button>`:`<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r=>r.kind!=='night'&&rotationPatterns.inRange(r,date))?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,date)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>`:''}</div>
     ${schoolInfoForDay(date)}${dateBlocks.changes(state,date)}${state.personTimeOff?workSchedule.agenda(state,[date]):''}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='daySlotForm'){
     contents=monthDayUI.form(sheet.date,sheet.childId,sheet.slotId,state.children,state.guardians,state);
   } else if(sheet?.type==='dateBlock'){
-    contents=dateBlocks.form(state,sheet.date,sheet.childId,sheet.sourceId,dateBlockSnapshot(sheet.date));
+    contents=dateBlocks.form(state,sheet.date,sheet.childId,sheet.sourceId,dateBlockSnapshot(sheet.date),sheet.origin);
   } else if(sheet?.type==='schoolActivity'){
     const {date,childId,schoolId,sessionId}=sheet;
     const activity=schoolActivities(date,activeChildren()).find(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId);
@@ -1741,7 +1741,7 @@ function clickAction(button:HTMLElement){
     case 'open-day-edit':if(calendarView==='week'){sheet={type:'dayEdit',date:selectedDate};render();}break;
     case 'open-filters':sheet={type:'filters'};render();break;
     case 'open-zoom':if(calendarView==='week'){sheet={type:'zoom'};render();}break;
-    case 'close-sheet':sheet=null;render();break;
+    case 'close-sheet':sheet=sheet?.type==='dateBlock'&&sheet.origin==='day'?{type:'dayEdit',date:sheet.date}:null;render();break;
     case 'return-detail':sheet=returnFromDetail(button.dataset.date??detailReturnDate);render();break;
     case 'today':{weekFocusTarget=true;selectedDate=localDate(new Date());const now=parseDate(selectedDate);viewMonth=now.getMonth();viewYear=now.getFullYear();monthScrollTarget=true;render();break;}
     case 'timeline-zoom-step':{
@@ -1775,15 +1775,23 @@ function clickAction(button:HTMLElement){
     case 'prev-month':goToMonth(-1);break;
     case 'next-month':goToMonth(1);break;
     case 'date-block-add':{
-      const date=button.dataset.date??selectedDate;if(!isValidDate(date))break;sheet={type:'dateBlock',date,childId:activeChildren()[0]?.id??state.children[0]?.id??'',sourceId:''};render();break;
+      const date=button.dataset.date??selectedDate;if(!isValidDate(date))break;sheet={type:'dateBlock',date,childId:activeChildren()[0]?.id??state.children[0]?.id??'',sourceId:'',origin:button.dataset.origin==='day'?'day':undefined};render();break;
+    }
+    case 'date-block-edit':{
+      const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
+      if(isValidDate(date)&&dateBlocks.find(state,date,childId,sourceId,dateBlockSnapshot(date))){sheet={type:'dateBlock',date,childId,sourceId,origin:button.dataset.origin==='day'?'day':'extracurricular'};render();}break;
+    }
+    case 'date-block-discard':{
+      const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
+      if(dateBlocks.discard(state,date,childId,sourceId)){sheet=button.dataset.origin==='day'?{type:'dayEdit',date}:null;update();notify('Canvi puntual desfet');}break;
     }
     case 'date-block-delete':{
       const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
-      if(isValidDate(date)&&dateBlocks.remove(state,date,childId,sourceId,dateBlockSnapshot(date))){sheet=null;update();notify('Franja eliminada només aquest dia. La pots recuperar des d’Edita el dia.');}break;
+      if(isValidDate(date)&&dateBlocks.remove(state,date,childId,sourceId,dateBlockSnapshot(date))){sheet=button.dataset.origin==='day'?{type:'dayEdit',date}:null;update();notify('Franja eliminada només aquest dia. La pots recuperar des d’Edita el dia.');}break;
     }
     case 'date-block-restore':{
       const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
-      if(dateBlocks.restore(state,date,childId,sourceId)){sheet={type:'dayEdit',date};update();notify('Franja recuperada');}break;
+      if(dateBlocks.restore(state,date,childId,sourceId)){sheet=button.dataset.origin==='extracurricular'?null:{type:'dayEdit',date};update();notify('Franja recuperada');}break;
     }
     case 'open-school-activity':{
       const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
@@ -1936,7 +1944,7 @@ document.addEventListener('submit',event=>{
     if(error){notify(error);return;}
     if(!sourceId){selectedDate=date;const chosen=parseDate(date);viewYear=chosen.getFullYear();viewMonth=chosen.getMonth();weekFocusTarget=true;}
     if(!state.preferences.visibleChildren.includes(childId))state.preferences.visibleChildren.push(childId);
-    sheet=null;update();notify('Franja puntual desada');return;
+    sheet=form.dataset.origin==='day'?{type:'dayEdit',date}:null;update();notify('Franja puntual desada');return;
   }
   if(form.dataset.daySlotForm){
     event.preventDefault();

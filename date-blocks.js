@@ -61,20 +61,21 @@
   if(stored)return {...stored};
   return source?{...source,item:undefined,disabled:false}:null;
  }
- function form(state,date,childId,sourceId,data){
+ function form(state,date,childId,sourceId,data,origin=''){
   if(!state.children.length)return '<h2 class="sheet-title">Afegeix una franja</h2><p class="settings-note">Primer cal afegir un fill al calendari.</p><button type="button" class="primary-btn" data-action="tab" data-tab="people">Afegeix un fill</button><button type="button" class="soft-btn" data-action="close-sheet">Tanca</button>';
   const item=sourceId?find(state,date,childId,sourceId,data):{date,childId:childId||state.children[0]?.id||'',sourceId:'',kind:'manual',name:'Franja puntual',startTime:'09:00',endTime:'10:00',guardianId:'',note:''};
   if(!item)return '<p class="settings-note">Aquesta franja ja no està disponible.</p>';
   const edit=!!sourceId,stored=state.dateEdits?.[key(date,childId,sourceId)];
   return `<div class="sheet-heading"><div><h2 class="sheet-title">${edit?'Edita la franja':'Afegeix una franja'}</h2><p class="sheet-subtitle">Només aquesta data i aquest fill</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">×</button></div>
-  <form data-date-block-form="true" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}" class="month-slot-form date-block-form">
+  <form data-date-block-form="true" data-origin="${esc(origin)}" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}" class="month-slot-form date-block-form">
   <div class="form-row"><div class="field"><label for="db-date">Data</label><input id="db-date" name="date" type="date" value="${esc(item.date)}" required ${edit?'readonly':''}></div><div class="field"><label for="db-child">Fill</label><select id="db-child" name="childId" ${edit?'disabled':''} required>${state.children.map(c=>`<option value="${esc(c.id)}" ${c.id===item.childId?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div></div>
   <div class="field"><label for="db-name">Nom de la franja</label><input id="db-name" name="name" maxlength="120" value="${esc(item.name)}" required></div>
   <div class="form-row"><div class="field"><label for="db-start">Inici</label><input id="db-start" type="time" name="startTime" value="${esc(item.startTime)}" required></div><div class="field"><label for="db-end">Final</label><input id="db-end" type="time" name="endTime" value="${esc(item.endTime==='24:00'?'23:59':item.endTime)}" required><label class="month-slot-midnight"><input type="checkbox" name="endAtMidnight" ${item.endTime==='24:00'?'checked':''}> Fins a les 24:00</label></div></div>
   <div class="field"><label for="db-guardian">Tutor responsable</label><select id="db-guardian" name="guardianId"><option value="">Sense tutor assignat</option>${state.guardians.map(g=>`<option value="${esc(g.id)}" ${item.guardianId===g.id?'selected':''}>${esc(g.name)}</option>`).join('')}</select></div>
   <div class="field"><label for="db-note">Nota (opcional)</label><textarea id="db-note" name="note" maxlength="2000" rows="3">${esc(item.note)}</textarea></div>
+  ${stored?.disabled?'<label class="month-slot-midnight"><input type="checkbox" name="disabled" checked> Mantenir la franja eliminada aquest dia</label>':''}
   <p class="settings-note">Els horaris i patrons originals es conserven. Pots recuperar la franja des d’«Edita el dia».</p>
-  <div class="action-row"><button type="submit" class="primary-btn">Desa els canvis</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button>${edit?`<button type="button" class="danger-btn" data-action="date-block-delete" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}">Elimina només aquest dia</button>`:''}${stored&&stored.kind!=='manual'?`<button type="button" class="soft-btn" data-action="date-block-restore" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}">Restaura la franja original</button>`:''}</div></form>`;
+  <div class="action-row"><button type="submit" class="primary-btn">Desa els canvis</button><button type="button" class="soft-btn" data-action="close-sheet">Cancel·la</button>${edit?`<button type="button" class="danger-btn" data-action="date-block-delete" data-origin="${esc(origin)}" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}">Elimina només aquest dia</button>`:''}${stored&&stored.kind!=='manual'?`<button type="button" class="soft-btn" data-action="date-block-restore" data-origin="${esc(origin)}" data-date="${esc(date)}" data-child="${esc(childId)}" data-source="${esc(sourceId)}">Restaura la franja original</button>`:''}</div></form>`;
  }
  function save(state,date,childId,sourceId,values,data,newId){
   if(!validDate(date)||!state.children.some(c=>c.id===childId))return 'Data o fill no vàlid';
@@ -87,7 +88,7 @@
   if(guardianId&&!state.guardians.some(g=>g.id===guardianId))return 'Tutor no vàlid';
   const source=sourceId||'manual:'+newId();
   state.dateEdits??={};
-  state.dateEdits[key(date,childId,source)]={date,childId,sourceId:source,kind:old?.kind??'manual',name,note,startTime,endTime,guardianId,color:old?.color??'#87b7dd',disabled:false};
+  state.dateEdits[key(date,childId,source)]={date,childId,sourceId:source,kind:old?.kind??'manual',name,note,startTime,endTime,guardianId,color:old?.color??'#87b7dd',disabled:!!old?.disabled&&values.has('disabled')};
   return '';
  }
  function remove(state,date,childId,sourceId,data){
@@ -98,11 +99,25 @@
   const id=key(date,childId,sourceId),entry=state.dateEdits?.[id];if(!entry)return false;
   if(entry.kind==='manual')entry.disabled=false;else delete state.dateEdits[id];return true;
  }
+ function discard(state,date,childId,sourceId){
+  const id=key(date,childId,sourceId);if(!state.dateEdits?.[id])return false;
+  delete state.dateEdits[id];return true;
+ }
  function changes(state,date){
-  const entries=Object.values(state.dateEdits??{}).filter(e=>e.date===date);
-  return entries.length?`<div class="sheet-section-label">Franges puntuals d’aquest dia</div><div class="date-block-changes">${entries.map(e=>`<div><span><strong>${esc(e.name)}</strong> · ${esc(state.children.find(c=>c.id===e.childId)?.name)}<small>${esc(e.startTime)}–${esc(e.endTime)}${e.disabled?' · Eliminada aquest dia':''}${e.note?' · '+esc(e.note):''}</small></span>${e.kind!=='manual'||e.disabled?`<button type="button" class="soft-btn" data-action="date-block-restore" data-date="${esc(date)}" data-child="${esc(e.childId)}" data-source="${esc(e.sourceId)}">${e.kind==='manual'?'Recupera':'Restaura original'}</button>`:''}</div>`).join('')}</div>`:'';
+  const entries=Object.values(state.dateEdits??{}).filter(e=>!date||e.date===date).sort((a,b)=>b.date.localeCompare(a.date)||a.startTime.localeCompare(b.startTime)||a.childId.localeCompare(b.childId)||a.sourceId.localeCompare(b.sourceId));
+  const origin=date?'day':'extracurricular';
+  const rows=entries.map(e=>{
+   const identity=`data-origin="${origin}" data-date="${esc(e.date)}" data-child="${esc(e.childId)}" data-source="${esc(e.sourceId)}"`;
+   const status=e.disabled?'Eliminada aquest dia':e.kind==='manual'?'Afegida':'Modificada';
+   const type=e.kind==='activity'?(e.sourceId.startsWith('activity:ec%3A')?'Extraescolar':'Escola'):({night:'Pernocta',rotation:'Rotació',slot:'Franja puntual',manual:'Franja puntual'})[e.kind];
+   const day=e.date.split('-').reverse().join('/');
+   const guardian=state.guardians.find(g=>g.id===e.guardianId)?.name||'Sense tutor assignat';
+   return `<li class="date-block-change"><div><strong>${esc(e.name)}</strong><span class="date-block-status">${status}</span><small>${!date?day+' · ':''}${esc(state.children.find(c=>c.id===e.childId)?.name)} · ${type}</small><small>${esc(e.startTime)}–${esc(e.endTime)} · ${esc(guardian)}</small>${e.note?`<p class="date-block-note">${esc(e.note)}</p>`:''}</div><div class="date-block-change-actions"><button type="button" class="soft-btn" data-action="date-block-edit" ${identity} aria-label="Edita el canvi de ${esc(e.name)}, ${esc(state.children.find(c=>c.id===e.childId)?.name)}, ${day}">Edita</button>${e.disabled?`<button type="button" class="soft-btn" data-action="date-block-restore" ${identity}>${e.kind==='manual'?'Recupera':'Restaura original'}</button>`:''}<button type="button" class="soft-btn" data-action="date-block-discard" ${identity}>Desfés el canvi</button></div></li>`;
+  }).join('');
+  const help='Revisa les franges afegides, modificades i eliminades. Desfer un canvi recupera la franja original; si era una franja afegida, la treu del calendari.';
+  return `${date?'<div class="sheet-section-label">Canvis puntuals d’aquest dia</div>':'<section class="card"><h2 class="section-title">Canvis puntuals</h2>'}<p class="settings-note">${help}</p>${entries.length?`<ol class="date-block-changes" aria-label="${date?'Canvis puntuals del dia':'Canvis puntuals del calendari, de més recent a més antic'}">${rows}</ol>`:`<p class="settings-note">${date?'Aquest dia no té canvis puntuals de franges.':'No hi ha canvis puntuals de franges.'}</p>`}${date?'':'</section>'}`;
  }
  function clearDate(state,date){for(const [id,e] of Object.entries(state.dateEdits??{}))if(e.date===date)delete state.dateEdits[id];}
  function removePerson(state,kind,id,replacement=''){for(const [key,e] of Object.entries(state.dateEdits??{})){if(kind==='child'&&e.childId===id)delete state.dateEdits[key];else if(kind==='guardian'&&e.guardianId===id)e.guardianId=replacement;}}
- window.dateBlocks={key,clean,apply,find,form,save,remove,restore,changes,clearDate,removePerson};
+ window.dateBlocks={key,clean,apply,find,form,save,remove,restore,discard,changes,clearDate,removePerson};
 })();
