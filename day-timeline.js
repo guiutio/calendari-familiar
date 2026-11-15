@@ -48,11 +48,12 @@
       const school=placed.map(({a,lane})=>{
         const start=Math.max(0,a.start),end=Math.min(DAY_MINUTES,a.end);
         if(end<=start)return '';
-        const caption=`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
+        const isExtracurricular=a.kind==='Extraescolar';
+        const caption=isExtracurricular?`${a.schoolName} · ${a.startTime}–${a.endTime}`:`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
         const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
-        const heading=`<span class="day-school-kind">${escape(a.kind==='Extraescolar'?a.schoolName:a.kind)}</span>`;
+        const heading=`<span class="day-school-kind">${escape(isExtracurricular?a.schoolName:a.kind)}</span>`;
         const hours=`<span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span>`;
-        return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${shared?'23% + ':''}${lane} * ${available}% / ${laneCount} + 3px);width:calc(${available}% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${a.kind==='Extraescolar'?heading+hours:hours+heading}${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
+        return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${shared?'23% + ':''}${lane} * ${available}% / ${laneCount} + 3px);width:calc(${available}% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
       const extras=childRotations.map(item=>{
         const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;

@@ -115,7 +115,9 @@ test('calendari: respecta dies, dates inclusives i fills; permet un fill en dive
  s.state.preferences.showExtracurriculars=false;assert.equal(s.api.collect(s.state,'2026-11-02',s.state.children).length,0);assert.equal(s.api.legend(s.state),'');
  s.state.preferences.showExtracurriculars=true;assert.match(s.api.legend(s.state),/Música/);
  const html=s.ctx.window.dayTimelineUI.render('2026-11-02','Dilluns',s.state.children,items,{},'19:00',50);
- assert.match(html,/Extraescolar/);assert.match(html,/17:00/);
+ assert.match(html,/Música/);assert.match(html,/17:00/);
+ assert.doesNotMatch(html,/Extraescolar|Iniciació|Piano/);
+ assert.match(html,/title="Música · 17:00–18:00" aria-label="Música · 17:00–18:00"/);
  const mini=s.ctx.window.monthDayUI.mini(s.state.children,{},items,{});assert.match(mini,/month-mini-school/);
 });
 test('noms maliciosos es mostren com a text a llistes, formularis i llegenda',()=>{
