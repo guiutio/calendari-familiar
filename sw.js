@@ -1,5 +1,5 @@
-const CACHE = 'calendari-familiar-v0.22.0';
-const ASSETS = ['./theme.css?v=0.22.0','./assets/fonts/RobotoCondensed-ExtraBold.woff','./','./index.html','./actualitza.html','./scroll-guard.js?v=0.22.0','./school-schedule-core.js?v=0.22.0','./school-timeline.js?v=0.22.0','./week-navigation.js?v=0.22.0','./day-timeline.js?v=0.22.0','./month-day-ui.js?v=0.22.0','./rotation-patterns.js?v=0.22.0','./rotation-editor.js?v=0.22.0','./work-schedule.js?v=0.22.0','./personal-time-off.js?v=0.22.0','./people-reorder.js?v=0.22.0','./app.js?v=0.22.0','./styles.css?v=0.22.0-r1','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
+const CACHE = 'calendari-familiar-v0.23.0';
+const ASSETS = ['./theme.css?v=0.23.0','./assets/fonts/RobotoCondensed-ExtraBold.woff','./','./index.html','./actualitza.html','./scroll-guard.js?v=0.23.0','./school-schedule-core.js?v=0.23.0','./school-timeline.js?v=0.23.0','./week-navigation.js?v=0.23.0','./day-timeline.js?v=0.23.0','./month-day-ui.js?v=0.23.0','./rotation-patterns.js?v=0.23.0','./rotation-editor.js?v=0.23.0','./work-schedule.js?v=0.23.0','./personal-time-off.js?v=0.23.0','./people-reorder.js?v=0.23.0','./app.js?v=0.23.0','./styles.css?v=0.23.0-r1','./manifest.webmanifest','./assets/icon-192.png','./assets/icon-512.png','./assets/apple-touch-icon.png','./assets/favicon.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

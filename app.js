@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.22.0';
+const APP_VERSION = '0.23.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1107,7 +1107,9 @@ function schoolsPage() {
  <p class="settings-note">${year.reducedWindow ? `De ${year.reducedWindow.startTime} a ${year.reducedWindow.endTime}. Aquestes hores s'apliquen a tots els dies reduïts del curs.` : "Encara no s'han especificat les hores de jornada reduïda; no se'n calcula un horari fins que les configuris."}</p></div>
  <div class="action-row"><button class="danger-btn" data-action="year-delete" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">Suprimeix el curs</button></div></section>
  <section class="card"><div class="panel-header"><h2 class="section-title">Grups classe</h2><button class="secondary-btn" data-action="group-add" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}">${icon('plus', 14)} Afegir grup</button></div>
- ${year.groups.length ? year.groups.map(g => `<div class="school-row">${schoolNavButton(g.name, { schoolId: school.id, yearId: year.id, groupId: g.id })}<span class="school-meta">${g.childIds.length} ${g.childIds.length === 1 ? 'fill' : 'fills'}${g.tutorName ? ` · ${escapeHtml(g.tutorName)}` : ''}</span></div>`).join('') : '<div class="empty-state">Encara no hi ha cap grup. Pots afegir-hi «Segon», «Sisè A» o qualsevol altre.</div>'}</section>`;
+ <p class="section-description">Toca un grup per obrir-lo. Arrossega les tres ratlles per canviar-ne l’ordre.</p>
+ <p id="people-reorder-help" class="visually-hidden">Arrossega per reordenar. Amb el teclat, fes servir les fletxes amunt i avall, Inici o Fi.</p>
+ ${year.groups.length ? `<ol class="people-list" data-kind="group" aria-label="Grups classe">${year.groups.map(g => `<li class="person-list-row" data-id="${escapeHtml(g.id)}"><button type="button" class="person-list-open" data-action="school-nav" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(g.id)}" aria-label="Obre ${escapeHtml(g.name)}"><span class="person-list-name">${escapeHtml(g.name)}<small>${g.childIds.length} ${g.childIds.length === 1 ? 'fill' : 'fills'}${g.tutorName ? ` · ${escapeHtml(g.tutorName)}` : ''}</small></span>${icon('chevronRight', 18)}</button><button type="button" class="person-drag-handle" aria-label="Reordena ${escapeHtml(g.name)}" aria-describedby="people-reorder-help" aria-pressed="false" ${year.groups.length < 2 ? 'disabled' : ''}>${icon('drag', 22)}</button></li>`).join('')}</ol>` : '<div class="empty-state">Encara no hi ha cap grup. Pots afegir-hi «Segon», «Sisè A» o qualsevol altre.</div>'}</section>`;
     const schedulePanel = schoolSchedulePanel(school, year, group);
     return `<header class="page-heading"><div>${schoolCrumb(schoolYearName(year), { schoolId: school.id, yearId: year.id })}<div class="eyebrow">${escapeHtml(school.name)} · ${schoolYearName(year)}</div><h1 class="page-title">${escapeHtml(group.name)}</h1><p class="page-subtitle">${group.tutorName ? `Tutor/a: ${escapeHtml(group.tutorName)}` : 'Tutor/a no especificat'}</p></div></header>
  <section class="card"><div class="panel-header"><h2 class="section-title">Grup classe</h2><button class="secondary-btn" data-action="group-edit" data-school="${escapeHtml(school.id)}" data-year="${escapeHtml(year.id)}" data-group="${escapeHtml(group.id)}">${icon('pencil', 15)} Edita</button></div>
@@ -1283,7 +1285,7 @@ function personDetails(key) {
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
 }
 function commitPersonOrder(kind, id, index) {
-    const entries = kind === 'child' ? state.children : kind === 'guardian' ? state.guardians : kind === 'school' ? state.schools : null;
+    const entries = kind === 'child' ? state.children : kind === 'guardian' ? state.guardians : kind === 'school' ? state.schools : kind === 'group' ? yearById(schoolById(schoolNav.schoolId), schoolNav.yearId)?.groups ?? null : null;
     if (!entries || !Number.isInteger(index) || index < 0 || index >= entries.length)
         return false;
     const previous = entries.findIndex(person => person.id === id);

@@ -549,3 +549,44 @@ test('cada tram conserva la capa i les cantonades quan coincideixen vacances de 
  assert.ok(first.items.every(p=>p.concaveBR));assert.ok(last.items.every(p=>p.concaveTL));assert.match(first.html,/personal-corner pto-concave-br/);
  assert.equal(s.api.marks(entries,'2026-11-12','2026-11-01','2026-11-30').items.length,0);
 });
+
+test('els cursos es mostren per inici invers sense alterar les dades guardades',()=>{
+ const s=setup();
+ const year=(id,startDate,endDate)=>({id,startDate,endDate,groups:[]});
+ s.state.schools=[{id:'school',name:'Escola',color:'#123456',childIds:[],weeklySchedule:[],years:[
+  year('old','2024-09-01','2025-06-30'),year('new','2026-09-01','2027-06-30'),year('middle','2025-09-01','2026-06-30')]}];
+ s.ctx.schoolNav={schoolId:'school'};
+ vm.runInContext(section('function schoolById(', 'function schoolDayIsWeekend('),s.ctx);
+ s.ctx.shortDate=date=>date;
+ const before=JSON.stringify(s.state),html=s.ctx.schoolsPage();
+ const ids=[...html.matchAll(/data-action="school-nav"[^>]*data-year="([^"]+)"/g)].map(match=>match[1]);
+ assert.deepEqual(ids,['new','middle','old']);assert.equal(JSON.stringify(s.state),before);assert.equal(s.saves,0);
+});
+
+test('els grups classe es reordenen només dins del curs seleccionat i conserven les inscripcions i horaris',()=>{
+ const s=setup();
+ const group=(id,name,childIds=[])=>({id,name,childIds,tutorName:'Tutor/a',weeklySchedule:[{id:'session-'+id,weekday:0,startTime:'09:00',endTime:'10:00',label:'Classe'}],childSchedules:{same:[]}});
+ const year=(id,groups)=>({id,startDate:'2026-09-01',endDate:'2027-06-30',holidays:[],vacations:[],reducedDays:[],groups});
+ const selected=year('year',[group('a','Segon',['same']),group('b','Sisè A'),group('c','Primer')]);
+ const otherYear=year('other',[group('a','Altre curs'),group('b','Altre grup')]);
+ const school={id:'school',name:'Escola',years:[selected,otherYear],childIds:[],weeklySchedule:[]};
+ const otherSchool={...school,id:'other-school',years:[year('year',[group('a','Altra escola'),group('b','Un altre')])]};
+ s.state.schools=[school,otherSchool];s.ctx.schoolNav={schoolId:'school',yearId:'year'};
+ vm.runInContext(section('function schoolById(', 'function schoolDayIsWeekend('),s.ctx);s.ctx.shortDate=date=>date;
+ const html=s.ctx.schoolsPage(),before=JSON.stringify({otherYear,otherSchool}),groups=new Map(selected.groups.map(group=>[group.id,JSON.stringify(group)]));
+ assert.match(html,/<ol class="people-list" data-kind="group" aria-label="Grups classe">/);
+ assert.equal((html.match(/class="person-drag-handle"/g)||[]).length,3);
+ assert.match(html,/data-school="school" data-year="year" data-group="a" aria-label="Obre Segon"/);
+ assert.equal(s.ctx.commitPersonOrder('group','c',0),true);
+ assert.deepEqual(selected.groups.map(group=>group.id),['c','a','b']);assert.equal(s.saves,1);
+ for(const group of selected.groups)assert.equal(JSON.stringify(group),groups.get(group.id));
+ assert.equal(JSON.stringify({otherYear,otherSchool}),before);
+ const restored=JSON.parse(JSON.stringify(s.state));assert.deepEqual(restored.schools[0].years[0].groups.map(group=>group.id),['c','a','b']);
+ assert.deepEqual(restored.schools[0].years[0].groups[1].childIds,['same']);
+ for(const [id,index] of [['c',0],['missing',1],['c',3],['c',-1],['c',0.5]])assert.equal(s.ctx.commitPersonOrder('group',id,index),false);
+ s.ctx.schoolNav={schoolId:'missing',yearId:'year'};assert.equal(s.ctx.commitPersonOrder('group','c',2),false);
+ s.ctx.schoolNav={schoolId:'school',yearId:'missing'};assert.equal(s.ctx.commitPersonOrder('group','c',2),false);assert.equal(s.saves,1);
+ s.ctx.schoolNav={schoolId:'school',yearId:'year'};selected.groups=selected.groups.slice(0,1);
+ assert.match(s.ctx.schoolsPage(),/aria-pressed="false" disabled/);
+ selected.groups=[];assert.match(s.ctx.schoolsPage(),/Encara no hi ha cap grup/);
+});

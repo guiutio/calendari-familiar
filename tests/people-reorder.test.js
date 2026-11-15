@@ -81,3 +81,9 @@ test('les escoles reutilitzen el gest i comuniquen la posició dins de la seva l
  const s=setup('school');s.fire('pointerdown','a');s.fire('pointermove','a',{clientY:340});s.fire('pointerup','a');
  assert.deepEqual(s.order(),['b','c','d','a']);assert.deepEqual(s.commits,[['school','a',3]]);
 });
+
+test('els grups classe reutilitzen la nansa per arrossegar i el teclat',()=>{
+ const s=setup('group');s.fire('pointerdown','d',{clientY:310});s.fire('pointermove','d',{clientY:110});s.fire('pointerup','d');
+ assert.deepEqual(s.order(),['d','a','b','c']);assert.deepEqual(s.commits,[['group','d',0]]);
+ s.fire('keydown','d',{key:'End'});assert.deepEqual(s.order(),['a','b','c','d']);assert.deepEqual(s.commits[1],['group','d',3]);
+});
