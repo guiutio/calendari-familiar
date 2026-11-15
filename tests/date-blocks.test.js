@@ -174,3 +174,25 @@ test('els canvis són només dins del seu curs, extraescolar i grup, de més ant
  const before=JSON.stringify(s.state.dateEdits);ec.page(s.state,nav);assert.equal(JSON.stringify(s.state.dateEdits),before,'mostrar la llista no migra ni altera dades');
  assert.deepEqual(plain(s.api.clean(s.state.dateEdits,s.state.children,s.state.guardians)),plain(s.state.dateEdits));
 });
+
+
+test('una franja compartida deixa triar el fill i l’edició puntual només desagrupa aquell fill',()=>{
+ const s=setup(),app=read('app.js'),section=(a,b)=>app.slice(app.indexOf(a),app.indexOf(b,app.indexOf(a)));
+ s.data.activities.push({...s.data.activities[0],childId:'b'});
+ Object.assign(s.ctx,{state:s.state,dateBlocks:s.api,tab:'calendar',calendarView:'week',selectedDate:s.date,sheet:null,activeChildren:()=>s.state.children,dateBlockSnapshot:()=>s.data,
+  isValidDate:d=>/^\d{4}-\d{2}-\d{2}$/.test(d),childById:id=>s.state.children.find(c=>c.id===id),render:()=>{},update:()=>{},notify:()=>{},
+  viewYear:2026,viewMonth:10,weekFocusTarget:false,parseDate:d=>new Date(d+'T12:00:00Z'),newId:()=> 'new',FormData:class {constructor(form){return new Map(Object.entries(form.values));}}});
+ vm.runInContext(section('function clickAction(button)',"document.addEventListener('click'"),s.ctx);
+ vm.runInContext(read('day-timeline.js'),s.ctx);
+ const applied=s.api.apply(s.state,s.date,s.state.children,s.data),render=()=>s.ctx.window.dayTimelineUI.renderWeek(s.date,[{date:s.date,label:'Dijous',activities:applied.activities,nightSegments:applied.nights,customSlots:applied.slots,rotatingSlots:applied.extra}],s.state.children);
+ const shared=render().match(/<button[^>]*data-session="school-session"[^>]*>/)[0];
+ const members=JSON.parse(shared.match(/data-shared-blocks="([^"]+)"/)[1].replaceAll('&quot;','"'));
+ s.ctx.clickAction({dataset:{date:s.date,sharedBlocks:JSON.stringify(members),dateBlock:'activity:school:school-session'}});assert.equal(s.ctx.sheet.type,'sharedBlock');assert.equal(s.ctx.sheet.members.length,2);
+ s.ctx.clickAction({dataset:{action:'date-block-choose',date:s.date,child:'b',source:'activity:school:school-session'}});assert.equal(s.ctx.sheet.childId,'b');assert.equal(s.ctx.sheet.type,'dateBlock');
+ vm.runInContext('function submitDateBlock(form,event){'+section('if (form.dataset.dateBlockForm)', 'if (form.dataset.daySlotForm)')+'}',s.ctx);
+ s.ctx.submitDateBlock({dataset:{dateBlockForm:'true',date:s.date,child:'b',source:'activity:school:school-session'},values:{name:'Escola',startTime:'10:00',endTime:'16:30',guardianId:'',note:'Només Bruc'}},{preventDefault(){}});
+ const changed=s.api.apply(s.state,s.date,s.state.children,s.data).activities;
+ assert.equal(changed.find(e=>e.childId==='a'&&e.id==='school-session').startTime,'09:00');assert.equal(changed.find(e=>e.childId==='b'&&e.id==='school-session').startTime,'10:00');assert.equal(Object.values(s.state.dateEdits).length,1);
+ const html=s.ctx.window.dayTimelineUI.renderWeek(s.date,[{date:s.date,label:'Dijous',activities:changed,nightSegments:{}}],s.state.children);
+ assert.equal((html.match(/data-session="school-session"/g)||[]).length,2);assert.doesNotMatch(html.match(/<button[^>]*data-session="school-session"[^>]*>/g).join(''),/data-shared-blocks/);
+});

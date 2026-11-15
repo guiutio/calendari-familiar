@@ -135,3 +135,6 @@
 /* Fons principal completament blanc o negre, incloent-hi les barres fixes. */
 :root[data-theme="light"] :is(.app-layout,.sidebar,.main-area,.calendar-sticky-bar,.calendar-controls,.mobile-tabs),
 :root[data-theme="dark"] :is(.app-layout,.sidebar,.main-area,.calendar-sticky-bar,.calendar-controls,.mobile-tabs) {background:var(--app-background);}
+
+/* El color de la pernocta deixa passar la graella horària; el text manté l’opacitat. */
+:root[data-theme] .week-date-columns .day-night-block {background:color-mix(in srgb,var(--night-color) 40%,transparent);}

@@ -124,16 +124,29 @@
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
     const shared=child=>rotatingSlots.some(item=>item.childId===child.id&&item.visible&&activities.some(a=>a.childId===child.id&&a.start<item.to&&a.end>item.from));
-    return `<span class="month-mini ${annual?'year-scale':special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
-      ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape(childSymbol(c))}</span>`).join('')}
-      ${children.map(c=>`<span class="month-mini-column"${shared(c)?' style="--schedule-inset:23%"':''}>
+    // Agrupem el contingut visible, sense identificar-lo pel fill ni pels ids dels patrons.
+    const signature=c=>{
+      const rows=[
+        ...(nights[c.id]??[]).filter(n=>n.visible).map(n=>['night',n.from,n.to,n.guardianId,n.guardianColor,n.guardianName,n.note??'']),
+        ...(customSlots[c.id]??[]).map(n=>['slot',n.from,n.to,n.guardianId,n.color,n.name,n.note??'']),
+        ...activities.filter(n=>n.childId===c.id).map(n=>['school',n.start,n.end,n.schoolName,n.kind,n.description??'',n.color,n.guardianId??'',n.note??'']),
+        ...rotatingSlots.filter(n=>n.childId===c.id&&n.visible).map(n=>['rotation',n.from,n.to,n.rotationName,n.guardianId,n.guardianName,n.color,n.note??''])
+      ];
+      return JSON.stringify(rows.map(row=>JSON.stringify(row)).sort());
+    };
+    const groups=[],byContent=new Map();
+    for(const child of children){const key=signature(child);let group=byContent.get(key);if(!group){group=[];groups.push(group);byContent.set(key,group);}group.push(child);}
+    return `<span class="month-mini ${annual?'year-scale':special?'night-expanded':'night-compressed'}" style="--month-children:${groups.length}" aria-hidden="true">
+      ${groups.map(group=>`<span class="month-mini-child" title="${escape(group.map(c=>c.name).join(', '))}">${escape(group.map(childSymbol).join(' '))}</span>`).join('')}
+      ${groups.map(group=>{const c=group[0];return `<span class="month-mini-column" title="${escape(group.map(c=>c.name).join(', '))}"${shared(c)?' style="--schedule-inset:23%"':''}>
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
         ${(customSlots[c.id]??[]).map(s=>rect(s.from,s.to,s.color,'month-mini-custom',s.startTime+'–'+s.endTime+' '+s.name)).join('')}
         ${activities.filter(a=>a.childId===c.id).map(a=>rect(a.start,a.end,a.color,'month-mini-school',a.schoolName)).join('')}
         ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra '+(a.guardianId?'with-guardian':'without-guardian')+(activities.some(item=>item.childId===c.id&&item.start<a.to&&item.end>a.from)?' with-activity':''),a.rotationName+' · '+a.guardianName)).join('')}
-      </span>`).join('')}
+      </span>`;}).join('')}
     </span>`;
   }
+
   /* El detall mensual comparteix les mateixes accions per a pernoctes i activitats escolars
      que les vistes independents de dia i setmana. */
   function detail(date,label,children,nights,activities,customSlots,state){

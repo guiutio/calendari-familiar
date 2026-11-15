@@ -31,17 +31,60 @@
   }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
   const blockDetails=item=>`${item.guardianName&&item.guardianId?`<small class="day-block-guardian">${escape(item.guardianName)}</small>`:''}${item.note?`<small class="day-block-note" title="${escape(item.note)}">${escape(item.note)}</small>`:''}`;
-  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={},rotatingSlots=[]) {
-    const columns=children.map(child=>{
+  // Les agrupacions només abracen fills consecutius: mai no cobreixen la columna d’un altre fill.
+  function sharedPlan(children,activities,nightSegments,customSlots,rotatingSlots){
+    const maps=children.map(()=>new Map()),columns=children.map((child,index)=>{
+      const nights=(nightSegments[child.id]??[]).filter(s=>s.visible),nodes=[];
+      const add=(item,kind,start,end,priority,signature,sourceId)=>{
+        if(end<=start)return;
+        const node={item,kind,start,end,priority,index,span:1,hasNight:nights.length>0,members:[{childId:child.id,sourceId}],signature:JSON.stringify([kind,start,end,...signature])};
+        nodes.push(node);maps[index].set(item,node);
+      };
+      nights.forEach((s,i)=>{
+        const same=(a,b)=>!!(a&&b&&a.guardianId===b.guardianId&&a.to===b.from);
+        add(s,'night',s.from,s.to,-1,[s.guardianId,s.guardianName,s.guardianColor,s.blockName&&s.blockName!=='Pernocta'?s.blockName:'',s.note??'',same(nights[i-1],s),same(s,nights[i+1])],s.dateBlock||'night:'+s.date);
+      });
+      for(const s of rotatingSlots.filter(s=>s.childId===child.id&&s.visible))add(s,'rotation',Math.max(0,s.from),Math.min(DAY_MINUTES,s.to),0,[s.rotationName,s.guardianId??'',s.guardianName??'',s.color,s.note??''],s.dateBlock||'rotation:'+s.rotationId);
+      for(const s of customSlots[child.id]??[])add(s,'slot',Math.max(0,s.from),Math.min(DAY_MINUTES,s.to),1,[s.name,s.guardianId??'',s.guardianName??'',s.color,s.note??''],s.dateBlock||'slot:'+s.id);
+      for(const s of activities.filter(s=>s.childId===child.id))add(s,'activity',Math.max(0,s.start),Math.min(DAY_MINUTES,s.end),2,[s.schoolName,s.kind,s.description??'',s.blockName||(s.kind==='Extraescolar'?s.schoolName:s.kind),s.guardianId??'',s.guardianId?s.guardianName??'':'',s.color,s.note??''],s.dateBlock||'activity:'+encodeURIComponent(s.schoolId)+':'+encodeURIComponent(s.id));
+      return nodes;
+    });
+    const groups=[];
+    columns.forEach((nodes,index)=>nodes.forEach(node=>{
+      if(node.hidden)return;
+      for(let next=index+1;next<columns.length;next++){
+        const matching=columns[next].find(other=>!other.hidden&&other.signature===node.signature);
+        if(!matching)break;
+        matching.hidden=true;node.span++;node.members.push(...matching.members);node.hasNight||=matching.hasNight;
+      }
+      groups.push(node);
+    }));
+    const active=[];
+    const placed=groups.filter(n=>n.kind!=='night').sort((a,b)=>a.start-b.start||b.end-a.end||a.priority-b.priority||a.index-b.index||a.signature.localeCompare(b.signature));
+    placed.forEach((node,index)=>{
+      for(let i=active.length-1;i>=0;i--)if(active[i].end<=node.start)active.splice(i,1);
+      const overlaps=active.filter(other=>other.index<node.index+node.span&&node.index<other.index+other.span);
+      node.depth=overlaps.reduce((depth,other)=>Math.max(depth,other.depth+1),0);node.layer=index+2;active.push(node);
+    });
+    maps.focusLayer=placed.length+3;return maps;
+  }
+  function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={},rotatingSlots=[],merge=false) {
+    const plan=merge?sharedPlan(children,activities,nightSegments,customSlots,rotatingSlots):null;
+    const columns=children.map((child,childIndex)=>{
+      const shared=item=>plan?.[childIndex].get(item);
+      const sharedClass=item=>shared(item)?.span>1?' day-shared-block':'';
+      const sharedAttrs=item=>shared(item)?.span>1?`data-shared-blocks="${escape(JSON.stringify(shared(item).members))}"`:"";
+      const sharedTitle=(item,title)=>shared(item)?.span>1?title+' Fills: '+shared(item).members.map(m=>children.find(c=>c.id===m.childId)?.name).join(', ')+'.':title;
       const segments=nightSegments[child.id]??[];
       const visibleNights=segments.filter(s=>s.visible);
       const nights=visibleNights.map((s,index)=>{
+        if(shared(s)?.hidden)return '';
         const same=(a,b)=>a&&b&&a.guardianId===b.guardianId&&a.to===b.from;
         const continuedBefore=same(visibleNights[index-1],s),continuedAfter=same(s,visibleNights[index+1]);
         const h=(s.to-s.from)*pxPerMinute;
         const name=escape((s.blockName&&s.blockName!=='Pernocta'?s.blockName+' · ':'')+s.guardianName);
-        const title=`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`;
-        return `<button type="button" class="day-night-block${continuedBefore?' night-continues-before':''}${continuedAfter?' night-continues-after':''}" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" data-date-block="${escape(s.dateBlock??'')}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span>${s.note?`<small class="day-block-note">${escape(s.note)}</small>`:''}</button>`;
+        const title=sharedTitle(s,`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`);
+        return `<button type="button" class="day-night-block${sharedClass(s)}${continuedBefore?' night-continues-before':''}${continuedAfter?' night-continues-after':''}" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" data-date-block="${escape(s.dateBlock??'')}" ${sharedAttrs(s)} style="top:${s.from*pxPerMinute}px;height:${h}px;--shared-span:${shared(s)?.span??1};--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span>${s.note?`<small class="day-block-note">${escape(s.note)}</small>`:''}</button>`;
       }).join('');
       const childActivities=activities.filter(a=>a.childId===child.id);
       const childRotations=rotatingSlots.filter(item=>item.childId===child.id&&item.visible);
@@ -53,31 +96,31 @@
       ]);
       const positions=new Map(placed.map(entry=>[entry.item,entry]));
       const position=(item,extraStyle)=>{
-        const entry=positions.get(item),level=entry.depth+(visibleNights.length?1:0);
-        return `data-event-depth="${entry.depth}" style="top:${entry.start*pxPerMinute}px;height:${(entry.end-entry.start)*pxPerMinute}px;--event-indent:min(${level*6}px,30%);--event-layer:${entry.layer};${extraStyle}\"`;
+        const entry=shared(item)??positions.get(item),level=entry.depth+((entry.hasNight??visibleNights.length)?1:0);
+        return `${sharedAttrs(item)?sharedAttrs(item)+' ':''}data-event-depth="${entry.depth}" style="top:${entry.start*pxPerMinute}px;height:${(entry.end-entry.start)*pxPerMinute}px;--event-indent:min(${level*6}px,30%);--event-layer:${entry.layer};--shared-span:${entry.span??1};${extraStyle}\"`;
       };
       const overrides=childOverrides.map(slot=>{
         const start=Math.max(0,slot.from),end=Math.min(DAY_MINUTES,slot.to);
-        if(end<=start)return '';
-        const title=`Assignació puntual · ${slot.name} · ${slot.startTime}–${slot.endTime}. Toca per editar.`;
-        return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" data-date-block="${escape(slot.dateBlock??'')}" ${position(slot,`background-color:${escape(slot.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small>${blockDetails(slot)}</button>`;
+        if(end<=start||shared(slot)?.hidden)return '';
+        const title=sharedTitle(slot,`Assignació puntual · ${slot.name} · ${slot.startTime}–${slot.endTime}. Toca per editar.`);
+        return `<button type="button" class="day-slot-block${sharedClass(slot)}" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" data-date-block="${escape(slot.dateBlock??'')}" ${position(slot,`background-color:${escape(slot.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small>${blockDetails(slot)}</button>`;
       }).join('');
       const school=childActivities.map(a=>{
         const start=Math.max(0,a.start),end=Math.min(DAY_MINUTES,a.end);
-        if(end<=start)return '';
+        if(end<=start||shared(a)?.hidden)return '';
         const isExtracurricular=a.kind==='Extraescolar';
         const baseCaption=isExtracurricular?`${a.schoolName} · ${a.startTime}–${a.endTime}`:`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
-        const caption=baseCaption+(a.guardianName&&a.guardianId?' · '+a.guardianName:'')+(a.note?' · '+a.note:'');
+        const caption=sharedTitle(a,baseCaption+(a.guardianName&&a.guardianId?' · '+a.guardianName:'')+(a.note?' · '+a.note:''));
         const heading=`<span class="day-school-kind">${escape(a.blockName||(isExtracurricular?a.schoolName:a.kind))}</span>`;
         const hours=`<span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span>`;
-        return `<button type="button" class="day-school-block" ${position(a,`--school-event-color:${escape(a.color)}`)} data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" data-date-block="${escape(a.dateBlock??'')}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}${blockDetails(a)}</button>`;
+        return `<button type="button" class="day-school-block${sharedClass(a)}" ${position(a,`--school-event-color:${escape(a.color)}`)} data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" data-date-block="${escape(a.dateBlock??'')}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}${blockDetails(a)}</button>`;
       }).join('');
       const extras=childRotations.map(item=>{
-        if(!positions.has(item))return '';
-        const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
-        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" data-date-block="${escape(item.dateBlock??'')}" ${position(item,`--extra-color:${escape(item.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small>${blockDetails(item)}</button>`;
+        if(!positions.has(item)||shared(item)?.hidden)return '';
+        const title=sharedTitle(item,`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`);
+        return `<button type="button" class="day-extra-block${sharedClass(item)} ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" data-date-block="${escape(item.dateBlock??'')}" ${position(item,`--extra-color:${escape(item.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small>${blockDetails(item)}</button>`;
       }).join('');
-      return `<div class="day-time-column" style="height:${height}px;--event-focus-layer:${placed.length+3}" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
+      return `<div class="day-time-column" style="height:${height}px;--event-focus-layer:${plan?.focusLayer??placed.length+3}" data-child="${escape(child.id)}" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');
     return columns;
   }
@@ -96,7 +139,7 @@
       <div class="week-child-headers" style="--week-child-count:${columnCount}">${childHeaders}</div>
     </div>`).join('');
     const dayColumns=days.map(day=>`<div class="week-date-columns${day.date===todayDate?' today':''}" data-date="${escape(day.date)}" style="height:${height}px;--week-child-count:${columnCount}" aria-label="${escape(day.label)}">
-      ${children.length?buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots):`<div class="day-time-column" style="height:${height}px"></div>`}</div>`).join('');
+      ${children.length?buildColumns(day.date,children,day.activities,day.nightSegments,height,pxPerMinute,day.customSlots,day.rotatingSlots,true):`<div class="day-time-column" style="height:${height}px"></div>`}</div>`).join('');
     return `<section class="week-timeline" aria-label="Setmana de 24 hores des de ${escape(startDate)}">
       <div class="week-sticky-head"><div class="week-sticky-head-viewport"></div></div>
       <div class="day-timeline-viewport week-timeline-viewport" tabindex="0" role="region"

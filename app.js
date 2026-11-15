@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.26.1';
+const APP_VERSION = '0.27.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -1425,6 +1425,11 @@ function sheetMarkup() {
     else if (sheet?.type === 'daySlotForm') {
         contents = monthDayUI.form(sheet.date, sheet.childId, sheet.slotId, state.children, state.guardians, state);
     }
+    else if (sheet?.type === 'sharedBlock') {
+        const { date, members } = sheet;
+        const first = dateBlocks.find(state, date, members[0]?.childId ?? '', members[0]?.sourceId ?? '', dateBlockSnapshot(date));
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(first?.name ?? 'Franja compartida')}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div><p class="settings-note">Aquesta franja és igual per a diversos fills. Tria de quin fill vols editar-la.</p><ol class="people-list">${members.map(member => `<li class="person-list-row"><button type="button" class="person-list-open" data-action="date-block-choose" data-date="${escapeHtml(date)}" data-child="${escapeHtml(member.childId)}" data-source="${escapeHtml(member.sourceId)}"><span class="person-list-name">${escapeHtml(childById(member.childId)?.name ?? '')}</span>${icon('chevronRight', 17)}</button></li>`).join('')}</ol>`;
+    }
     else if (sheet?.type === 'dateBlock') {
         contents = dateBlocks.form(state, sheet.date, sheet.childId, sheet.sourceId, dateBlockSnapshot(sheet.date), sheet.origin);
     }
@@ -1848,6 +1853,23 @@ function clearAllData() {
     notify('Totes les dades esborrades. Ja pots començar de zero.');
 }
 function clickAction(button) {
+    if (button.dataset.sharedBlocks && tab === 'calendar' && calendarView === 'week') {
+        const date = button.dataset.viewDate ?? button.dataset.date ?? '';
+        try {
+            const parsed = JSON.parse(button.dataset.sharedBlocks);
+            if (isValidDate(date) && Array.isArray(parsed) && parsed.length <= state.children.length) {
+                const seen = new Set(), members = parsed.filter((m) => m && typeof m.childId === 'string' && typeof m.sourceId === 'string' && childById(m.childId) && !seen.has(m.childId) && dateBlocks.find(state, date, m.childId, m.sourceId, dateBlockSnapshot(date)) && seen.add(m.childId));
+                if (members.length > 1) {
+                    sheet = { type: 'sharedBlock', date, members };
+                    render();
+                }
+            }
+        }
+        catch {
+            notify('No s’ha pogut obrir la franja compartida');
+        }
+        return;
+    }
     if (button.dataset.dateBlock && tab === 'calendar' && calendarView === 'week') {
         const date = button.dataset.viewDate ?? button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.dateBlock;
         if (isValidDate(date) && childById(childId) && dateBlocks.find(state, date, childId, sourceId, dateBlockSnapshot(date))) {
@@ -2367,6 +2389,14 @@ function clickAction(button) {
                 break;
             sheet = { type: 'dateBlock', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '', sourceId: '', origin: button.dataset.origin === 'day' ? 'day' : undefined };
             render();
+            break;
+        }
+        case 'date-block-choose': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
+            if (sheet?.type === 'sharedBlock' && sheet.date === date && sheet.members.some(m => m.childId === childId && m.sourceId === sourceId) && dateBlocks.find(state, date, childId, sourceId, dateBlockSnapshot(date))) {
+                sheet = { type: 'dateBlock', date, childId, sourceId };
+                render();
+            }
             break;
         }
         case 'date-block-edit': {

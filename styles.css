@@ -1252,3 +1252,6 @@ input::-webkit-datetime-edit {min-width:0;max-width:100%;padding:0;}
 .date-block-form>.action-row {margin:0;}
 .date-block-form .month-slot-midnight {display:flex;flex-direction:row;align-items:center;gap:7px;font-weight:400;margin-top:5px;}
 .date-block-form .month-slot-midnight input[type="checkbox"] {width:18px;height:18px;min-height:18px;flex:0 0 18px;padding:0;appearance:auto;}
+
+/* Una franja comuna conserva les subcolumnes dels fills i només envaeix les que li corresponen. */
+.day-time-column > .day-shared-block {width:calc((100% + 1px) * var(--shared-span) - var(--event-indent,0px) - 6px);}
