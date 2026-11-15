@@ -30,6 +30,7 @@
     });
   }
   /** Els dos calendaris comparteixen exactament les mateixes regles de pernocta i escola. */
+  const blockDetails=item=>`${item.guardianName&&item.guardianId?`<small class="day-block-guardian">${escape(item.guardianName)}</small>`:''}${item.note?`<small class="day-block-note" title="${escape(item.note)}">${escape(item.note)}</small>`:''}`;
   function buildColumns(date,children,activities,nightSegments,height,pxPerMinute,customSlots={},rotatingSlots=[]) {
     const columns=children.map(child=>{
       const segments=nightSegments[child.id]??[];
@@ -38,9 +39,9 @@
         const same=(a,b)=>a&&b&&a.guardianId===b.guardianId&&a.to===b.from;
         const continuedBefore=same(visibleNights[index-1],s),continuedAfter=same(s,visibleNights[index+1]);
         const h=(s.to-s.from)*pxPerMinute;
-        const name=escape(s.guardianName);
+        const name=escape((s.blockName&&s.blockName!=='Pernocta'?s.blockName+' · ':'')+s.guardianName);
         const title=`Pernocta · ${s.guardianName} · ${fmt(s.from)}–${fmt(s.to)}. Toca per editar la nit assignada.`;
-        return `<button type="button" class="day-night-block${continuedBefore?' night-continues-before':''}${continuedAfter?' night-continues-after':''}" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span></button>`;
+        return `<button type="button" class="day-night-block${continuedBefore?' night-continues-before':''}${continuedAfter?' night-continues-after':''}" data-action="edit-band" data-date="${escape(s.date)}" data-view-date="${escape(date)}" data-band="nit" data-child="${escape(child.id)}" data-date-block="${escape(s.dateBlock??'')}" style="top:${s.from*pxPerMinute}px;height:${h}px;--night-color:${escape(s.guardianColor)}" aria-label="${escape(title)}" title="${escape(title)}"><span class="day-night-title">${name}</span><span class="day-night-subtitle">Pernocta · ${fmt(s.from)}–${fmt(s.to)}</span>${s.note?`<small class="day-block-note">${escape(s.note)}</small>`:''}</button>`;
       }).join('');
       const childActivities=activities.filter(a=>a.childId===child.id);
       const childRotations=rotatingSlots.filter(item=>item.childId===child.id&&item.visible);
@@ -59,21 +60,22 @@
         const start=Math.max(0,slot.from),end=Math.min(DAY_MINUTES,slot.to);
         if(end<=start)return '';
         const title=`Assignació puntual · ${slot.name} · ${slot.startTime}–${slot.endTime}. Toca per editar.`;
-        return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" ${position(slot,`background-color:${escape(slot.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small></button>`;
+        return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" data-date-block="${escape(slot.dateBlock??'')}" ${position(slot,`background-color:${escape(slot.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small>${blockDetails(slot)}</button>`;
       }).join('');
       const school=childActivities.map(a=>{
         const start=Math.max(0,a.start),end=Math.min(DAY_MINUTES,a.end);
         if(end<=start)return '';
         const isExtracurricular=a.kind==='Extraescolar';
-        const caption=isExtracurricular?`${a.schoolName} · ${a.startTime}–${a.endTime}`:`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
-        const heading=`<span class="day-school-kind">${escape(isExtracurricular?a.schoolName:a.kind)}</span>`;
+        const baseCaption=isExtracurricular?`${a.schoolName} · ${a.startTime}–${a.endTime}`:`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
+        const caption=baseCaption+(a.guardianName&&a.guardianId?' · '+a.guardianName:'')+(a.note?' · '+a.note:'');
+        const heading=`<span class="day-school-kind">${escape(a.blockName||(isExtracurricular?a.schoolName:a.kind))}</span>`;
         const hours=`<span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span>`;
-        return `<button type="button" class="day-school-block" ${position(a,`--school-event-color:${escape(a.color)}`)} data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
+        return `<button type="button" class="day-school-block" ${position(a,`--school-event-color:${escape(a.color)}`)} data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" data-date-block="${escape(a.dateBlock??'')}" title="${escape(caption)}" aria-label="${escape(caption)}">${isExtracurricular?heading+hours:hours+heading}${!isExtracurricular&&a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}${blockDetails(a)}</button>`;
       }).join('');
       const extras=childRotations.map(item=>{
         if(!positions.has(item))return '';
         const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
-        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" ${position(item,`--extra-color:${escape(item.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
+        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" data-date-block="${escape(item.dateBlock??'')}" ${position(item,`--extra-color:${escape(item.color)}`)} title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small>${blockDetails(item)}</button>`;
       }).join('');
       return `<div class="day-time-column" style="height:${height}px;--event-focus-layer:${placed.length+3}" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');

@@ -97,7 +97,7 @@ test('els controls queden sobre el títol i els modes sota el contingut, fora de
   assert.match(html,/<\/aside><nav class="calendar-controls">Eines<\/nav><header class="calendar-sticky-bar">Controls<\/header><main class="main-area">/);
   const main=html.slice(html.indexOf('<main'),html.indexOf('</main>'));
   assert.doesNotMatch(main,/calendar-sticky-bar|calendar-controls|mobile-tabs/);
-  assert.match(html,/<\/main>\s*<nav class="mobile-tabs"/);
+  assert.match(html,/<\/main>\s*(?:<button[^>]+class="week-add-block"[^>]*>\+<\/button>)?<nav class="mobile-tabs"/);
  }
 });
 

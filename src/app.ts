@@ -97,12 +97,12 @@ type ExtracurricularActivity={id:string;name:string;address:string;phone:string;
 type ExtracurricularCourse={id:string;startDate:string;endDate:string;activities:ExtracurricularActivity[]};
 type ExtracurricularNav={courseId?:string;activityId?:string;groupId?:string};
 type ExtracurricularEditor=ExtracurricularNav & {kind:'course'|'activity'|'group'|'session';sessionId?:string};
-type AppState = { extracurricularCourses:ExtracurricularCourse[]; version: number; personTimeOff:Record<string,PersonTimeOff>; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
+type AppState = { dateEdits?:Record<string,any>; extracurricularCourses:ExtracurricularCourse[]; version: number; personTimeOff:Record<string,PersonTimeOff>; children: Child[]; guardians: Guardian[]; overrides: Record<string,string>; bandOverrides:Record<string,string>; daySlots:Record<string,DaySlot[]>; preferences: Preferences; schools:School[];nightDateTimes:Record<string,string>;extraRotations:ExtraRotation[];extraExceptions:Record<string,ExtraException> };
 type Tab = 'extracurricular' | 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'general';
-type Sheet = {type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
+type Sheet = {type:'dateBlock';date:string;childId:string;sourceId:string}|{type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.24.5';
+const APP_VERSION = '0.25.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -160,7 +160,7 @@ function newId() {return (typeof crypto !== 'undefined' && 'randomUUID' in crypt
 function emptyState():AppState {
   return {
     version:2,children:[],guardians:[],personTimeOff:{},
-    overrides:{},bandOverrides:{},daySlots:{},schools:[],extracurricularCourses:[],nightDateTimes:{},extraRotations:[],extraExceptions:{},
+    dateEdits:{},overrides:{},bandOverrides:{},daySlots:{},schools:[],extracurricularCourses:[],nightDateTimes:{},extraRotations:[],extraExceptions:{},
     preferences:{showExtracurriculars:true,showHolyWeek:false,showWorkSchedules:true,mePerson:'',visibleTimeOffPeople:[],showPersonalHolidays:true,showPersonalVacations:true,visibleChildren:[],visibleGuardians:[],visibleSchools:[],visibleBands:[...BANDS],theme:'auto',fontSize:'normal',timelineZoom:50,timelineZooms:{day:50,week:50}}
   };
 }
@@ -349,7 +349,10 @@ function cleanState(raw:unknown):AppState {
   extraRotations.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.id.localeCompare(b.id));
   const nightDateTimes=rotationPatterns.cleanNightDateTimes(obj.nightDateTimes,children) as Record<string,string>;
   const extraExceptions=rotationPatterns.cleanExtraExceptions(obj.extraExceptions,extraRotations,children,guardians) as Record<string,ExtraException>;
-  return {version:2,extracurricularCourses,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,showExtracurriculars:obj.preferences.showExtracurriculars!==false,showHolyWeek:obj.preferences.showHolyWeek===true,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
+  const dateEditAPI=(window as Window & {dateBlocks?:any}).dateBlocks;
+  if(obj.dateEdits&&Object.keys(obj.dateEdits).length&&!dateEditAPI)throw Error('No s’ha pogut carregar el suport d’edicions puntuals');
+  const dateEdits=dateEditAPI?.clean(obj.dateEdits,children,guardians)??{};
+  return {version:2,dateEdits,extracurricularCourses,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,showExtracurriculars:obj.preferences.showExtracurriculars!==false,showHolyWeek:obj.preferences.showHolyWeek===true,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
 }
 let db:IDBDatabase|null=null;
 let storageMode:'indexeddb'|'localStorage'|'session'='session';
@@ -500,6 +503,7 @@ const rotationEditor=(window as Window & {rotationEditor?:any}).rotationEditor;
 const workSchedule=(window as Window & {workSchedule?:any}).workSchedule;
 const weekNavigation=(window as Window & {weekNavigation?:any}).weekNavigation;
 const extracurricular=(window as Window & {extracurricular?:any}).extracurricular;
+const dateBlocks=(window as Window & {dateBlocks?:any}).dateBlocks;
 const personalTimeOff=(window as Window & {personalTimeOff?:any}).personalTimeOff;
 /** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
 function childHasSchool(date:string,childId:string):boolean {
@@ -549,8 +553,14 @@ function weekTimelineDays(start:string,children:Child[],count=7){
    const date=addDays(start,i);
    const nightSegments:Record<string,ReturnType<DayTimelineUI['overnightSegments']>>={};
    for(const c of children)nightSegments[c.id]=dayTimelineUI!.overnightSegments(date,c.id,nightChangeTime(date,c.id),assigned,(d:string)=>addDays(d,-1),guardian,state.preferences.visibleGuardians);
-   return {date,label:`${weekLong[(parseDate(date).getDay()+6)%7]} ${parseDate(date).getDate()}`,dayOff:Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date)),activities:schoolActivities(date,children),nightSegments,customSlots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),rotatingSlots:extraSlots(date,children)};
+   const raw={activities:schoolActivities(date,children),nights:nightSegments,slots:monthDayUI.slots(state,date,children,state.guardians,state.preferences.visibleGuardians),extra:extraSlots(date,children)};
+   const data=(window as Window & {dateBlocks?:any}).dateBlocks?.apply(state,date,children,raw)??raw;
+   return {date,label:`${weekLong[(parseDate(date).getDay()+6)%7]} ${parseDate(date).getDate()}`,dayOff:Boolean(state.preferences.mePerson&&workSchedule.isDayOff(state,date)),activities:data.activities,nightSegments:data.nights,customSlots:data.slots,rotatingSlots:data.extra};
  });
+}
+function dateBlockSnapshot(date:string){
+ const day=weekTimelineDays(date,state.children,1)[0]!;
+ return {activities:day.activities,nights:day.nightSegments,slots:day.customSlots,extra:day.rotatingSlots};
 }
 function miniBands(date:string,children:Child[],bands:TimeBand[]):string {
   if(!children.length||!bands.length)return '<span class="mini-empty">—</span>';
@@ -631,7 +641,7 @@ function layout(content:string){return `<div class="app-layout ${tab==='calendar
   <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${tab==='calendar'?`<hr class="side-nav-separator">${calendarControls(true)}`:''}</nav>
   <nav class="side-nav-bottom" aria-label="Configuració"><hr class="side-nav-separator">${navButton('settings','Configuració','settings','side')}</nav>
   </aside>${tab==='calendar'?(calendarView==='year'?'':calendarControls())+calendarNavigation():''}<main class="main-area"><div class="content">${tab!=='calendar'&&tab!=='settings'?`<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft',17)} Configuració</button></nav>`:''}${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab==='calendar'?calendarControls(true):''}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
+  ${tab==='calendar'&&calendarView==='week'?`<button type="button" class="week-add-block" data-action="date-block-add" aria-label="Afegeix una franja" title="Afegeix una franja">+</button>`:''}<nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab==='calendar'?calendarControls(true):''}${navButton('settings','Configuració','settings','mobile')}</nav></div>${sheet?sheetMarkup():''}<div id="toast-region" aria-live="polite"></div>`;}
 function monthPanel(index:number,children:Child[],today:string):string {
     const year=Math.floor(index/12),month=index-year*12;
     const firstDay=(new Date(year,month,1,12).getDay()+6)%7;
@@ -1222,11 +1232,13 @@ function sheetMarkup(){
   } else if(sheet?.type==='dayEdit'){
     const date=sheet.date;
     contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Edita el dia</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
-    <div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${date}">+ Afegeix una franja</button>`:`<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r=>r.kind!=='night'&&rotationPatterns.inRange(r,date))?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,date)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>`:''}</div>
-    ${schoolInfoForDay(date)}${state.personTimeOff?workSchedule.agenda(state,[date]):''}
+    <div class="day-edit-actions">${state.children.length?`<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}">+ Afegeix una franja</button>`:`<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r=>r.kind!=='night'&&rotationPatterns.inRange(r,date))?`<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>`:''}${monthDayUI.hasChanges(state,date)?`<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>`:''}</div>
+    ${schoolInfoForDay(date)}${dateBlocks.changes(state,date)}${state.personTimeOff?workSchedule.agenda(state,[date]):''}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='daySlotForm'){
     contents=monthDayUI.form(sheet.date,sheet.childId,sheet.slotId,state.children,state.guardians,state);
+  } else if(sheet?.type==='dateBlock'){
+    contents=dateBlocks.form(state,sheet.date,sheet.childId,sheet.sourceId,dateBlockSnapshot(sheet.date));
   } else if(sheet?.type==='schoolActivity'){
     const {date,childId,schoolId,sessionId}=sheet;
     const activity=schoolActivities(date,activeChildren()).find(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId);
@@ -1483,7 +1495,7 @@ function removeGuardian(id:string){
   state.guardians=state.guardians.filter(x=>x.id!==id);const alternate=defaultGuardian();
   Object.keys(state.overrides).forEach(key=>{if(state.overrides[key]===id)state.overrides[key]=alternate;});
   Object.keys(state.bandOverrides).forEach(key=>{if(state.bandOverrides[key]===id)state.bandOverrides[key]=alternate;});
-  monthDayUI.removeGuardian(state.daySlots,id,alternate);rotationPatterns.removeGuardian(state,id,alternate);
+  monthDayUI.removeGuardian(state.daySlots,id,alternate);rotationPatterns.removeGuardian(state,id,alternate);dateBlocks.removePerson(state,'guardian',id,alternate);
    if(sheet?.type==='personDetails'&&sheet.personKey==='guardian:'+id)sheet=null;
    state.preferences.visibleGuardians=state.preferences.visibleGuardians.filter(x=>x!==id);extraRotationDrafts={};extraRotationOpen=null;update();
 }
@@ -1496,7 +1508,7 @@ function removeChild(id:string){
   state.schools.forEach(s=>{s.childIds=s.childIds.filter(x=>x!==id);s.years.forEach(y=>y.groups.forEach(g=>{g.childIds=g.childIds.filter(x=>x!==id);if(g.childSchedules)delete g.childSchedules[id];if(g.reducedChildSchedules)delete g.reducedChildSchedules[id];}));});
   Object.keys(state.overrides).forEach(key=>{if(key.endsWith(`|${id}`))delete state.overrides[key];});
   Object.keys(state.bandOverrides).forEach(key=>{if(key.split('|')[1]===id)delete state.bandOverrides[key];});
-  monthDayUI.removeChild(state.daySlots,id);rotationPatterns.removeChild(state,id);
+  monthDayUI.removeChild(state.daySlots,id);rotationPatterns.removeChild(state,id);dateBlocks.removePerson(state,'child',id);
    if(sheet?.type==='personDetails'&&sheet.personKey==='child:'+id)sheet=null;
    state.preferences.visibleChildren=state.preferences.visibleChildren.filter(x=>x!==id);extraRotationDrafts={};extraRotationOpen=null;update();
 }
@@ -1521,6 +1533,12 @@ function clearAllData(){
   update();notify('Totes les dades esborrades. Ja pots començar de zero.');
 }
 function clickAction(button:HTMLElement){
+ if(button.dataset.dateBlock&&tab==='calendar'&&calendarView==='week'){
+  const date=button.dataset.viewDate??button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.dateBlock;
+  if(isValidDate(date)&&childById(childId)&&dateBlocks.find(state,date,childId,sourceId,dateBlockSnapshot(date))){sheet={type:'dateBlock',date,childId,sourceId};render();}
+  return;
+ }
+
   const action=button.dataset.action;
   if(action?.startsWith('ec-')){
     const result=extracurricular.click(state,extracurricularNav,button.dataset,confirm);
@@ -1756,6 +1774,17 @@ function clickAction(button:HTMLElement){
     case 'calendar-navigate':navigateCalendar(Number(button.dataset.step)===-1?-1:1);break;
     case 'prev-month':goToMonth(-1);break;
     case 'next-month':goToMonth(1);break;
+    case 'date-block-add':{
+      const date=button.dataset.date??selectedDate;if(!isValidDate(date))break;sheet={type:'dateBlock',date,childId:activeChildren()[0]?.id??state.children[0]?.id??'',sourceId:''};render();break;
+    }
+    case 'date-block-delete':{
+      const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
+      if(isValidDate(date)&&dateBlocks.remove(state,date,childId,sourceId,dateBlockSnapshot(date))){sheet=null;update();notify('Franja eliminada només aquest dia. La pots recuperar des d’Edita el dia.');}break;
+    }
+    case 'date-block-restore':{
+      const date=button.dataset.date??'',childId=button.dataset.child??'',sourceId=button.dataset.source??'';
+      if(dateBlocks.restore(state,date,childId,sourceId)){sheet={type:'dayEdit',date};update();notify('Franja recuperada');}break;
+    }
     case 'open-school-activity':{
       const date=button.dataset.date??'',childId=button.dataset.child??'',schoolId=button.dataset.school??'',sessionId=button.dataset.session??'';
       if(schoolActivities(date,activeChildren()).some(a=>a.id===sessionId&&a.schoolId===schoolId&&a.childId===childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'schoolActivity',date,childId,schoolId,sessionId};render();}
@@ -1792,7 +1821,7 @@ function clickAction(button:HTMLElement){
      case 'day-slot-add':{const date=button.dataset.date??'';if(!isValidDate(date)||!state.children.length)break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId:activeChildren()[0]?.id??state.children[0]?.id??''};render();break;}
      case 'day-slot-edit':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=date;sheet={type:'daySlotForm',date,childId,slotId};render();break;}
      case 'day-slot-delete':{const date=button.dataset.date??'',childId=button.dataset.child??'',slotId=button.dataset.slot??'';if(!isValidDate(date)||!childById(childId)||!monthDayUI.find(state,date,childId,slotId))break;if(!confirm('Vols eliminar aquesta franja puntual?'))break;monthDayUI.remove(state,date,childId,slotId);sheet=returnFromDetail(date);update();notify('Franja eliminada');break;}
-     case 'day-restore':{const date=button.dataset.date??'';if(!isValidDate(date)||!monthDayUI.hasChanges(state,date))break;if(!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))break;monthDayUI.restore(state,date);rotationPatterns.clearDate(state,date);sheet=null;update();notify('Dia restaurat segons la rotació');break;}
+     case 'day-restore':{const date=button.dataset.date??'';if(!isValidDate(date)||!monthDayUI.hasChanges(state,date))break;if(!confirm('Vols eliminar tots els canvis puntuals d’aquest dia i recuperar la planificació habitual?'))break;monthDayUI.restore(state,date);rotationPatterns.clearDate(state,date);dateBlocks.clearDate(state,date);sheet=null;update();notify('Dia restaurat segons la rotació');break;}
     case 'edit-band':{const band=button.dataset.band??'',date=button.dataset.date??'',childId=button.dataset.child??'';if(isTimeBand(band)&&isValidDate(date)&&childById(childId)){detailOrigin=button.closest('.month-day-sheet')?'day':'calendar';detailReturnDate=button.dataset.viewDate??date;sheet={type:'bandEdit',date,childId,band,viewDate:button.dataset.viewDate??date};render();}break;}
     case 'assign-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'',gId=button.dataset.guardian??'';if(!isValidDate(date)||!childById(childId)||!isTimeBand(band)||band==='nit'||(gId&&!guardian(gId)))break;state.bandOverrides[bandKey(date,childId,band)]=gId;sheet=returnFromDetail(date);update();notify('Franja actualitzada');break;}
     case 'clear-band':{const date=button.dataset.date??'',childId=button.dataset.child??'',band=button.dataset.band??'';if(!isTimeBand(band))break;delete state.bandOverrides[bandKey(date,childId,band)];sheet=returnFromDetail(date);update();notify('Assignació automàtica restaurada');break;}
@@ -1898,6 +1927,16 @@ document.addEventListener('submit',event=>{
     const error=rotationEditor.saveDate(state,date,rotationId,childId,new FormData(form));
     if(error){notify(error);return;}
     sheet=returnFromDetail(date);update();notify('Excepció de rotació desada');return;
+  }
+  if(form.dataset.dateBlockForm){
+    event.preventDefault();const values=new FormData(form),sourceId=form.dataset.source??'';
+    const date=sourceId?form.dataset.date??'':String(values.get('date')??''),childId=sourceId?form.dataset.child??'':String(values.get('childId')??'');
+    if(!isValidDate(date)){notify('Data no vàlida');return;}
+    const error=dateBlocks.save(state,date,childId,sourceId,values,dateBlockSnapshot(date),newId);
+    if(error){notify(error);return;}
+    if(!sourceId){selectedDate=date;const chosen=parseDate(date);viewYear=chosen.getFullYear();viewMonth=chosen.getMonth();weekFocusTarget=true;}
+    if(!state.preferences.visibleChildren.includes(childId))state.preferences.visibleChildren.push(childId);
+    sheet=null;update();notify('Franja puntual desada');return;
   }
   if(form.dataset.daySlotForm){
     event.preventDefault();

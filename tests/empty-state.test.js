@@ -25,10 +25,11 @@ const functions=[
   extract('function clearAllData()','function clickAction(button)'),
   extract('function clickAction(button)',"document.addEventListener('click'")
 ].join('\n');
+vm.runInNewContext(readFileSync(new URL('../date-blocks.js',import.meta.url),'utf8'),rotationContext);
 const makeContext=()=>{
   let saves=0,id=0,confirmed=true;
   const context=vm.createContext({
-    monthDayUI:monthContext.window.monthDayUI,
+    window:rotationContext.window,dateBlocks:rotationContext.window.dateBlocks,monthDayUI:monthContext.window.monthDayUI,
     rotationPatterns:rotationContext.window.rotationPatterns,
     personalTimeOff:rotationContext.window.personalTimeOff,workSchedule:rotationContext.window.workSchedule,
     DEFAULT_CHANGE_TIME:'19:00',MAX_ROTATION_DAYS:3640,
@@ -159,8 +160,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.24\.5/);
-  assert.match(sw,/calendari-familiar-v0\.24\.5/);
+  assert.match(html,/app\.js\?v=0\.25\.0/);
+  assert.match(sw,/calendari-familiar-v0\.25\.0/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -304,4 +305,16 @@ test('el JSON conserva cursos d’extraescolars, dates pròpies i símbols de fi
  const broken=asJSON(raw);broken.extracurricularCourses[0].activities[0].endDate='2026-07-31';assert.throws(()=>context.cleanState(broken));
  context.removeChild('a');assert.deepEqual(asJSON(context.state.extracurricularCourses[0].activities[0].groups[0].childIds),[]);
  context.state=context.cleanState(asJSON(context.state));assert.equal(context.state.extracurricularCourses.length,1);
+});
+
+test('les edicions de franges sobreviuen a exportació/importació i actualitzacions, incloses les eliminacions',async()=>{
+ const {context}=makeContext();context.clickAction({dataset:{action:'add-child'}});context.clickAction({dataset:{action:'add-guardian'}});
+ const child=context.state.children[0].id,tutor=context.state.guardians[0].id,date='2026-11-19';
+ const values=new Map(Object.entries({name:'Música puntual',startTime:'17:00',endTime:'18:00',guardianId:tutor,note:'Portar instrument'}));
+ const empty={nights:{},activities:[],extra:[],slots:{}};
+ assert.equal(context.dateBlocks.save(context.state,date,child,'',values,empty,()=> 'manual-test'),'');
+ context.dateBlocks.remove(context.state,date,child,'manual:manual-test',empty);
+ const saved=asJSON(context.state);assert.deepEqual(asJSON(context.cleanState(saved)),saved);
+ for(const fallback of [false,true]){const loaded=await simulateLoad(saved,{fallback});assert.deepEqual(asJSON(loaded.context.state),saved);assert.deepEqual(loaded.writes,[]);}
+ context.removeChild(child);assert.deepEqual(asJSON(context.state.dateEdits),{});
 });

@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.24.5';
+const APP_VERSION = '0.25.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -127,7 +127,7 @@ function newId() { return (typeof crypto !== 'undefined' && 'randomUUID' in cryp
 function emptyState() {
     return {
         version: 2, children: [], guardians: [], personTimeOff: {},
-        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], extracurricularCourses: [], nightDateTimes: {}, extraRotations: [], extraExceptions: {},
+        dateEdits: {}, overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], extracurricularCourses: [], nightDateTimes: {}, extraRotations: [], extraExceptions: {},
         preferences: { showExtracurriculars: true, showHolyWeek: false, showWorkSchedules: true, mePerson: '', visibleTimeOffPeople: [], showPersonalHolidays: true, showPersonalVacations: true, visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50, timelineZooms: { day: 50, week: 50 } }
     };
 }
@@ -361,7 +361,11 @@ function cleanState(raw) {
     extraRotations.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id));
     const nightDateTimes = rotationPatterns.cleanNightDateTimes(obj.nightDateTimes, children);
     const extraExceptions = rotationPatterns.cleanExtraExceptions(obj.extraExceptions, extraRotations, children, guardians);
-    return { version: 2, extracurricularCourses, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showExtracurriculars: obj.preferences.showExtracurriculars !== false, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
+    const dateEditAPI = window.dateBlocks;
+    if (obj.dateEdits && Object.keys(obj.dateEdits).length && !dateEditAPI)
+        throw Error('No s’ha pogut carregar el suport d’edicions puntuals');
+    const dateEdits = dateEditAPI?.clean(obj.dateEdits, children, guardians) ?? {};
+    return { version: 2, dateEdits, extracurricularCourses, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showExtracurriculars: obj.preferences.showExtracurriculars !== false, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
 }
 let db = null;
 let storageMode = 'session';
@@ -544,6 +548,7 @@ const rotationEditor = window.rotationEditor;
 const workSchedule = window.workSchedule;
 const weekNavigation = window.weekNavigation;
 const extracurricular = window.extracurricular;
+const dateBlocks = window.dateBlocks;
 const personalTimeOff = window.personalTimeOff;
 /** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
 function childHasSchool(date, childId) {
@@ -605,8 +610,14 @@ function weekTimelineDays(start, children, count = 7) {
         const nightSegments = {};
         for (const c of children)
             nightSegments[c.id] = dayTimelineUI.overnightSegments(date, c.id, nightChangeTime(date, c.id), assigned, (d) => addDays(d, -1), guardian, state.preferences.visibleGuardians);
-        return { date, label: `${weekLong[(parseDate(date).getDay() + 6) % 7]} ${parseDate(date).getDate()}`, dayOff: Boolean(state.preferences.mePerson && workSchedule.isDayOff(state, date)), activities: schoolActivities(date, children), nightSegments, customSlots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), rotatingSlots: extraSlots(date, children) };
+        const raw = { activities: schoolActivities(date, children), nights: nightSegments, slots: monthDayUI.slots(state, date, children, state.guardians, state.preferences.visibleGuardians), extra: extraSlots(date, children) };
+        const data = window.dateBlocks?.apply(state, date, children, raw) ?? raw;
+        return { date, label: `${weekLong[(parseDate(date).getDay() + 6) % 7]} ${parseDate(date).getDate()}`, dayOff: Boolean(state.preferences.mePerson && workSchedule.isDayOff(state, date)), activities: data.activities, nightSegments: data.nights, customSlots: data.slots, rotatingSlots: data.extra };
     });
+}
+function dateBlockSnapshot(date) {
+    const day = weekTimelineDays(date, state.children, 1)[0];
+    return { activities: day.activities, nights: day.nightSegments, slots: day.customSlots, extra: day.rotatingSlots };
 }
 function miniBands(date, children, bands) {
     if (!children.length || !bands.length)
@@ -708,7 +719,7 @@ function layout(content) {
   <nav class="side-nav" aria-label="Navegació">${calendarViewButtons('side')}${tab === 'calendar' ? `<hr class="side-nav-separator">${calendarControls(true)}` : ''}</nav>
   <nav class="side-nav-bottom" aria-label="Configuració"><hr class="side-nav-separator">${navButton('settings', 'Configuració', 'settings', 'side')}</nav>
   </aside>${tab === 'calendar' ? (calendarView === 'year' ? '' : calendarControls()) + calendarNavigation() : ''}<main class="main-area"><div class="content">${tab !== 'calendar' && tab !== 'settings' ? `<nav aria-label="Torna a configuració"><button type="button" class="school-breadcrumb settings-back" data-action="tab" data-tab="settings">${icon('chevronLeft', 17)} Configuració</button></nav>` : ''}${content}</div></main>
-  <nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
+  ${tab === 'calendar' && calendarView === 'week' ? `<button type="button" class="week-add-block" data-action="date-block-add" aria-label="Afegeix una franja" title="Afegeix una franja">+</button>` : ''}<nav class="mobile-tabs" aria-label="Navegació principal">${calendarViewButtons('mobile')}${tab === 'calendar' ? calendarControls(true) : ''}${navButton('settings', 'Configuració', 'settings', 'mobile')}</nav></div>${sheet ? sheetMarkup() : ''}<div id="toast-region" aria-live="polite"></div>`;
 }
 function monthPanel(index, children, today) {
     const year = Math.floor(index / 12), month = index - year * 12;
@@ -1407,12 +1418,15 @@ function sheetMarkup() {
     else if (sheet?.type === 'dayEdit') {
         const date = sheet.date;
         contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Edita el dia</h2><p class="sheet-subtitle">${escapeHtml(fullDate(date))}</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
-    <div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="day-slot-add" data-date="${date}">+ Afegeix una franja</button>` : `<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, date)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, date) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>` : ''}</div>
-    ${schoolInfoForDay(date)}${state.personTimeOff ? workSchedule.agenda(state, [date]) : ''}
+    <div class="day-edit-actions">${state.children.length ? `<button type="button" class="soft-btn" data-action="date-block-add" data-date="${date}">+ Afegeix una franja</button>` : `<button type="button" class="soft-btn" data-action="tab" data-tab="people">Afegeix un fill</button>`}${state.extraRotations.some(r => r.kind !== 'night' && rotationPatterns.inRange(r, date)) ? `<button type="button" class="soft-btn" data-action="extra-date-choose" data-date="${date}">Edita rotacions del dia</button>` : ''}${monthDayUI.hasChanges(state, date) ? `<button type="button" class="soft-btn" data-action="day-restore" data-date="${date}">Restaurar segons la rotació</button>` : ''}</div>
+    ${schoolInfoForDay(date)}${dateBlocks.changes(state, date)}${state.personTimeOff ? workSchedule.agenda(state, [date]) : ''}
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
     }
     else if (sheet?.type === 'daySlotForm') {
         contents = monthDayUI.form(sheet.date, sheet.childId, sheet.slotId, state.children, state.guardians, state);
+    }
+    else if (sheet?.type === 'dateBlock') {
+        contents = dateBlocks.form(state, sheet.date, sheet.childId, sheet.sourceId, dateBlockSnapshot(sheet.date));
     }
     else if (sheet?.type === 'schoolActivity') {
         const { date, childId, schoolId, sessionId } = sheet;
@@ -1741,6 +1755,7 @@ function removeGuardian(id) {
         state.bandOverrides[key] = alternate; });
     monthDayUI.removeGuardian(state.daySlots, id, alternate);
     rotationPatterns.removeGuardian(state, id, alternate);
+    dateBlocks.removePerson(state, 'guardian', id, alternate);
     if (sheet?.type === 'personDetails' && sheet.personKey === 'guardian:' + id)
         sheet = null;
     state.preferences.visibleGuardians = state.preferences.visibleGuardians.filter(x => x !== id);
@@ -1771,6 +1786,7 @@ function removeChild(id) {
         delete state.bandOverrides[key]; });
     monthDayUI.removeChild(state.daySlots, id);
     rotationPatterns.removeChild(state, id);
+    dateBlocks.removePerson(state, 'child', id);
     if (sheet?.type === 'personDetails' && sheet.personKey === 'child:' + id)
         sheet = null;
     state.preferences.visibleChildren = state.preferences.visibleChildren.filter(x => x !== id);
@@ -1832,6 +1848,14 @@ function clearAllData() {
     notify('Totes les dades esborrades. Ja pots començar de zero.');
 }
 function clickAction(button) {
+    if (button.dataset.dateBlock && tab === 'calendar' && calendarView === 'week') {
+        const date = button.dataset.viewDate ?? button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.dateBlock;
+        if (isValidDate(date) && childById(childId) && dateBlocks.find(state, date, childId, sourceId, dateBlockSnapshot(date))) {
+            sheet = { type: 'dateBlock', date, childId, sourceId };
+            render();
+        }
+        return;
+    }
     const action = button.dataset.action;
     if (action?.startsWith('ec-')) {
         const result = extracurricular.click(state, extracurricularNav, button.dataset, confirm);
@@ -2337,6 +2361,32 @@ function clickAction(button) {
         case 'next-month':
             goToMonth(1);
             break;
+        case 'date-block-add': {
+            const date = button.dataset.date ?? selectedDate;
+            if (!isValidDate(date))
+                break;
+            sheet = { type: 'dateBlock', date, childId: activeChildren()[0]?.id ?? state.children[0]?.id ?? '', sourceId: '' };
+            render();
+            break;
+        }
+        case 'date-block-delete': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
+            if (isValidDate(date) && dateBlocks.remove(state, date, childId, sourceId, dateBlockSnapshot(date))) {
+                sheet = null;
+                update();
+                notify('Franja eliminada només aquest dia. La pots recuperar des d’Edita el dia.');
+            }
+            break;
+        }
+        case 'date-block-restore': {
+            const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', sourceId = button.dataset.source ?? '';
+            if (dateBlocks.restore(state, date, childId, sourceId)) {
+                sheet = { type: 'dayEdit', date };
+                update();
+                notify('Franja recuperada');
+            }
+            break;
+        }
         case 'open-school-activity': {
             const date = button.dataset.date ?? '', childId = button.dataset.child ?? '', schoolId = button.dataset.school ?? '', sessionId = button.dataset.session ?? '';
             if (schoolActivities(date, activeChildren()).some(a => a.id === sessionId && a.schoolId === schoolId && a.childId === childId)) {
@@ -2444,6 +2494,7 @@ function clickAction(button) {
                 break;
             monthDayUI.restore(state, date);
             rotationPatterns.clearDate(state, date);
+            dateBlocks.clearDate(state, date);
             sheet = null;
             update();
             notify('Dia restaurat segons la rotació');
@@ -2750,6 +2801,33 @@ document.addEventListener('submit', event => {
         sheet = returnFromDetail(date);
         update();
         notify('Excepció de rotació desada');
+        return;
+    }
+    if (form.dataset.dateBlockForm) {
+        event.preventDefault();
+        const values = new FormData(form), sourceId = form.dataset.source ?? '';
+        const date = sourceId ? form.dataset.date ?? '' : String(values.get('date') ?? ''), childId = sourceId ? form.dataset.child ?? '' : String(values.get('childId') ?? '');
+        if (!isValidDate(date)) {
+            notify('Data no vàlida');
+            return;
+        }
+        const error = dateBlocks.save(state, date, childId, sourceId, values, dateBlockSnapshot(date), newId);
+        if (error) {
+            notify(error);
+            return;
+        }
+        if (!sourceId) {
+            selectedDate = date;
+            const chosen = parseDate(date);
+            viewYear = chosen.getFullYear();
+            viewMonth = chosen.getMonth();
+            weekFocusTarget = true;
+        }
+        if (!state.preferences.visibleChildren.includes(childId))
+            state.preferences.visibleChildren.push(childId);
+        sheet = null;
+        update();
+        notify('Franja puntual desada');
         return;
     }
     if (form.dataset.daySlotForm) {

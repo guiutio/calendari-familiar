@@ -19,8 +19,8 @@ function setup(){
   monthData:()=>({nights:{},activities:[],slots:{},extra:[]}),birthdays:()=>[],weekStart:d=>d,
   saveState:()=>saves++,render:()=>paints++,update:()=>saves++,notify:m=>messages.push(m),confirm:()=>true,
   FormData:class {constructor(form){return new Map(Object.entries(form.fields));}}});
- for(const file of ['work-schedule.js','personal-time-off.js','rotation-patterns.js','month-day-ui.js'])vm.runInContext(read(file),ctx);
- Object.assign(ctx,{workSchedule:ctx.window.workSchedule,personalTimeOff:ctx.window.personalTimeOff,rotationPatterns:ctx.window.rotationPatterns,monthDayUI:ctx.window.monthDayUI,isValidDate:ctx.window.personalTimeOff.valid});
+ for(const file of ['work-schedule.js','personal-time-off.js','rotation-patterns.js','month-day-ui.js','date-blocks.js'])vm.runInContext(read(file),ctx);
+ Object.assign(ctx,{dateBlocks:ctx.window.dateBlocks,workSchedule:ctx.window.workSchedule,personalTimeOff:ctx.window.personalTimeOff,rotationPatterns:ctx.window.rotationPatterns,monthDayUI:ctx.window.monthDayUI,isValidDate:ctx.window.personalTimeOff.valid});
  vm.runInContext(section('function escapeHtml(', 'function emptyState(')+section('function periodTitle()', 'function navButton(')+section('function calendarNavigation()', 'function layout(')+
   section('function monthPanel(', '// Keep loaded months')+section('function yearOverview(', 'function rotationPage(')+section('function personActions(', 'function settingsPage(')+
   section('function sheetMarkup()', 'let nativePickerRenderPending')+section('function removeGuardian(id)', 'async function exportData()')+
@@ -496,7 +496,7 @@ test('el llapis obre les accions del dia i conserva els editors, la data i la re
  assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-haspopup="dialog"[^>]*aria-expanded="false"/);
  s.click('open-day-edit');let html=s.ctx.sheetMarkup();
  assert.match(html,/role="dialog" aria-modal="true" aria-label="Edita el dia"/);
- assert.match(html,new RegExp('data-action="day-slot-add" data-date="'+date+'"'));
+ assert.match(html,new RegExp('data-action="date-block-add" data-date="'+date+'"'));
  assert.doesNotMatch(html,/data-action="day-restore"|data-action="extra-date-choose"/);
  assert.match(s.ctx.calendarControls(),/data-action="open-day-edit"[^>]*aria-expanded="true"/);
  s.ctx.clickAction({dataset:{action:'day-slot-add',date},closest:()=>null});
