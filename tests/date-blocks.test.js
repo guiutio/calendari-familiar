@@ -124,16 +124,14 @@ test('les franges renderitzades mantenen referències d’edició, notes i tutor
 });
 
 
-test('revisió global i per dia: dates descendents, estat, fill, tutor, nota i accions',()=>{
+test('la revisió del dia conserva estat, fill, tutor, nota i accions, sense llista global',()=>{
  const s=setup();s.save('activity:ec%3A2:ec%3A1%3A2%3A3%3A4',{name:'Karate puntual',note:'<script>note</script>'});
  s.api.remove(s.state,s.date,'a','rotation:pickup',s.data);s.save('',{name:'Natació'},'b','2026-11-25');
- const global=s.api.changes(s.state),day=s.api.changes(s.state,s.date);
- assert.ok(global.indexOf('Natació')<global.indexOf('Karate puntual'));
- for(const word of ['25/11/2026','19/11/2026','Alba','Bruc','Maria','Extraescolar','Modificada','Afegida','Eliminada aquest dia','data-action="date-block-edit"','data-action="date-block-discard"','data-origin="extracurricular"'])assert.ok(global.includes(word),word);
- assert.match(global,/&lt;script&gt;note/);assert.doesNotMatch(global,/<script>/);
- assert.match(day,/data-origin="day"/);assert.doesNotMatch(day,/Natació/);
+ const day=s.api.changes(s.state,s.date);
+ for(const word of ['Alba','Maria','Extraescolar','Modificada','Eliminada aquest dia','data-action="date-block-edit"','data-action="date-block-discard"','data-origin="day"'])assert.ok(day.includes(word),word);
+ assert.match(day,/&lt;script&gt;note/);assert.doesNotMatch(day,/<script>|Natació/);
+ assert.equal(s.api.changes(s.state),'');
  assert.match(s.api.changes(s.state,'2027-01-01'),/Aquest dia no té canvis puntuals/);
- s.api.clearDate(s.state,s.date);s.api.clearDate(s.state,'2026-11-25');assert.match(s.api.changes(s.state),/No hi ha canvis puntuals/);
 });
 test('desfer un canvi recupera l’original o treu una franja afegida, sense tocar la resta',()=>{
  const s=setup(),source='activity:school:school-session';s.save(source);s.save('');s.save('',{},'b');
@@ -152,9 +150,27 @@ test('editar una eliminació conserva l’estat fins que es demana recuperar-la 
  assert.equal(s.api.find(s.state,s.date,'a',source,s.data).note,'Avís de l’absència');
  assert.equal(s.save(source),'');assert.equal(s.api.apply(s.state,s.date,s.state.children,s.data).activities.length,2);
 });
-test('Extraescolars inclou la revisió fins i tot sense cursos i conserva les excepcions de cursos esborrats',()=>{
- const s=setup();s.state.extracurricularCourses=[];s.save('activity:ec%3A2:ec%3A1%3A2%3A3%3A4',{name:'Karate històric'});
- vm.runInContext(read('extracurricular.js'),s.ctx);const html=s.ctx.window.extracurricular.page(s.state);
- assert.match(html,/Canvis puntuals/);assert.match(html,/Karate històric/);assert.match(html,/data-action="date-block-edit"/);
- s.data.activities=[];assert.ok(s.api.find(s.state,s.date,'a','activity:ec%3A2:ec%3A1%3A2%3A3%3A4',s.data));
+test('els canvis són només dins del seu curs, extraescolar i grup, de més antic a més recent',()=>{
+ const s=setup();vm.runInContext(read('extracurricular.js'),s.ctx);const ec=s.ctx.window.extracurricular;
+ const nav={courseId:'c:1%',activityId:'a:2%',groupId:'g:3%'};
+ const groups=[{id:nav.groupId,name:'Grup A',childIds:['a','b'],weeklySchedule:[{id:'session:%',weekday:3,startTime:'17:00',endTime:'18:00'}]},{id:nav.groupId+'2',name:'Grup B',childIds:['a'],weeklySchedule:[{id:'other',weekday:3,startTime:'17:00',endTime:'18:00'}]}];
+ const activity={id:nav.activityId,name:'Música',groups},course={id:nav.courseId,startDate:'2026-09-01',endDate:'2027-06-30',activities:[activity,{...activity,id:'other-activity',name:'Teatre'}]};
+ s.state.extracurricularCourses=[course,{...course,id:'other-course',activities:[{...activity,name:'Dansa'}]}];
+ s.data.activities=ec.collect(s.state,s.date,s.state.children);
+ const all=s.api.apply(s.state,s.date,s.state.children,s.data).activities;
+ const source=(name,group='Grup A')=>all.find(e=>e.childId==='a'&&e.schoolName===name&&e.description.includes(group)).dateBlock;
+ const own=source('Música');s.save(own,{name:'Recent'},'a','2026-11-26');s.save(own,{name:'Antic'},'a','2026-11-12');s.api.remove(s.state,s.date,'a',own,s.data);
+ s.save(source('Música','Grup B'),{name:'Altre grup'});s.save(source('Teatre'),{name:'Altra extraescolar'});s.save(source('Dansa'),{name:'Altre curs'});s.save('',{name:'Manual sense grup'});
+ for(const page of [{},{courseId:nav.courseId},{courseId:nav.courseId,activityId:nav.activityId}])assert.doesNotMatch(ec.page(s.state,page),/Canvis puntuals/);
+ const html=ec.page(s.state,nav);
+ assert.ok(html.indexOf('12/11/2026')<html.indexOf('19/11/2026'));assert.ok(html.indexOf('19/11/2026')<html.indexOf('26/11/2026'));
+ assert.match(html,/Antic/);assert.match(html,/Recent/);assert.match(html,/Eliminada aquest dia/);
+ assert.doesNotMatch(html,/Altre grup|Altra extraescolar|Altre curs|Manual sense grup|date-block-discard|date-block-restore/);
+ assert.equal((html.match(/data-action="date-block-edit"/g)||[]).length,3,'la llista només obre el detall');
+ const form=s.api.form(s.state,s.date,'a',own,s.data,'extracurricular');
+ assert.match(form,/data-action="date-block-discard"/);assert.match(form,/Elimina el canvi puntual/);assert.match(form,/name="disabled" checked/);assert.doesNotMatch(form,/date-block-delete|date-block-restore/);
+ activity.groups[0].weeklySchedule=[];activity.groups[0].childIds=[];
+ assert.match(ec.page(s.state,nav),/Antic/,'un canvi desat no desapareix si canvia l’horari o la inscripció');
+ const before=JSON.stringify(s.state.dateEdits);ec.page(s.state,nav);assert.equal(JSON.stringify(s.state.dateEdits),before,'mostrar la llista no migra ni altera dades');
+ assert.deepEqual(plain(s.api.clean(s.state.dateEdits,s.state.children,s.state.guardians)),plain(s.state.dateEdits));
 });
