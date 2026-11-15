@@ -123,13 +123,14 @@
       const {top,height}=miniGeometry(from,to,annual?false:special,annual?4:NIGHT_WEIGHT);
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
+    const shared=child=>rotatingSlots.some(item=>item.childId===child.id&&item.visible&&activities.some(a=>a.childId===child.id&&a.start<item.to&&a.end>item.from));
     return `<span class="month-mini ${annual?'year-scale':special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
       ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape(childSymbol(c))}</span>`).join('')}
-      ${children.map(c=>`<span class="month-mini-column">
+      ${children.map(c=>`<span class="month-mini-column"${shared(c)?' style="--schedule-inset:23%"':''}>
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
         ${(customSlots[c.id]??[]).map(s=>rect(s.from,s.to,s.color,'month-mini-custom',s.startTime+'–'+s.endTime+' '+s.name)).join('')}
         ${activities.filter(a=>a.childId===c.id).map(a=>rect(a.start,a.end,a.color,'month-mini-school',a.schoolName)).join('')}
-        ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra '+(a.guardianId?'with-guardian':'without-guardian'),a.rotationName+' · '+a.guardianName)).join('')}
+        ${rotatingSlots.filter(a=>a.childId===c.id&&a.visible).map(a=>rect(a.from,a.to,a.color,'month-mini-extra '+(a.guardianId?'with-guardian':'without-guardian')+(activities.some(item=>item.childId===c.id&&item.start<a.to&&item.end>a.from)?' with-activity':''),a.rotationName+' · '+a.guardianName)).join('')}
       </span>`).join('')}
     </span>`;
   }

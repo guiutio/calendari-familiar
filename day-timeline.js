@@ -34,6 +34,10 @@
         return `<button type="button" class="day-slot-block" data-action="day-slot-edit" data-date="${escape(date)}" data-child="${escape(child.id)}" data-slot="${escape(slot.id)}" style="top:${start*pxPerMinute}px;height:${(end-start)*pxPerMinute}px;background-color:${escape(slot.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(slot.name)}</span><small>${escape(slot.startTime)}–${escape(slot.endTime)}</small></button>`;
       }).join('');
       const childActivities=activities.filter(a=>a.childId===child.id).sort((a,b)=>a.start-b.start||a.end-b.end);
+      const childRotations=rotatingSlots.filter(item=>item.childId===child.id&&item.visible);
+      const overlapsActivity=item=>childActivities.some(a=>a.start<item.to&&a.end>item.from);
+      // Conservem una franja de la rotació al costat de les activitats amb horari.
+      const shared=childRotations.some(overlapsActivity),available=shared?77:100;
       const laneEnds=[];
       const placed=childActivities.map(a=>{
         let lane=laneEnds.findIndex(end=>end<=a.start);
@@ -46,11 +50,13 @@
         if(end<=start)return '';
         const caption=`${a.schoolName} · ${a.kind}${a.description?' · '+a.description:''} · ${a.startTime}–${a.endTime}`;
         const top=start*pxPerMinute, h=(end-start)*pxPerMinute;
-        return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${lane} * 100% / ${laneCount} + 3px);width:calc(100% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}"><span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span><span class="day-school-kind">${escape(a.kind)}</span>${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
+        const heading=`<span class="day-school-kind">${escape(a.kind==='Extraescolar'?a.schoolName:a.kind)}</span>`;
+        const hours=`<span class="day-school-hours">${escape(a.startTime)}–${escape(a.endTime)}</span>`;
+        return `<button type="button" class="day-school-block" style="top:${top}px;height:${h}px;left:calc(${shared?'23% + ':''}${lane} * ${available}% / ${laneCount} + 3px);width:calc(${available}% / ${laneCount} - 6px);--school-event-color:${escape(a.color)}" data-action="open-school-activity" data-date="${escape(date)}" data-school="${escape(a.schoolId)}" data-child="${escape(a.childId)}" data-session="${escape(a.id)}" title="${escape(caption)}" aria-label="${escape(caption)}">${a.kind==='Extraescolar'?heading+hours:hours+heading}${a.description?`<span class="day-school-label">${escape(a.description)}</span>`:''}</button>`;
       }).join('');
-      const extras=rotatingSlots.filter(item=>item.childId===child.id&&item.visible).map(item=>{
+      const extras=childRotations.map(item=>{
         const title=`${item.rotationName} · ${item.guardianName} · ${item.startTime}–${item.endTime}. Toca per ajustar només aquest dia.`;
-        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
+        return `<button type="button" class="day-extra-block ${item.guardianId?'with-guardian':'without-guardian'}${overlapsActivity(item)?' with-activity':''}" data-action="edit-extra-slot" data-date="${escape(date)}" data-rotation="${escape(item.rotationId)}" data-child="${escape(child.id)}" style="top:${item.from*pxPerMinute}px;height:${(item.to-item.from)*pxPerMinute}px;--extra-color:${escape(item.color)}" title="${escape(title)}" aria-label="${escape(title)}"><span>${escape(item.rotationName)}</span><small>${escape(item.startTime)}–${escape(item.endTime)}</small></button>`;
       }).join('');
       return `<div class="day-time-column" style="height:${height}px" aria-label="${escape(child.name)}">${nights}${overrides}${school}${extras}</div>`;
     }).join('');

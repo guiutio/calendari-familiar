@@ -124,6 +124,61 @@ test('noms maliciosos es mostren com a text a llistes, formularis i llegenda',()
  assert.match(s.api.page(s.state,c),/&lt;script&gt;/);
 });
 
+test('extraescolars abans i després de l’escola i en cap de setmana, sense dependre d’una matrícula escolar',()=>{
+ const s=setup(),c=s.course(),a=s.activity(c),g=s.group(a);
+ s.session(g,{startTime:'07:00',endTime:'08:00'});
+ s.session(g,{startTime:'18:00',endTime:'20:00'});
+ s.session(g,{weekday:'5',startTime:'10:00',endTime:'12:00'});
+ s.state.schools=[];s.state.preferences.visibleSchools=[];
+ const monday=s.api.collect(s.state,'2026-11-16',s.state.children);
+ assert.deepEqual(plain(monday.map(a=>[a.start,a.end])),[[420,480],[1080,1200]]);
+ assert.equal(s.api.collect(s.state,'2026-11-21',s.state.children).length,1);
+ const html=s.ctx.window.dayTimelineUI.render('2026-11-16','Dilluns',s.state.children,monday,{},'19:00',50);
+ assert.match(html,/top:168px;height:24px/);assert.match(html,/top:432px;height:48px/);
+ // El nom continua llegible amb el zoom inicial, que amaga la descripció llarga.
+ assert.match(html,/<span class="day-school-kind">Música<\/span><span class="day-school-hours">18:00–20:00/);
+});
+
+test('una rotació coincident deixa lloc a l’extraescolar i conserva una franja visible a totes les vistes',()=>{
+ const s=setup(),c=s.course(),a=s.activity(c),g=s.group(a);s.session(g);
+ const date='2026-11-16',items=s.api.collect(s.state,date,s.state.children);
+ const base={childId:'a',from:960,to:1200,startTime:'16:00',endTime:'20:00',visible:true,rotationId:'pickup',rotationName:'Recollida',guardianName:'Tutor',color:'#1357ac'};
+ for(const guardianId of ['tutor','']){
+  const rotation={...base,guardianId},before=JSON.stringify({items,rotation});
+  const day=s.ctx.window.dayTimelineUI.render(date,'Dilluns',s.state.children,items,{},'19:00',50,{},[rotation]);
+  const week=s.ctx.window.dayTimelineUI.renderWeek(date,[{date,label:'Dilluns',activities:items,nightSegments:{},rotatingSlots:[rotation]}],s.state.children,50);
+  for(const html of [day,week]){
+   assert.match(html,/left:calc\(23% \+ 0 \* 77% \/ 1 \+ 3px\);width:calc\(77% \/ 1 - 6px\)/);
+   assert.match(html,/day-extra-block (?:with|without)-guardian with-activity/);
+   assert.match(html,/data-action="open-school-activity"/);assert.match(html,/data-action="edit-extra-slot"/);
+  }
+  for(const view of ['month','year']){
+   const mini=s.ctx.window.monthDayUI.mini(s.state.children,{},items,{},[rotation],view);
+   assert.match(mini,/--schedule-inset:23%/);assert.match(mini,/month-mini-school/);
+   assert.match(mini,/month-mini-extra (?:with|without)-guardian with-activity/);
+  }
+  assert.equal(JSON.stringify({items,rotation}),before,'renderitzar no altera dades ni horaris');
+ }
+ const css=read('styles.css');
+ const layer=selector=>Number(css.match(new RegExp(selector.replaceAll('.', '\\.')+' ?\\{z-index:(\\d+)'))?.[1]);
+ assert.ok(layer('.day-school-block')>4,'l’activitat es pinta per sobre de la rotació (capa 4)');
+ assert.ok(layer('.month-mini-school')>4);
+ assert.match(css,/\.day-extra-block\.with-activity \{left:0;width:100%;\}/);
+ assert.match(css,/\.month-mini-extra\.with-activity \{left:0;right:0;\}/);
+});
+
+test('només les rotacions visibles del mateix fill que se solapen reserven una franja',()=>{
+ const s=setup(),c=s.course(),a=s.activity(c),g=s.group(a);s.session(g);
+ const date='2026-11-16',items=s.api.collect(s.state,date,s.state.children);
+ const base={childId:'a',from:1020,to:1080,visible:true,guardianId:'tutor'};
+ for(const rotation of [{...base,to:1020,from:960},{...base,from:1080,to:1200},{...base,visible:false},{...base,childId:'b'}]){
+  const html=s.ctx.window.dayTimelineUI.render(date,'Dilluns',s.state.children,items,{},'19:00',50,{},[rotation]);
+  assert.doesNotMatch(html,/23% \+|with-activity/);assert.match(html,/width:calc\(100% \/ 1 - 6px\)/);
+  const mini=s.ctx.window.monthDayUI.mini(s.state.children,{},items,{},[rotation]);
+  assert.doesNotMatch(mini,/--schedule-inset|with-activity/);
+ }
+});
+
 test('eliminar una activitat setmanal deixa intactes el grup i les altres activitats',()=>{
  const s=setup(),c=s.course(),a=s.activity(c),g=s.group(a);s.session(g);s.session(g,{weekday:'2'});
  const group=s.api.context(s.state,g).group,first=group.weeklySchedule[0].id,second=plain(group.weeklySchedule[1]);
