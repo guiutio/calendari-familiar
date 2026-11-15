@@ -17,7 +17,7 @@ function setup(){
   icon:()=>'',activeChildren:()=>state.children.filter(c=>state.preferences.visibleChildren.includes(c.id)),
   childById:id=>state.children.find(c=>c.id===id),guardian:id=>state.guardians.find(g=>g.id===id),defaultGuardian:()=>state.guardians[0]?.id??'',
   monthData:()=>({nights:{},activities:[],slots:{},extra:[]}),birthdays:()=>[],weekStart:d=>d,
-  render:()=>paints++,update:()=>saves++,notify:m=>messages.push(m),confirm:()=>true,
+  saveState:()=>saves++,render:()=>paints++,update:()=>saves++,notify:m=>messages.push(m),confirm:()=>true,
   FormData:class {constructor(form){return new Map(Object.entries(form.fields));}}});
  for(const file of ['work-schedule.js','personal-time-off.js','rotation-patterns.js','month-day-ui.js'])vm.runInContext(read(file),ctx);
  Object.assign(ctx,{workSchedule:ctx.window.workSchedule,personalTimeOff:ctx.window.personalTimeOff,rotationPatterns:ctx.window.rotationPatterns,monthDayUI:ctx.window.monthDayUI,isValidDate:ctx.window.personalTimeOff.valid});
@@ -181,19 +181,21 @@ test('Fills i Tutors són llistes reordenables i les dades s’obren a la fitxa 
  s.state.overrides['2026-11-02|same']='other';
  s.ctx.$app={querySelectorAll:()=>[]};
  const before=JSON.stringify({overrides:s.state.overrides,preferences:s.state.preferences});
- s.click('move-person',{kind:'child',id:'second',step:'-1'});
+ s.ctx.commitPersonOrder('child','second',0);
  assert.deepEqual(plain(s.state.children.map(p=>p.id)),['second','same']);
- s.click('move-person',{kind:'guardian',id:'same',step:'1'});
+ s.ctx.commitPersonOrder('guardian','same',1);
  assert.deepEqual(plain(s.state.guardians.map(p=>p.id)),['other','same']);
  assert.equal(JSON.stringify({overrides:s.state.overrides,preferences:s.state.preferences}),before);
  const stored=JSON.parse(JSON.stringify(s.state));
  assert.deepEqual(stored.children.map(p=>p.id),['second','same']);
  assert.deepEqual(stored.guardians.map(p=>p.id),['other','same']);
  const saves=s.saves;
- for(const data of [{kind:'child',id:'second',step:'-1'},{kind:'child',id:'missing',step:'1'},{kind:'guardian',id:'same',step:'2'},{kind:'unknown',id:'same',step:'1'}])s.click('move-person',data);
+ for(const [kind,id,index] of [['child','second',0],['child','missing',1],['guardian','same',2],['unknown','same',1],['child','same',-1],['child','same',0.5]])s.ctx.commitPersonOrder(kind,id,index);
  assert.equal(s.saves,saves);
  const html=s.ctx.peoplePage();
  assert.equal((html.match(/<ol class="people-list"/g)||[]).length,2);
+ assert.equal((html.match(/class="person-drag-handle"/g)||[]).length,4);
+ assert.doesNotMatch(html,/move-person|person-order-button/);
  assert.doesNotMatch(html,/<input|delete-child|delete-guardian|person-me|person-time-off/);
  assert.ok(html.indexOf('data-person="child:second"')<html.indexOf('data-person="child:same"'));
  s.click('open-person',{person:'child:second'});

@@ -96,7 +96,7 @@ type Tab = 'calendar' | 'rotation' | 'schools' | 'people' | 'settings' | 'genera
 type Sheet = {type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.19.7';
+const APP_VERSION = '0.20.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -118,6 +118,7 @@ const icons: Record<string,string> = {
   settings:'<polygon points="10.54,4.64 10.05,2.19 13.95,2.19 13.46,4.64 16.17,5.76 17.56,3.69 20.31,6.44 18.24,7.83 19.36,10.54 21.81,10.05 21.81,13.95 19.36,13.46 18.24,16.17 20.31,17.56 17.56,20.31 16.17,18.24 13.46,19.36 13.95,21.81 10.05,21.81 10.54,19.36 7.83,18.24 6.44,20.31 3.69,17.56 5.76,16.17 4.64,13.46 2.19,13.95 2.19,10.05 4.64,10.54 5.76,7.83 3.69,6.44 6.44,3.69 7.83,5.76"/><circle cx="12" cy="12" r="3.25"/>',
   chevronLeft:'<path d="m15 18-6-6 6-6"/>', chevronRight:'<path d="m9 18 6-6-6-6"/>',
   zoom:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M7.5 10.5h6m-3-3v6"/>',
+  drag:'<path d="M5 7h14M5 12h14M5 17h14"/>',
   filter:'<path d="M4 7h16M7 12h10M10 17h4"/>',
   close:'<path d="M18 6 6 18M6 6l12 12"/>',
   check:'<path d="m20 6-11 11-5-5"/>',
@@ -1091,11 +1092,11 @@ function peopleList(kind:'child'|'guardian'):string {
   const entries=kind==='child'?state.children:state.guardians;
   const label=kind==='child'?'Fills':'Tutors i responsables';
   if(!entries.length)return `<p class="settings-note">Encara no hi ha ${kind==='child'?'fills':'tutors'}. Prem «Afegir» per començar.</p>`;
-  return `<ol class="people-list" aria-label="${label}">${entries.map((person,index)=>{
+  return `<ol class="people-list" data-kind="${kind}" aria-label="${label}">${entries.map(person=>{
     const key=kind+':'+person.id,me=state.preferences.mePerson===key;
     const avatar='color' in person?`<span class="person-list-color" style="background:${person.color}" aria-hidden="true"></span>`:icon('person',20);
-    return `<li class="person-list-row"><button type="button" class="person-list-open" data-action="open-person" data-person="${escapeHtml(key)}" aria-label="Obre ${escapeHtml(person.name)}">${avatar}<span class="person-list-name">${escapeHtml(person.name)}${me?'<small>Jo</small>':''}</span>${icon('chevronRight',18)}</button>
-      <div class="person-order" role="group" aria-label="Ordre de ${escapeHtml(person.name)}">${([-1,1] as const).map(step=>`<button type="button" class="person-order-button" data-action="move-person" data-kind="${kind}" data-id="${escapeHtml(person.id)}" data-step="${step}" aria-label="${step===-1?'Puja':'Baixa'} ${escapeHtml(person.name)}" ${index+step<0||index+step>=entries.length?'disabled':''}>${icon(step===-1?'chevronLeft':'chevronRight',16)}</button>`).join('')}</div></li>`;
+    return `<li class="person-list-row" data-id="${escapeHtml(person.id)}"><button type="button" class="person-list-open" data-action="open-person" data-person="${escapeHtml(key)}" aria-label="Obre ${escapeHtml(person.name)}">${avatar}<span class="person-list-name">${escapeHtml(person.name)}${me?'<small>Jo</small>':''}</span>${icon('chevronRight',18)}</button>
+      <button type="button" class="person-drag-handle" aria-label="Reordena ${escapeHtml(person.name)}" aria-describedby="people-reorder-help" aria-pressed="false" ${entries.length<2?'disabled':''}>${icon('drag',22)}</button></li>`;
   }).join('')}</ol>`;
 }
 function personDetails(key:string):string {
@@ -1111,16 +1112,20 @@ function personDetails(key:string):string {
   return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child?'Fill':'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child?'delete-child':'delete-guardian'}" data-${child?'child':'guardian'}="${id}">${icon('trash',16)} Suprimeix ${child?'el fill':'el tutor'}</button></div>`;
 }
-function reorderPerson<T extends {id:string}>(entries:T[],id:string,step:number):boolean {
-  if(step!==-1&&step!==1)return false;
-  const index=entries.findIndex(person=>person.id===id),next=index+step;
-  if(index<0||next<0||next>=entries.length)return false;
-  const [person]=entries.splice(index,1);
-  entries.splice(next,0,person!);
+function commitPersonOrder(kind:string,id:string,index:number):boolean {
+  const entries:(Child|Guardian)[]|null=kind==='child'?state.children:kind==='guardian'?state.guardians:null;
+  if(!entries||!Number.isInteger(index)||index<0||index>=entries.length)return false;
+  const previous=entries.findIndex(person=>person.id===id);
+  if(previous<0||previous===index)return false;
+  const [person]=entries.splice(previous,1);
+  entries.splice(index,0,person!);
+  saveState();
+  notify(`${person!.name}, posició ${index+1} de ${entries.length}`);
   return true;
 }
 function peoplePage(){
-  return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Toca una persona per editar-la. Les fletxes permeten canviar-ne l’ordre.</p></div></header>
+  return `<header class="page-heading"><div><div class="eyebrow">LA FAMÍLIA</div><h1 class="page-title">Persones</h1><p class="page-subtitle">Toca una persona per editar-la. Arrossega les tres ratlles per canviar-ne l’ordre.</p></div></header>
+    <p id="people-reorder-help" class="visually-hidden">Arrossega per reordenar. Amb el teclat, fes servir les fletxes amunt i avall, Inici o Fi.</p>
     <section class="card"><div class="panel-header"><h2 class="section-title">Fills</h2><button type="button" class="secondary-btn" data-action="add-child">${icon('plus',14)} Afegir</button></div>${peopleList('child')}</section>
     <section class="card"><div class="panel-header"><h2 class="section-title">Tutors i responsables</h2><button type="button" class="secondary-btn" data-action="add-guardian">${icon('plus',14)} Afegir</button></div>${peopleList('guardian')}</section>`;
 }
@@ -1506,16 +1511,6 @@ function clickAction(button:HTMLElement){
       const key=button.dataset.person??'';
       const exists=key.startsWith('child:')?childById(key.slice(6)):key.startsWith('guardian:')?guardian(key.slice(9)):undefined;
       if(exists){sheet={type:'personDetails',personKey:key};render();}
-      break;
-    }
-    case 'move-person':{
-      const kind=button.dataset.kind,id=button.dataset.id??'',step=Number(button.dataset.step);
-      const moved=kind==='child'?reorderPerson(state.children,id,step):kind==='guardian'?reorderPerson(state.guardians,id,step):false;
-      if(moved){
-        update();
-        const controls=Array.from($app.querySelectorAll<HTMLButtonElement>('[data-action="move-person"]')).filter(el=>el.dataset.kind===kind&&el.dataset.id===id&&!el.disabled);
-        (controls.find(el=>el.dataset.step===String(step))??controls[0])?.focus({preventScroll:true});
-      }
       break;
     }
     case 'person-me':{
@@ -2022,7 +2017,7 @@ document.addEventListener('pointerup',()=>{nativePickerPointerDown=false;queueNa
 document.addEventListener('pointercancel',()=>{nativePickerPointerDown=false;queueNativePickerRender();},true);
 document.addEventListener('focusout',()=>queueNativePickerRender(),true);
 document.addEventListener('click',()=>queueNativePickerRender(0));
-async function init(){await loadState();applyTheme();applyFontSize();await document.fonts?.load('800 22px "Roboto Condensed"').catch(()=>[]);render();if('serviceWorker'in navigator && location.protocol!=='file:'){
+async function init(){await loadState();applyTheme();applyFontSize();await document.fonts?.load('800 22px "Roboto Condensed"').catch(()=>[]);render();(window as Window & {peopleReorder?:{mount:(root:HTMLElement,commit:typeof commitPersonOrder)=>void}}).peopleReorder?.mount($app,commitPersonOrder);if('serviceWorker'in navigator && location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update().catch(()=>{})).catch(err=>console.warn('Service worker no registrat:',err));
 }}
 void init();
