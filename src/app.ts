@@ -86,7 +86,8 @@ type WorkShift = {startTime:string;endTime:string};
 type WorkRotation = {id:string;name:string;startDate:string;endDate?:string;weeks:number;days:WorkShift[][]};
 type WorkDraft = WorkRotation & {week:number};
 type PersonTimeOff = {workRotations?:WorkRotation[];holidayColor?:string;vacationColor?:string;holidays:string[];vacations:SchoolVacation[]};
-type Preferences = { showExtracurriculars:boolean; showHolyWeek:boolean;showWorkSchedules:boolean;mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
+type CalendarFilterPreferences=Pick<Preferences,'visibleChildren'|'visibleGuardians'|'visibleSchools'|'visibleBands'|'visibleTimeOffPeople'|'showExtracurriculars'|'showHolyWeek'|'showWorkSchedules'|'showPersonalHolidays'|'showPersonalVacations'>;
+type Preferences = { filterViews?:Partial<Record<CalendarView,CalendarFilterPreferences>>; showExtracurriculars:boolean; showHolyWeek:boolean;showWorkSchedules:boolean;mePerson:string;visibleTimeOffPeople:string[];showPersonalHolidays:boolean;showPersonalVacations:boolean; visibleChildren: string[]; visibleGuardians: string[]; visibleSchools: string[]; visibleBands:TimeBand[]; theme: ThemeMode; fontSize: FontSize; timelineZoom:number; timelineZooms:{day:number;week:number} };
 type DaySlot = {id:string;startTime:string;endTime:string;guardianId:string};
 type ExtraRotation = {id:string;name:string;startDate:string;length:number;startTime:string;endTime:string;childIds:string[];assignments:Record<string,string[]>;activeDays:boolean[];childActiveDays?:Record<string,boolean[]>;schoolDaysOnly?:boolean;kind?:'night'|'activity';endDate?:string;nightTimes?:Record<string,string>};
 type ExtraException = {startTime:string;endTime:string;guardianId:string;disabled:boolean};
@@ -102,7 +103,7 @@ type Tab = 'extracurricular' | 'calendar' | 'rotation' | 'schools' | 'people' | 
 type Sheet = {type:'sharedBlock';date:string;members:{childId:string;sourceId:string}[]}|{type:'dateBlock';date:string;childId:string;sourceId:string;origin?:'day'|'extracurricular'}|{type:'extracurricular';editor:ExtracurricularEditor}|{type:'rotationType'}|{type:'personDetails';personKey:string}|{type:'personWork';personKey:string;draft:WorkDraft}|{type:'personHolidays';personKey:string;month:string;dates:string[]}|{type:'personVacation';personKey:string;periodId?:string}|{ type:'filters' } | { type:'zoom' } | { type:'legend' } | { type:'dayEdit'; date:string } | { type:'day'; date:string } | {type:'daySlotForm';date:string;childId:string;slotId?:string} | {type:'bandEdit';date:string;childId:string;band:TimeBand;viewDate?:string} | {type:'extraCell';rotationId:string;childId:string;index:number} | {type:'extraWeek';rotationId:string;childId:string;week:number} | {type:'extraDate';rotationId:string;childId:string;date:string} | {type:'schoolForm';schoolId?:string} | {type:'yearForm';schoolId:string;yearId?:string} | {type:'groupForm';schoolId:string;yearId:string;groupId?:string} | {type:'schoolVacationForm';schoolId:string;yearId:string;vacationId?:string} | {type:'schoolDayForm';schoolId:string;yearId:string;kind:'holiday'|'reduced';month:string;dates:string[]} | {type:'reducedWindowForm';schoolId:string;yearId:string} | {type:'ordinaryWindowForm';schoolId:string;yearId:string} | {type:'scheduleForm';schoolId:string;yearId:string;groupId:string;childId?:string;sessionId?:string;mode?:ScheduleMode} | {type:'schoolActivity';date:string;childId:string;schoolId:string;sessionId:string} | null;
 
 const $app = document.getElementById('app')!;
-const APP_VERSION = '0.27.2';
+const APP_VERSION = '0.28.0';
 const TIMELINE_ZOOM_LEVELS:readonly number[]=[25,50,75,100,125,150];
 const FONT_SIZE_OPTIONS:readonly FontSize[]=['normal','large','xlarge'];
 const FONT_SIZE_LABELS:Record<FontSize,string>={normal:'Normal',large:'Gran',xlarge:'Molt gran'};
@@ -352,7 +353,13 @@ function cleanState(raw:unknown):AppState {
   const dateEditAPI=(window as Window & {dateBlocks?:any}).dateBlocks;
   if(obj.dateEdits&&Object.keys(obj.dateEdits).length&&!dateEditAPI)throw Error('No s’ha pogut carregar el suport d’edicions puntuals');
   const dateEdits=dateEditAPI?.clean(obj.dateEdits,children,guardians)??{};
-  return {version:2,dateEdits,extracurricularCourses,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,showExtracurriculars:obj.preferences.showExtracurriculars!==false,showHolyWeek:obj.preferences.showHolyWeek===true,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
+  const cleaned:AppState={version:2,dateEdits,extracurricularCourses,children,guardians,personTimeOff,nightDateTimes,extraRotations,extraExceptions,overrides,bandOverrides,daySlots,preferences:{...personalPrefs,showExtracurriculars:obj.preferences.showExtracurriculars!==false,showHolyWeek:obj.preferences.showHolyWeek===true,visibleChildren:children.filter(c=>obj.preferences!.visibleChildren?.includes(c.id)).map(c=>c.id),visibleGuardians:guardians.filter(g=>obj.preferences!.visibleGuardians?.includes(g.id)).map(g=>g.id),visibleSchools:schools.filter(s=>obj.preferences!.visibleSchools?.includes(s.id)).map(s=>s.id),visibleBands,theme:validTheme(obj.preferences.theme),fontSize:validFontSize(obj.preferences.fontSize),timelineZoom:validTimelineZoom(obj.preferences.timelineZoom),timelineZooms:{day:validTimelineZoom(obj.preferences.timelineZooms?.day??obj.preferences.timelineZoom),week:validTimelineZoom(obj.preferences.timelineZooms?.week??obj.preferences.timelineZoom)}},schools};
+  if(obj.preferences.filterViews!==undefined){
+    const api=(window as Window & {viewFilters?:any}).viewFilters;
+    if(!api)throw Error('No s’ha pogut carregar el suport de filtres per vista');
+    cleaned.preferences.filterViews=api.clean(obj.preferences.filterViews,cleaned);
+  }
+  return cleaned;
 }
 let db:IDBDatabase|null=null;
 let storageMode:'indexeddb'|'localStorage'|'session'='session';
@@ -410,6 +417,7 @@ async function loadState(){
   catch(e){console.error('No hi ha emmagatzematge persistent disponible',e);storageMode='session';}
 }
 function saveState(){
+  (window as Window & {viewFilters?:any}).viewFilters?.sync(state,calendarView);
   const snapshot=JSON.parse(JSON.stringify(state)) as AppState;
   writeQueue=writeQueue.catch(()=>{}).then(async()=>{
     if(storageMode==='indexeddb'&&db)await idbPut(snapshot);
@@ -1214,7 +1222,7 @@ function sheetMarkup(){
     <div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button></div>`;
   } else if(sheet?.type==='filters'){
     const showHolyWeek=state.preferences.showHolyWeek===true;
-    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Tria què vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
+    contents=`<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">${({year:'Any',month:'Mes',week:'Setmana'})[calendarView]} · Es desen només per a aquesta vista</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close',17)}</button></div>
     <div class="sheet-section-label">Calendari</div>
     <button type="button" class="option ${showHolyWeek?'selected':''}" data-action="toggle-holy-week" aria-pressed="${showHolyWeek}"><span class="option-left"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>${showHolyWeek?icon('check',17):'<span class="badge-soft">Oculta</span>'}</button>
     <p class="settings-note">De Rams a Pasqua, a les vistes Any i Mes.</p>
@@ -1424,6 +1432,7 @@ function selectWeekDate(date:string){
 }
 function render(){
   if(deferRenderForNativePicker())return;
+  if((window as Window & {viewFilters?:any}).viewFilters?.sync(state,calendarView))saveState();
   const monthAnchor=monthPosition();
   stopCalendarScroll?.();stopCalendarScroll=null;
   const previousTimeline=$app.querySelector<HTMLElement>('.day-timeline-viewport');

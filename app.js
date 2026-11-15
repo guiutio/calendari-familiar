@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.27.2';
+const APP_VERSION = '0.28.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -365,7 +365,14 @@ function cleanState(raw) {
     if (obj.dateEdits && Object.keys(obj.dateEdits).length && !dateEditAPI)
         throw Error('No s’ha pogut carregar el suport d’edicions puntuals');
     const dateEdits = dateEditAPI?.clean(obj.dateEdits, children, guardians) ?? {};
-    return { version: 2, dateEdits, extracurricularCourses, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showExtracurriculars: obj.preferences.showExtracurriculars !== false, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
+    const cleaned = { version: 2, dateEdits, extracurricularCourses, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showExtracurriculars: obj.preferences.showExtracurriculars !== false, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
+    if (obj.preferences.filterViews !== undefined) {
+        const api = window.viewFilters;
+        if (!api)
+            throw Error('No s’ha pogut carregar el suport de filtres per vista');
+        cleaned.preferences.filterViews = api.clean(obj.preferences.filterViews, cleaned);
+    }
+    return cleaned;
 }
 let db = null;
 let storageMode = 'session';
@@ -458,6 +465,7 @@ async function loadState() {
     }
 }
 function saveState() {
+    window.viewFilters?.sync(state, calendarView);
     const snapshot = JSON.parse(JSON.stringify(state));
     writeQueue = writeQueue.catch(() => { }).then(async () => {
         if (storageMode === 'indexeddb' && db)
@@ -1398,7 +1406,7 @@ function sheetMarkup() {
     }
     else if (sheet?.type === 'filters') {
         const showHolyWeek = state.preferences.showHolyWeek === true;
-        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">Tria què vols veure al calendari</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Filtres</h2><p class="sheet-subtitle">${({ year: 'Any', month: 'Mes', week: 'Setmana' })[calendarView]} · Es desen només per a aquesta vista</p></div><button class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     <div class="sheet-section-label">Calendari</div>
     <button type="button" class="option ${showHolyWeek ? 'selected' : ''}" data-action="toggle-holy-week" aria-pressed="${showHolyWeek}"><span class="option-left"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>${showHolyWeek ? icon('check', 17) : '<span class="badge-soft">Oculta</span>'}</button>
     <p class="settings-note">De Rams a Pasqua, a les vistes Any i Mes.</p>
@@ -1663,6 +1671,8 @@ function selectWeekDate(date) {
 function render() {
     if (deferRenderForNativePicker())
         return;
+    if (window.viewFilters?.sync(state, calendarView))
+        saveState();
     const monthAnchor = monthPosition();
     stopCalendarScroll?.();
     stopCalendarScroll = null;

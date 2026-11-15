@@ -40,8 +40,8 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
  assert.doesNotMatch(theme,/\.week-date-columns\.today/);
- assert.match(html,/styles\.css\?v=0\.27\.2/);
- assert.match(sw,/calendari-familiar-v0\.27\.2/);
+ assert.match(html,/styles\.css\?v=0\.28\.0/);
+ assert.match(sw,/calendari-familiar-v0\.28\.0/);
 });
 
 const between=(a,b)=>{
@@ -81,7 +81,7 @@ function simulateRender({oldFocus='',oldLeft=0,oldMode='',focusDate='2026-10-29'
    },
    set innerHTML(value){assert.equal(value,'layout');painted=true;}
  };
- const context=vm.createContext({weekFocusTarget:false,mountWeekNavigation:()=>{},weekNavigation:{singleDay:()=>visibleWidth<=560},
+ const context=vm.createContext({window:{},weekFocusTarget:false,mountWeekNavigation:()=>{},weekNavigation:{singleDay:()=>visibleWidth<=560},
    deferRenderForNativePicker:()=>false,monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},$app,tab:'calendar',calendarView:'week',selectedDate:focusDate,
    weekStart:()=>start,schoolNav:{},sheet:null,fitCalendarTimeline:()=>{},
    layout:()=> 'layout',calendarPage:()=> '',rotationPage:()=>'',schoolsPage:()=>'',settingsPage:()=>'',
