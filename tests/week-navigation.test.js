@@ -218,3 +218,15 @@ test('el scroll programàtic sense moviment en repintar no substitueix el dia tr
  s.viewport.scrollLeft=588;s.viewport.emit('scroll');
  assert.deepEqual(s.focused,['2026-11-05']);
 });
+
+test('les fletxes d’escriptori són fora de la pista, als extrems i visibles amb hover o focus',()=>{
+ const app=read('app.js'),css=read('styles.css');
+ assert.match(app,/class="week-desktop-arrows"><button[^>]*class="week-arrow week-arrow-previous"[^>]*data-step="-1"/);
+ assert.match(app,/class="week-arrow week-arrow-next"[^>]*data-step="1"/);
+ assert.match(app,/track.innerHTML = `<span class="week-strip-corner" aria-hidden="true"><\/span>/);
+ assert.doesNotMatch(app,/week-strip-corner">\$\{arrows\}/);
+ assert.match(css,/\.week-desktop-arrows \.week-arrow-previous \{left:0;/);
+ assert.match(css,/\.week-desktop-arrows \.week-arrow-next \{right:0;/);
+ assert.match(css,/\.week-desktop-arrows \.week-arrow \{[^}]*opacity:0;/);
+ assert.match(css,/\.week-desktop-arrows \.week-arrow:hover,[\s\S]*?\.week-desktop-arrows \.week-arrow:focus-visible \{opacity:1;/);
+});

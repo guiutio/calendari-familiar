@@ -87,3 +87,8 @@ test('els grups classe reutilitzen la nansa per arrossegar i el teclat',()=>{
  assert.deepEqual(s.order(),['d','a','b','c']);assert.deepEqual(s.commits,[['group','d',0]]);
  s.fire('keydown','d',{key:'End'});assert.deepEqual(s.order(),['a','b','c','d']);assert.deepEqual(s.commits[1],['group','d',3]);
 });
+
+for(const kind of ['ec-activity','ec-group'])test(`${kind}: nansa d’extraescolars amb desament en deixar anar`,()=>{
+ const s=setup(kind);s.fire('pointerdown','a');s.fire('pointermove','a',{clientY:340});assert.equal(s.commits.length,0);s.fire('pointerup','a');
+ assert.deepEqual(s.order(),['b','c','d','a']);assert.deepEqual(s.commits,[[kind,'a',3]]);
+});

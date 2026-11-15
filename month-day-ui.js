@@ -1,6 +1,12 @@
 /* Resum mensual de 24 h i excepcions horàries puntuals; no altera la rotació base. */
 (() => {
   const DAY = 1440;
+  function normalizeSymbol(value){
+    const text=typeof value==='string'?value.trim().slice(0,80):'';
+    if(!text)return '';
+    return typeof Intl.Segmenter==='function'?new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)[Symbol.iterator]().next().value.segment:([...text][0]??'');
+  }
+  const childSymbol=child=>normalizeSymbol(child.calendarSymbol)||([...child.name.trim()][0]?.toUpperCase()??'?');
   const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const minutes = time => time === '24:00' ? DAY : Number(time.slice(0,2))*60 + Number(time.slice(3,5));
   const validTime = time => typeof time === 'string' && (time === '24:00' || /^([01]\d|2[0-3]):[0-5]\d$/.test(time));
@@ -118,7 +124,7 @@
       return height>0?`<span class="${klass}" style="top:${top}%;height:${height}%;background:${escape(color)}" title="${escape(label)}"></span>`:'';
     };
     return `<span class="month-mini ${annual?'year-scale':special?'night-expanded':'night-compressed'}" style="--month-children:${children.length}" aria-hidden="true">
-      ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape([...c.name][0]??'?')}</span>`).join('')}
+      ${children.map(c=>`<span class="month-mini-child" title="${escape(c.name)}">${escape(childSymbol(c))}</span>`).join('')}
       ${children.map(c=>`<span class="month-mini-column">
         ${(nights[c.id]??[]).filter(n=>n.visible).map(n=>rect(n.from,n.to,n.guardianColor,'month-mini-night',n.guardianName)).join('')}
         ${(customSlots[c.id]??[]).map(s=>rect(s.from,s.to,s.color,'month-mini-custom',s.startTime+'–'+s.endTime+' '+s.name)).join('')}
@@ -255,5 +261,5 @@
   function removeChild(daySlots,id){
     for(const key of Object.keys(daySlots||{}))if(key.endsWith('|'+id))delete daySlots[key];
   }
-  window.monthDayUI={clean,hasChanges,slots,isoWeek,outline,miniGeometry,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
+  window.monthDayUI={normalizeSymbol,childSymbol,clean,hasChanges,slots,isoWeek,outline,miniGeometry,mini,detail,find,form,remove,save,restore,removeGuardian,removeChild};
 })();

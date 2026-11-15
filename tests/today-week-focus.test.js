@@ -40,8 +40,8 @@ test('Any i Mes destaquen el dia complet amb el mateix vermell que el títol del
  assert.match(css,/\.month-grid \.day-cell\.today \.day-number\s*\{\s*background:transparent;\s*color:inherit;\s*border-radius:0;/);
  assert.match(theme,/\.week-day-header\.today,[\s\S]*?\.calendar-day-layout:has\(\.calendar-title\[data-current-period\]\)[^\n]*?\{background:var\(--calendar-current\);color:#fff;/);
  assert.doesNotMatch(theme,/\.week-date-columns\.today/);
- assert.match(html,/styles\.css\?v=0\.23\.0/);
- assert.match(sw,/calendari-familiar-v0\.23\.0/);
+ assert.match(html,/styles\.css\?v=0\.24\.0/);
+ assert.match(sw,/calendari-familiar-v0\.24\.0/);
 });
 
 const between=(a,b)=>{

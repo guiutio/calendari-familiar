@@ -69,7 +69,7 @@ function inReducedWindow(sessions, window) {
     return sessions.every(a => a.startTime >= window.startTime && a.endTime <= window.endTime);
 }
 const $app = document.getElementById('app');
-const APP_VERSION = '0.23.0';
+const APP_VERSION = '0.24.0';
 const TIMELINE_ZOOM_LEVELS = [25, 50, 75, 100, 125, 150];
 const FONT_SIZE_OPTIONS = ['normal', 'large', 'xlarge'];
 const FONT_SIZE_LABELS = { normal: 'Normal', large: 'Gran', xlarge: 'Molt gran' };
@@ -127,8 +127,8 @@ function newId() { return (typeof crypto !== 'undefined' && 'randomUUID' in cryp
 function emptyState() {
     return {
         version: 2, children: [], guardians: [], personTimeOff: {},
-        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], nightDateTimes: {}, extraRotations: [], extraExceptions: {},
-        preferences: { showHolyWeek: false, showWorkSchedules: true, mePerson: '', visibleTimeOffPeople: [], showPersonalHolidays: true, showPersonalVacations: true, visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50, timelineZooms: { day: 50, week: 50 } }
+        overrides: {}, bandOverrides: {}, daySlots: {}, schools: [], extracurricularCourses: [], nightDateTimes: {}, extraRotations: [], extraExceptions: {},
+        preferences: { showExtracurriculars: true, showHolyWeek: false, showWorkSchedules: true, mePerson: '', visibleTimeOffPeople: [], showPersonalHolidays: true, showPersonalVacations: true, visibleChildren: [], visibleGuardians: [], visibleSchools: [], visibleBands: [...BANDS], theme: 'auto', fontSize: 'normal', timelineZoom: 50, timelineZooms: { day: 50, week: 50 } }
     };
 }
 const SCHOOL_PALETTE = ['#74c6a3', '#f0be75', '#afa4e6', '#7bbcc9', '#d3a1cd', '#bbc773', '#d4a68f', '#87b8e1'];
@@ -305,7 +305,13 @@ function cleanState(raw) {
     const obj = raw;
     if ((obj.version !== 1 && obj.version !== 2) || !Array.isArray(obj.children) || !Array.isArray(obj.guardians) || !obj.preferences || !obj.overrides)
         throw Error('Format de còpia no compatible');
-    const children = obj.children.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string' && typeof c.birthDate === 'string').map(c => ({ ...c, name: c.name.slice(0, 70), birthDate: isValidDate(c.birthDate) ? c.birthDate : '' }));
+    const children = obj.children.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string' && typeof c.birthDate === 'string').map(c => {
+        const child = { ...c, name: c.name.slice(0, 70), birthDate: isValidDate(c.birthDate) ? c.birthDate : '' };
+        delete child.calendarSymbol;
+        if (typeof c.calendarSymbol === 'string' && c.calendarSymbol.trim())
+            child.calendarSymbol = monthDayUI.normalizeSymbol(c.calendarSymbol);
+        return child;
+    });
     const guardians = obj.guardians.filter(g => g && typeof g.id === 'string' && typeof g.name === 'string' && typeof g.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(g.color)).map(g => ({ ...g, name: g.name.slice(0, 70) }));
     if (children.length > 30 || guardians.length > 30 || new Set(children.map(x => x.id)).size !== children.length || new Set(guardians.map(x => x.id)).size !== guardians.length)
         throw Error('La còpia conté fills o tutors incorrectes');
@@ -319,6 +325,13 @@ function cleanState(raw) {
             overrides[key] = value;
     }
     const schools = cleanSchools(obj.schools, children);
+    let extracurricularCourses = [];
+    if (obj.extracurricularCourses !== undefined && !(Array.isArray(obj.extracurricularCourses) && obj.extracurricularCourses.length === 0)) {
+        const api = window.extracurricular;
+        if (!api)
+            throw Error('No s’ha pogut carregar el suport d’extraescolars');
+        extracurricularCourses = api.clean(obj.extracurricularCourses, children);
+    }
     const daySlots = monthDayUI.clean(obj.daySlots, children.map(c => c.id), guardians.map(g => g.id));
     const visibleBands = Array.isArray(obj.preferences.visibleBands)
         ? BANDS.filter(b => obj.preferences.visibleBands.includes(b)) : [...BANDS];
@@ -348,7 +361,7 @@ function cleanState(raw) {
     extraRotations.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.id.localeCompare(b.id));
     const nightDateTimes = rotationPatterns.cleanNightDateTimes(obj.nightDateTimes, children);
     const extraExceptions = rotationPatterns.cleanExtraExceptions(obj.extraExceptions, extraRotations, children, guardians);
-    return { version: 2, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
+    return { version: 2, extracurricularCourses, children, guardians, personTimeOff, nightDateTimes, extraRotations, extraExceptions, overrides, bandOverrides, daySlots, preferences: { ...personalPrefs, showExtracurriculars: obj.preferences.showExtracurriculars !== false, showHolyWeek: obj.preferences.showHolyWeek === true, visibleChildren: children.filter(c => obj.preferences.visibleChildren?.includes(c.id)).map(c => c.id), visibleGuardians: guardians.filter(g => obj.preferences.visibleGuardians?.includes(g.id)).map(g => g.id), visibleSchools: schools.filter(s => obj.preferences.visibleSchools?.includes(s.id)).map(s => s.id), visibleBands, theme: validTheme(obj.preferences.theme), fontSize: validFontSize(obj.preferences.fontSize), timelineZoom: validTimelineZoom(obj.preferences.timelineZoom), timelineZooms: { day: validTimelineZoom(obj.preferences.timelineZooms?.day ?? obj.preferences.timelineZoom), week: validTimelineZoom(obj.preferences.timelineZooms?.week ?? obj.preferences.timelineZoom) } }, schools };
 }
 let db = null;
 let storageMode = 'session';
@@ -362,6 +375,7 @@ let yearRange = null;
 let monthScrollTarget = true;
 let stopCalendarScroll = null;
 let tab = 'calendar';
+let extracurricularNav = {};
 let schoolNav = {};
 let sheet = null;
 let detailOrigin = 'calendar';
@@ -508,16 +522,18 @@ function responsibility(date, childId, band) {
 function activeChildren() { return state.children.filter(c => state.preferences.visibleChildren.includes(c.id)); }
 function activeBands() { return BANDS.filter(b => state.preferences.visibleBands.includes(b)); }
 function bandKey(date, childId, band) { return `${date}|${childId}|${band}`; }
-function shortChildLabel(c) { return initial(c.name); }
+function shortChildLabel(c) { return monthDayUI.childSymbol(c); }
 const schoolCalendarUI = window.schoolCalendarUI;
 function schoolActivities(date, children) {
-    return schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, schoolScheduleForCalendarDay) ?? [];
+    const school = schoolCalendarUI?.collect(date, children, state.schools, state.preferences.visibleSchools, schoolScheduleForCalendarDay) ?? [];
+    const extra = state.extracurricularCourses?.length ? extracurricular.collect(state, date, children) : [];
+    return [...school, ...extra].sort((a, b) => a.start - b.start || a.end - b.end || a.childId.localeCompare(b.childId));
 }
 function schoolReducedDay(date, children) {
     return state.schools.some(s => state.preferences.visibleSchools.includes(s.id) && s.years.some(y => date >= y.startDate && date <= y.endDate && y.reducedDays.includes(date) && y.groups.some(g => g.childIds.some(id => children.some(c => c.id === id)))));
 }
 function schoolTimeline(date, children, range, empty = false) {
-    if (!state.preferences.visibleSchools.length || !children.length)
+    if (!children.length)
         return '';
     return schoolCalendarUI?.render(date, fullDate(date), children, schoolActivities(date, children), range, empty, schoolReducedDay(date, children)) ?? '';
 }
@@ -527,6 +543,7 @@ const rotationPatterns = window.rotationPatterns;
 const rotationEditor = window.rotationEditor;
 const workSchedule = window.workSchedule;
 const weekNavigation = window.weekNavigation;
+const extracurricular = window.extracurricular;
 const personalTimeOff = window.personalTimeOff;
 /** Presència escolar real, independent dels filtres de visualització i de l’hora de la rotació. */
 function childHasSchool(date, childId) {
@@ -663,7 +680,7 @@ function calendarNavigation() {
     }
     if (calendarView === 'week') {
         const start = weekStart(selectedDate);
-        return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}"><div class="week-fixed-strip"><button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start, -1)}" aria-label="Setmana anterior">&lt;</button>${calendarWeekdays.map((_, index) => weekStripDay(addDays(start, index))).join('')}<button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start, 7)}" aria-label="Setmana següent">&gt;</button></div><div class="week-scroll-strip"><div class="week-scroll-track"></div></div></header>`;
+        return `<header class="calendar-sticky-bar week-day-strip" aria-label="${escapeHtml(periodTitle())}"><div class="week-fixed-strip"><button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start, -1)}" aria-label="Setmana anterior">&lt;</button>${calendarWeekdays.map((_, index) => weekStripDay(addDays(start, index))).join('')}<button type="button" class="week-arrow" data-action="show-calendar-day" data-date="${addDays(start, 7)}" aria-label="Setmana següent">&gt;</button></div><div class="week-scroll-strip"><div class="week-scroll-track"></div></div><div class="week-desktop-arrows"><button type="button" class="week-arrow week-arrow-previous" data-action="calendar-navigate" data-step="-1" aria-label="Setmana anterior">&lt;</button><button type="button" class="week-arrow week-arrow-next" data-action="calendar-navigate" data-step="1" aria-label="Setmana següent">&gt;</button></div></header>`;
     }
     return '';
 }
@@ -711,7 +728,7 @@ function monthPanel(index, children, today) {
         const changed = monthDayUI.hasChanges(state, date);
         const bdays = birthdays(date).filter(c => children.some(child => child.id === c.id));
         const snapshot = monthData(date, children), schoolCount = snapshot.activities.length;
-        return `<button type="button" class="day-cell ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${personalMarks.label ? escapeHtml(personalMarks.label) + '. ' : ''}${schoolCount ? schoolCount + ' activitats escolars. ' : ''}Mostra aquest dia a la vista Setmana.">
+        return `<button type="button" class="day-cell ${date === today ? 'today' : ''} ${monthEdges}" data-action="show-calendar-day" data-date="${date}" ${date === today ? 'aria-current="date"' : ''} aria-label="${escapeHtml(fullDate(date))}. ${personalMarks.label ? escapeHtml(personalMarks.label) + '. ' : ''}${schoolCount ? schoolCount + (schoolCount === 1 ? ' activitat amb horari. ' : ' activitats amb horari. ') : ''}Mostra aquest dia a la vista Setmana.">
         <span class="day-top"><span class="day-number${state.preferences?.mePerson && workSchedule.isDayOff(state, date) ? ' is-day-off' : ''}">${d.getDate()}</span>${changed ? '<span class="change-dot" title="Canvi puntual"></span>' : ''}</span>
         ${monthDayUI.mini(children, snapshot.nights, snapshot.activities, snapshot.slots, snapshot.extra)}
         ${bdays.length ? '<span class="mini-birthday" title="Aniversari">Aniv.</span>' : ''}${personalMarks.html}
@@ -1004,7 +1021,7 @@ function calendarLegend() {
     const showOutlines = calendarView === 'year' || calendarView === 'month';
     const personalLegend = showOutlines && state.personTimeOff ? personalTimeOff.legendMarkup(state) : '';
     const holyWeekLegend = showOutlines && state.preferences.showHolyWeek ? '<span class="legend-entry"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>' : '';
-    return `<div class="legend">${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}${holyWeekLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>`;
+    return `<div class="legend">${state.extracurricularCourses?.length ? extracurricular.legend(state) : ''}${state.schools.filter(s => state.preferences.visibleSchools.includes(s.id)).map(s => `<span class="legend-entry"><span class="legend-color" style="background:${s.color}"></span>${escapeHtml(s.name)}</span>`).join('')}${state.guardians.filter(g => state.preferences.visibleGuardians.includes(g.id)).map(g => `<span class="legend-entry"><span class="legend-color" style="background:${g.color}"></span>${escapeHtml(g.name)}</span>`).join('')}${personalLegend}${holyWeekLegend}<span class="legend-entry"><span class="legend-color legend-empty"></span>Sense assignar</span></div>`;
 }
 function calendarPage() {
     const today = localDate(new Date()), children = activeChildren();
@@ -1278,13 +1295,20 @@ function personDetails(key) {
         return '';
     const id = escapeHtml(person.id);
     const fields = child ? `<div class="field"><label for="child-name-${id}">Nom</label><input id="child-name-${id}" type="text" maxlength="70" value="${escapeHtml(child.name)}" data-action="child-name" data-child="${id}" /></div>
-    <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p>` :
+    <div class="field"><label for="child-birth-${id}">Data de naixement (opcional)</label><input id="child-birth-${id}" type="date" value="${escapeHtml(child.birthDate)}" data-action="child-birth" data-child="${id}" /></div><p class="settings-note">La data de naixement permet mostrar els aniversaris al calendari.</p><div class="field"><label for="child-symbol-${id}">Símbol al calendari (opcional)</label><input id="child-symbol-${id}" type="text" maxlength="80" value="${escapeHtml(child.calendarSymbol ?? '')}" placeholder="${escapeHtml(initial(child.name))}" data-action="child-symbol" data-child="${id}" /><p class="settings-note">Una lletra o un emoji. Si el deixes buit, es mostra la inicial del nom.</p></div>` :
         `<div class="school-form-fields"><div class="field"><label for="guardian-name-${id}">Nom</label><input id="guardian-name-${id}" type="text" maxlength="70" value="${escapeHtml(tutor.name)}" data-action="guardian-name" data-guardian="${id}" /></div>
     <div class="field"><label for="guardian-color-${id}">Color al calendari</label><input id="guardian-color-${id}" type="color" value="${tutor.color}" data-action="guardian-color" data-guardian="${id}" /></div></div>${personActions(key)}<h3 class="sheet-section-label">Horari laboral</h3>${personalTimeOff.sections(state, key)}`;
     return `<div class="sheet-heading"><div><h2 class="sheet-title">${escapeHtml(person.name)}</h2><p class="sheet-subtitle">${child ? 'Fill' : 'Tutor o responsable'}</p></div><button type="button" class="sheet-close" data-action="close-sheet" aria-label="Tanca">${icon('close', 17)}</button></div>
     ${fields}<div class="action-row"><button type="button" class="primary-btn" data-action="close-sheet">Fet</button><button type="button" class="danger-btn" data-action="${child ? 'delete-child' : 'delete-guardian'}" data-${child ? 'child' : 'guardian'}="${id}">${icon('trash', 16)} Suprimeix ${child ? 'el fill' : 'el tutor'}</button></div>`;
 }
 function commitPersonOrder(kind, id, index) {
+    if (kind === 'ec-activity' || kind === 'ec-group') {
+        if (!extracurricular.reorder(state, extracurricularNav, kind, id, index))
+            return false;
+        saveState();
+        notify('Ordre actualitzat');
+        return true;
+    }
     const entries = kind === 'child' ? state.children : kind === 'guardian' ? state.guardians : kind === 'school' ? state.schools : kind === 'group' ? yearById(schoolById(schoolNav.schoolId), schoolNav.yearId)?.groups ?? null : null;
     if (!entries || !Number.isInteger(index) || index < 0 || index >= entries.length)
         return false;
@@ -1308,7 +1332,8 @@ function settingsPage() {
         ['general', 'General', 'settings', 'Aparença, actualitzacions i dades.'],
         ['people', 'Persones', 'people', 'Fills, tutors i responsables.'],
         ['rotation', 'Rotacions', 'repeat', 'Patrons de pernocta i altres franges.'],
-        ['schools', 'Escoles', 'school', 'Centres, cursos i horaris escolars.']
+        ['schools', 'Escoles', 'school', 'Centres, cursos i horaris escolars.'],
+        ['extracurricular', 'Extraescolars', 'calendar', 'Cursos, grups i activitats setmanals.']
     ];
     return `<header class="page-heading"><div><h1 class="page-title">Configuració</h1><p class="page-subtitle">Tria l’àrea que vols configurar.</p></div></header>
   <nav class="settings-areas" aria-label="Àrees de configuració">${areas.map(([target, label, glyph, description]) => `<button type="button" class="card settings-area-link" data-action="tab" data-tab="${target}"><span class="settings-area-icon">${icon(glyph, 23)}</span><span class="settings-area-copy"><strong>${label}</strong><span>${description}</span></span>${icon('chevronRight', 18)}</button>`).join('')}</nav>`;
@@ -1326,13 +1351,16 @@ function generalSettingsPage() {
   <section class="card"><h2 class="section-title">Les teves dades</h2><p class="section-description">Les dades es queden en aquest navegador. Exporta una còpia si canvies de dispositiu o abans de netejar-ne les dades.</p>
   <div class="status-good">${icon('shield', 17)} ${escapeHtml(storageDescription)}</div><div class="action-row"><button class="primary-btn" data-action="export">${icon('download', 15)} Exporta JSON</button><button class="secondary-btn" data-action="import">${icon('upload', 15)} Importa JSON</button><input class="sr-only" id="import-file" type="file" accept=".json,application/json" /></div><hr>
   <div class="panel-header"><h2 class="section-title">Comença de zero</h2></div>
-  <p class="settings-note">Esborra tots els fills, tutors, escoles, horaris, rotacions i canvis puntuals desats. Aquesta acció no es pot desfer. Exporta abans una còpia JSON si vols conservar les dades.</p>
+  <p class="settings-note">Esborra tots els fills, tutors, escoles, extraescolars, horaris, rotacions i canvis puntuals desats. Aquesta acció no es pot desfer. Exporta abans una còpia JSON si vols conservar les dades.</p>
   <div class="action-row"><button type="button" class="danger-btn" data-action="clear-all">${icon('trash', 15)} Esborra totes les dades</button></div></section>`;
 }
 function returnFromDetail(date) { return detailOrigin === 'day' ? { type: 'day', date: detailReturnDate || date } : null; }
 function sheetMarkup() {
     let contents = '';
-    if (sheet?.type === 'personDetails') {
+    if (sheet?.type === 'extracurricular') {
+        contents = extracurricular.form(state, sheet.editor);
+    }
+    else if (sheet?.type === 'personDetails') {
         contents = personDetails(sheet.personKey);
     }
     else if (sheet?.type === 'personWork') {
@@ -1363,6 +1391,7 @@ function sheetMarkup() {
     <div class="sheet-section-label">Calendari</div>
     <button type="button" class="option ${showHolyWeek ? 'selected' : ''}" data-action="toggle-holy-week" aria-pressed="${showHolyWeek}"><span class="option-left"><span class="personal-legend holy-week" aria-hidden="true"></span>Setmana Santa</span>${showHolyWeek ? icon('check', 17) : '<span class="badge-soft">Oculta</span>'}</button>
     <p class="settings-note">De Rams a Pasqua, a les vistes Any i Mes.</p>
+    <div class="sheet-section-label">Extraescolars</div><button type="button" class="option ${state.preferences.showExtracurriculars !== false ? 'selected' : ''}" data-action="toggle-extracurriculars" aria-pressed="${state.preferences.showExtracurriculars !== false}">Mostra les extraescolars</button>
     <div class="sheet-section-label">Fills</div>${state.children.map(c => filterOption(c.id, c.name, state.preferences.visibleChildren.includes(c.id), 'child')).join('')}
     <div class="sheet-section-label">Tutors</div>${state.guardians.map(g => filterOption(g.id, g.name, state.preferences.visibleGuardians.includes(g.id), 'guardian', g.color)).join('')}
     <div class="sheet-section-label">Escoles <span class="filter-section-hint">(ocultes per defecte)</span></div>${state.schools.length ? state.schools.map(s => filterOption(s.id, s.name, state.preferences.visibleSchools.includes(s.id), 'school', s.color)).join('') : '<p class="settings-note">Afegeix escoles a la pestanya Escoles.</p>'}
@@ -1389,7 +1418,7 @@ function sheetMarkup() {
         const { date, childId, schoolId, sessionId } = sheet;
         const activity = schoolActivities(date, activeChildren()).find(a => a.id === sessionId && a.schoolId === schoolId && a.childId === childId);
         const c = childById(sheet.childId);
-        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">Activitat escolar</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
+        contents = `<div class="sheet-heading"><div><h2 class="sheet-title">${activity?.kind === 'Extraescolar' ? 'Activitat extraescolar' : 'Activitat escolar'}</h2><p class="sheet-subtitle">${escapeHtml(fullDate(sheet.date))}</p></div><button class="sheet-close" data-action="return-detail" data-date="${escapeHtml(date)}" aria-label="Torna a la vista anterior">${icon('close', 17)}</button></div>
     ${activity ? `<div class="school-activity-info"><strong>${escapeHtml(activity.kind)}</strong><p>${escapeHtml(c?.name ?? 'Fill')} · ${escapeHtml(activity.schoolName)}</p><p>${activity.startTime}–${activity.endTime}</p>${activity.description ? `<p>${escapeHtml(activity.description)}</p>` : ''}</div>` : '<p class="settings-note">Aquesta activitat ja no està disponible.</p>'}`;
     }
     else if (sheet?.type === 'extraCell') {
@@ -1515,8 +1544,7 @@ function mountWeekNavigation() {
         if (!scroller || !track || !inner)
             return;
         if (track.dataset.range !== key) {
-            const arrows = Array.from(strip.querySelectorAll('.week-fixed-strip .week-arrow')).map(button => button.outerHTML).join('');
-            track.innerHTML = `<span class="week-strip-corner">${arrows}</span>${headers.map(header => weekStripDay(header.dataset.date)).join('')}`;
+            track.innerHTML = `<span class="week-strip-corner" aria-hidden="true"></span>${headers.map(header => weekStripDay(header.dataset.date)).join('')}`;
             track.dataset.range = key;
         }
         scroller.style.width = `${viewport.clientWidth}px`;
@@ -1627,7 +1655,7 @@ function render() {
     const timelineLeft = keepHorizontalScroll ? previousTimeline.scrollLeft : 0;
     const oldScale = Number(previousTimeline?.dataset.pxPerMinute ?? 0);
     const previousMain = $app.querySelector('.main-area');
-    const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|');
+    const scrollKey = [tab, tab === 'calendar' ? calendarView : '', schoolNav.schoolId ?? '', schoolNav.yearId ?? '', schoolNav.groupId ?? ''].join('|') + (tab === 'extracurricular' ? '|' + JSON.stringify(extracurricularNav) : '');
     const mainScroll = previousMain?.dataset.scrollKey === scrollKey ? previousMain.scrollTop : 0;
     const oldTimelineOffset = previousMain && previousTimeline
         ? previousMain.scrollTop + previousTimeline.getBoundingClientRect().top - previousMain.getBoundingClientRect().top : NaN;
@@ -1638,7 +1666,7 @@ function render() {
     const sheetScroll = previousSheet?.dataset.sheetKey === sheetKey ? previousSheet.scrollTop : 0;
     const pickerFocus = sheet && (sheet.type === 'schoolDayForm' || sheet.type === 'personHolidays') ? document.activeElement?.closest('.school-date-picker button') : null;
     const pickerFocusKey = pickerFocus?.dataset.date ? `[data-action="${pickerFocus.dataset.action}"][data-date="${pickerFocus.dataset.date}"]` : pickerFocus?.dataset.step ? `[data-action="${pickerFocus.dataset.action}"][data-step="${pickerFocus.dataset.step}"]` : '';
-    $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : tab === 'general' ? generalSettingsPage() : settingsPage());
+    $app.innerHTML = layout(tab === 'calendar' ? calendarPage() : tab === 'rotation' ? rotationPage() : tab === 'schools' ? schoolsPage() : tab === 'people' ? peoplePage() : tab === 'extracurricular' ? extracurricular.page(state, extracurricularNav) : tab === 'general' ? generalSettingsPage() : settingsPage());
     const main = $app.querySelector('.main-area');
     if (main && calendarView === 'week')
         fitCalendarTimeline(main);
@@ -1727,6 +1755,10 @@ function removeChild(id) {
     if (state.personTimeOff)
         personalTimeOff.removePerson(state, 'child:' + id);
     state.children = state.children.filter(x => x.id !== id);
+    for (const course of state.extracurricularCourses ?? [])
+        for (const activity of course.activities)
+            for (const group of activity.groups)
+                group.childIds = group.childIds.filter(childId => childId !== id);
     for (const key of Object.keys(state.nightDateTimes))
         if (key.endsWith('|' + id))
             delete state.nightDateTimes[key];
@@ -1774,6 +1806,7 @@ async function importData(file) {
         extraRotationOpen = null;
         sheet = null;
         schoolNav = {};
+        extracurricularNav = {};
         update();
         notify('Dades importades correctament');
     }
@@ -1782,13 +1815,14 @@ async function importData(file) {
     }
 }
 function clearAllData() {
-    if (!confirm('ATENCIÓ: vols esborrar tots els fills, tutors, escoles, horaris, rotacions i assignacions? No es pot desfer. Exporta una còpia JSON abans si vols conservar-los.'))
+    if (!confirm('ATENCIÓ: vols esborrar tots els fills, tutors, escoles, extraescolars, horaris, rotacions i assignacions? No es pot desfer. Exporta una còpia JSON abans si vols conservar-los.'))
         return;
     state = emptyState();
     extraRotationDrafts = {};
     extraRotationOpen = null;
     sheet = null;
     schoolNav = {};
+    extracurricularNav = {};
     tab = 'general';
     calendarView = 'month';
     selectedDate = localDate(new Date());
@@ -1799,6 +1833,31 @@ function clearAllData() {
 }
 function clickAction(button) {
     const action = button.dataset.action;
+    if (action?.startsWith('ec-')) {
+        const result = extracurricular.click(state, extracurricularNav, button.dataset, confirm);
+        if (!result)
+            return;
+        if (result.error) {
+            notify(result.error);
+            return;
+        }
+        if (result.nav) {
+            extracurricularNav = result.nav;
+            tab = 'extracurricular';
+            sheet = null;
+        }
+        if (result.editor)
+            sheet = { type: 'extracurricular', editor: result.editor };
+        if (result.changed) {
+            sheet = null;
+            update();
+        }
+        else
+            render();
+        if (result.message)
+            notify(result.message);
+        return;
+    }
     switch (action) {
         case 'work-add':
         case 'work-edit': {
@@ -2427,11 +2486,16 @@ function clickAction(button) {
             update();
             break;
         }
+        case 'toggle-extracurriculars':
+            state.preferences.showExtracurriculars = state.preferences.showExtracurriculars === false;
+            update();
+            break;
         case 'toggle-holy-week':
             state.preferences.showHolyWeek = !state.preferences.showHolyWeek;
             update();
             break;
         case 'filter-all':
+            state.preferences.showExtracurriculars = true;
             state.preferences.showHolyWeek = true;
             state.preferences.visibleChildren = state.children.map(c => c.id);
             state.preferences.visibleGuardians = state.guardians.map(g => g.id);
@@ -2621,6 +2685,21 @@ document.addEventListener('submit', event => {
     if (!(form instanceof HTMLFormElement))
         return;
     finishNativePickerEdit();
+    if (form.dataset.ecForm) {
+        event.preventDefault();
+        if (sheet?.type !== 'extracurricular')
+            return;
+        const result = extracurricular.save(state, sheet.editor, new FormData(form), newId);
+        if (result.error) {
+            notify(result.error);
+            return;
+        }
+        extracurricularNav = result.nav;
+        sheet = null;
+        update();
+        notify('Canvis desats');
+        return;
+    }
     if (form.dataset.workRotationForm) {
         event.preventDefault();
         if (sheet?.type !== 'personWork')
@@ -2993,6 +3072,17 @@ document.addEventListener('change', event => {
         const child = childById(target.dataset.child);
         if (child) {
             child.name = target.value.trim().slice(0, 70) || child.name;
+            update();
+        }
+    }
+    else if (action === 'child-symbol') {
+        const child = childById(target.dataset.child);
+        if (child) {
+            const symbol = monthDayUI.normalizeSymbol(target.value);
+            if (symbol)
+                child.calendarSymbol = symbol;
+            else
+                delete child.calendarSymbol;
             update();
         }
     }

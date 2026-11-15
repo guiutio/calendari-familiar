@@ -17,7 +17,7 @@ function setup(){
   icon:()=>'<svg></svg>',escapeHtml:String,storageMode:'indexeddb',APP_VERSION:'test',
   validTheme:value=>value,validFontSize:value=>value,FONT_SIZE_LABELS:{normal:'Normal'},FONT_SIZE_OPTIONS:['normal','large','xlarge'],
   calendarNavigation:()=>'<header class="calendar-sticky-bar">Calendari</header>',calendarControls:()=>'<nav class="calendar-controls">Controls</nav>',
-  calendarPage:()=>'<h1>Calendari</h1>',peoplePage:()=>'<h1>Persones</h1>',rotationPage:()=>'<h1>Rotacions</h1>',schoolsPage:()=>'<h1>Escoles</h1>',
+  calendarPage:()=>'<h1>Calendari</h1>',peoplePage:()=>'<h1>Persones</h1>',rotationPage:()=>'<h1>Rotacions</h1>',schoolsPage:()=>'<h1>Escoles</h1>',extracurricularNav:{},extracurricular:{page:()=>'<h1>Extraescolars</h1>'},
   deferRenderForNativePicker:()=>false,monthPosition:()=>null,stopCalendarScroll:null,mountCalendarScroll:()=>{},
   parseDate:value=>new Date(value+'T12:00:00'),weekStart:value=>value,fitCalendarTimeline:()=>{},
   window:{scrollTo:options=>scrolls.push(options)},document:{body:{style:{overflow:''}}},
@@ -33,19 +33,19 @@ const navTargets=(html,kind)=>{
  return [...nav.matchAll(/data-(?:tab|view)="([^"]+)"/g)].map(match=>match[1]);
 };
 
-test('Configuració conserva les quatre àrees i la navegació inclou les tres vistes del calendari',()=>{
+test('Configuració conserva les cinc àrees i la navegació inclou les tres vistes del calendari',()=>{
  const s=setup();s.ctx.changeTab('settings');
  assert.deepEqual(navTargets(s.html,'side-nav'),['year','month','week']);
  assert.deepEqual(navTargets(s.html,'side-nav-bottom'),['settings']);
  assert.deepEqual(navTargets(s.html,'mobile-tabs'),['year','month','week','settings']);
- assert.deepEqual([...s.html.matchAll(/settings-area-link[^>]+data-tab="([^"]+)"/g)].map(match=>match[1]),['general','people','rotation','schools']);
- assert.deepEqual([...s.html.matchAll(/settings-area-copy"><strong>([^<]+)/g)].map(match=>match[1]),['General','Persones','Rotacions','Escoles']);
+ assert.deepEqual([...s.html.matchAll(/settings-area-link[^>]+data-tab="([^"]+)"/g)].map(match=>match[1]),['general','people','rotation','schools','extracurricular']);
+ assert.deepEqual([...s.html.matchAll(/settings-area-copy"><strong>([^<]+)/g)].map(match=>match[1]),['General','Persones','Rotacions','Escoles','Extraescolars']);
  assert.doesNotMatch(s.html,/>Ajustos<|settings-back/);
 });
 
 test('cada àrea té retorn a Configuració i General conserva els ajustos sense canviar dades ni el calendari',()=>{
  const s=setup();
- for(const [area,title] of [['general','General'],['people','Persones'],['rotation','Rotacions'],['schools','Escoles']]){
+ for(const [area,title] of [['general','General'],['people','Persones'],['rotation','Rotacions'],['schools','Escoles'],['extracurricular','Extraescolars']]){
   s.ctx.changeTab(area);
   assert.doesNotMatch(s.html,/class="calendar-controls"/);
   assert.match(s.html,new RegExp('<h1[^>]*>'+title+'</h1>'));

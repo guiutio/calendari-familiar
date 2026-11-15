@@ -159,8 +159,8 @@ test('configuració i vistes tenen botons útils fins i tot amb zero fills',()=>
   assert.match(ts,/data-action="tab" data-tab="people">Ves a Persones/);
   assert.match(ts,/class="calendar-empty-state"/);
   assert.match(ts,/!isValidDate\(date\)\|\|!state.children.length/);
-  assert.match(html,/app\.js\?v=0\.23\.0/);
-  assert.match(sw,/calendari-familiar-v0\.23\.0/);
+  assert.match(html,/app\.js\?v=0\.24\.0/);
+  assert.match(sw,/calendari-familiar-v0\.24\.0/);
 });
 
 test('el mes amb zero fills és visualment net i ofereix un botó per començar',()=>{
@@ -289,4 +289,19 @@ test('les còpies antigues migren el zoom compartit i les noves conserven cada v
  assert.deepEqual(asJSON(reloaded.preferences.timelineZooms),{day:25,week:125});
  raw.preferences.timelineZooms={day:999,week:'malament'};
  assert.deepEqual(asJSON(context.cleanState(raw).preferences.timelineZooms),{day:50,week:50});
+});
+
+test('el JSON conserva cursos d’extraescolars, dates pròpies i símbols de fills',()=>{
+ const {context}=makeContext();context.window={};
+ vm.runInContext(readFileSync(new URL('../extracurricular.js',import.meta.url),'utf8'),context);
+ context.extracurricular=context.window.extracurricular;context.extracurricularNav={};
+ context.state.children=[{id:'a',name:'Alba',birthDate:'',calendarSymbol:'👩🏽‍🚀'}];
+ context.state.preferences.visibleChildren=['a'];
+ context.state.extracurricularCourses=[{id:'c',startDate:'2026-09-01',endDate:'2027-06-30',activities:[{id:'a',name:'Música',address:'',phone:'',startDate:'2026-08-01',endDate:'2027-07-31',groups:[{id:'g',name:'Iniciació',childIds:['a'],weeklySchedule:[{id:'s',weekday:0,startTime:'17:00',endTime:'18:00',label:'Piano'}]}]}]}];
+ const raw=asJSON(context.state),clean=context.cleanState(raw);assert.deepEqual(asJSON(clean),raw);
+ const old=asJSON(raw);delete old.extracurricularCourses;delete old.children[0].calendarSymbol;delete old.preferences.showExtracurriculars;
+ const legacy=context.cleanState(old);assert.deepEqual(asJSON(legacy.extracurricularCourses),[]);assert.equal(legacy.preferences.showExtracurriculars,true);assert.equal(legacy.children[0].calendarSymbol,undefined);
+ const broken=asJSON(raw);broken.extracurricularCourses[0].activities[0].endDate='2026-07-31';assert.throws(()=>context.cleanState(broken));
+ context.removeChild('a');assert.deepEqual(asJSON(context.state.extracurricularCourses[0].activities[0].groups[0].childIds),[]);
+ context.state=context.cleanState(asJSON(context.state));assert.equal(context.state.extracurricularCourses.length,1);
 });
